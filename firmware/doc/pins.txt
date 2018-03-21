@@ -1,0 +1,66 @@
+
+Debug Console:
+--------------
+USART1: (Rx:DMA1/5, Tx:DMA1/4)
+ PA9   TX
+ PA10  RX
+
+USB:
+----
+ PA11  USB_DM
+ PA12  USB_DP
+GPIO: (GPI_float, GPO_pushpull)
+ PB0 (connect via 1.5kohm to PA12/USB_DP)
+
+Floppy:
+-------
+GPIn: (GPI_float, active low, 5v tolerant)
+ PB13    8: IDX
+ PB4    26: TRK0
+ PB8    28: WRPROT
+GPOut: (GPO_pushpull, active high)
+ PA7     2: DENSEL
+ PA6    12: SEL_A
+ PA5    16: MTR_A
+ PA4    18: DIR
+ PA3    20: STEP
+ PA1    24: DKWE
+ PA0    32: SIDE
+TimerIn: (GPI_float, active low, 5v tolerant)
+ PB6    30: DKRD (Timer4/1, CC1:DMA1/1)
+TimerOut: (AFO_pushpull, active high)
+ PA2    22: DKWD (Timer2/3, UP:DMA1/2)
+
+Unused Pins:
+------------
+All to be pulled high:
+ PA8,13-15
+ PB1-3,5,7,9-12,14-15
+ PC0-15
+
+Floppy bus connections:
+-----------------------
+Inputs: Pull to 5v via 1k.
+Outputs: Drive open-collector 2N3904, 1k base resistor.
+
+IBM/PC 34-pin Floppy Host Interface:
+------------------------------------
+  2: -> DENSEL(5.25: HIGH=360rpm/high-density, LOW=300rpm, low-density)
+  3: missing/key
+  4: n/c
+  6: n/c
+  8: <- INDEX
+ 10: -> MTR_B
+ 12: -> SEL_A
+ 14: -> SEL_B
+ 16: -> MTR_A
+ 18: -> DIR
+ 20: -> STEP
+ 22: -> DKWD
+ 24: -> DKWE
+ 26: <- TRK0
+ 28: <- WRPROT
+ 30: <- DKRD
+ 32: -> SIDE
+ 34: <- DSKCHG / RDY(5.25)
+All odd pins are ground.
