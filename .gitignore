@@ -1,0 +1,14 @@
+*.[oa]
+.*.d
+*~
+*.ld
+*.elf
+*.bin
+*.hex
+*.orig
+*.rej
+*.rld
+*.upd
+*.adf
+*.scp
+Greaseweazle_*

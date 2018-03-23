@@ -10,32 +10,32 @@ USB:
  PA11  USB_DM
  PA12  USB_DP
 GPIO: (GPI_float, GPO_pushpull)
- PB0 (connect via 1.5kohm to PA12/USB_DP)
+ PA0 (connect via 1.5kohm to PA12/USB_DP)
 
 Floppy:
 -------
-GPIn: (GPI_float, active low, 5v tolerant)
- PB13    8: IDX
- PB4    26: TRK0
+GPIn: (GPI_float, active low)
+ PB6     8: IDX
+ PB7    26: TRK0
  PB8    28: WRPROT
-GPOut: (GPO_pushpull, active high)
- PA7     2: DENSEL
- PA6    12: SEL_A
- PA5    16: MTR_A
- PA4    18: DIR
- PA3    20: STEP
- PA1    24: DKWE
- PA0    32: SIDE
-TimerIn: (GPI_float, active low, 5v tolerant)
- PB6    30: DKRD (Timer4/1, CC1:DMA1/1)
-TimerOut: (AFO_pushpull, active high)
- PA2    22: DKWD (Timer2/3, UP:DMA1/2)
+GPOut: (GPO_opendrain or GPO_pushpull)
+ PB9     2: DENSEL
+ PB10   12: SEL_A
+ PB11   16: MTR_A
+ PB12   18: DIR
+ PB13   20: STEP
+ PB14   24: DKWE
+ PB15   32: SIDE
+TimerIn: (GPI_float, active low)
+ PB3    30: DKRD (Timer2/2, CC2:DMA1/7)
+TimerOut: (AFO_opendrain or AFO_pushpull)
+ PB4    22: DKWD (Timer3/1, UP:DMA1/3)
 
 Unused Pins:
 ------------
 All to be pulled high:
- PA8,13-15
- PB1-3,5,7,9-12,14-15
+ PA1-8,13-15
+ PB0-2,5
  PC0-15
 
 Floppy bus connections:
