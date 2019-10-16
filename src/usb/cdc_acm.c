@@ -22,7 +22,11 @@ static struct __packed line_coding {
     uint8_t nr_stop;
     uint8_t parity;
     uint8_t nr_data;
-} line_coding;
+} line_coding = { 
+    .baud = 9600,
+    .nr_stop = 0,
+    .parity = 0,
+    .nr_data = 8 };
 
 #if TRACE
 #define TRC printk
@@ -59,7 +63,7 @@ bool_t cdc_acm_handle_class_request(void)
     case CDC_GET_LINE_CODING: {
         struct line_coding *lc = (struct line_coding *)ep0.data;
         TRC("GET_LINE_CODING: ");
-        line_coding = *lc;
+        *lc = line_coding;
         dump_line_coding(lc);
         ep0.data_len = sizeof(*lc);
         break;

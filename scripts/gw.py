@@ -320,10 +320,11 @@ def main(argv):
 #  parser.add_argument("--total", type=float, default=8.0,
 #                      help="total length, seconds")
   parser.add_argument("file", help="in/out filename")
+  parser.add_argument("device", help="serial device")
   args = parser.parse_args(argv[1:])
 
   global ser
-  ser = serial.Serial("/dev/ttyACM0")
+  ser = serial.Serial(args.device)
   ser.send_break()
   ser.reset_input_buffer()
 
@@ -344,3 +345,4 @@ if __name__ == "__main__":
     main(sys.argv)
   except CmdError as error:
     print("Command Failed: %s" % error)
+    motor(False)
