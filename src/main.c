@@ -37,7 +37,7 @@ int main(void)
     board_init();
     delay_ms(200); /* 5v settle */
 
-    printk("\n** Greaseweazle v%s\n", FW_VER);
+    printk("\n** Greaseweazle v%s\n", fw_ver);
     printk("** Keir Fraser <keir.xen@gmail.com>\n");
     printk("** https://github.com/keirf/Greaseweazle\n\n");
 

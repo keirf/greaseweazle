@@ -1,6 +1,8 @@
 
+export FW_VER := 0.1
+
 PROJ = Greaseweazle
-VER = v0.0.1a
+VER := v$(FW_VER)
 
 SUBDIRS += src
 
@@ -16,19 +18,21 @@ clean:
 	$(MAKE) -f $(ROOT)/Rules.mk $@
 
 dist:
-	rm -rf $(PROJ)_*
-	mkdir -p $(PROJ)_$(VER)/reloader
+	rm -rf $(PROJ)-*
+	mkdir -p $(PROJ)-$(VER)/scripts
 	$(MAKE) clean
 	$(MAKE) all
-	cp -a $(PROJ)-$(VER).hex $(PROJ)_$(VER)/
+	cp -a $(PROJ)-$(VER).hex $(PROJ)-$(VER)/
 	$(MAKE) clean
-	cp -a COPYING $(PROJ)_$(VER)/
-	cp -a README.md $(PROJ)_$(VER)/
-#	cp -a RELEASE_NOTES $(PROJ)_$(VER)/
-	zip -r $(PROJ)_$(VER).zip $(PROJ)_$(VER)
+	cp -a COPYING $(PROJ)-$(VER)/
+	cp -a README.md $(PROJ)-$(VER)/
+	cp -a scripts/49-greaseweazle.rules $(PROJ)-$(VER)/scripts/.
+	cp -a scripts/gw.py $(PROJ)-$(VER)/
+#	cp -a RELEASE_NOTES $(PROJ)-$(VER)/
+	zip -r $(PROJ)-$(VER).zip $(PROJ)-$(VER)
 
 mrproper: clean
-	rm -rf $(PROJ)_*
+	rm -rf $(PROJ)-*
 
 endif
 

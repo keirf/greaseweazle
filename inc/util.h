@@ -9,8 +9,6 @@
  * See the file COPYING for more details, or visit <http://unlicense.org>.
  */
 
-#define FW_VER "0.0.1a"
-
 #ifndef NDEBUG
 #define ASSERT(p) do { if (!(p)) illegal(); } while (0)
 #else
@@ -133,6 +131,9 @@ void floppy_process(void);
 
 /* CRC-CCITT */
 uint16_t crc16_ccitt(const void *buf, size_t len, uint16_t crc);
+
+/* Build info. */
+extern const char fw_ver[];
 
 /* Text/data/BSS address ranges. */
 extern char _stext[], _etext[];

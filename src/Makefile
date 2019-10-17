@@ -1,5 +1,6 @@
 OBJS += arena.o
 OBJS += board.o
+OBJS += build_info.o
 OBJS += cancellation.o
 OBJS += crc.o
 OBJS += vectors.o
@@ -14,3 +15,6 @@ OBJS += floppy.o
 OBJS-$(debug) += console.o
 
 SUBDIRS += usb
+
+.PHONY: build_info.c
+build_info.o: CFLAGS += -DFW_VER="\"$(FW_VER)\""
