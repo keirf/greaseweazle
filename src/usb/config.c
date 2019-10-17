@@ -72,7 +72,7 @@ const uint8_t config_descriptor[] __aligned(2) = {
 /* CDC Data interface */
     0x09, /* 0 bLength */
     DESC_INTERFACE, /* 1 bDescriptorType */
-    0x01, /* 2 bInterfacecNumber */
+    0x01, /* 2 bInterfaceNumber */
     0x00, /* 3 bAlternateSetting */
     0x02, /* 4 bNumEndpoints */
     USB_CLASS_CDC_DATA, /* 5 bInterfaceClass */
