@@ -9,9 +9,6 @@
  * See the file COPYING for more details, or visit <http://unlicense.org>.
  */
 
-/* Full Speed Max Packet Size */
-#define USB_FS_MPS 64
-
 /* bRequest: Standard Request Codes */
 #define GET_STATUS          0
 #define CLEAR_FEATURE       1

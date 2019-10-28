@@ -739,10 +739,20 @@ struct usb {
 };
 
 struct usb_bufd {
-    uint32_t addr_tx;  /* 00: Transmission buffer address */
-    uint32_t count_tx; /* 04: Transmission byte count */
-    uint32_t addr_rx;  /* 08: Reception buffer address */
-    uint32_t count_rx; /* 0C: Reception byte count */
+    union {
+        struct {
+            uint32_t addr_tx;  /* 00: Transmission buffer address */
+            uint32_t count_tx; /* 04: Transmission byte count */
+            uint32_t addr_rx;  /* 08: Reception buffer address */
+            uint32_t count_rx; /* 0C: Reception byte count */
+        };
+        struct {
+            uint32_t addr_0;  /* 00: Double buffer #0 address */
+            uint32_t count_0; /* 04: Double buffer #0 byte count */
+            uint32_t addr_1;  /* 08: Double buffer #1 address */
+            uint32_t count_1; /* 0C: Double buffer #1 byte count */
+        };
+    };
 };
 
 #define USB_EPR_CTR_RX       (1u<<15)

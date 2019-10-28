@@ -100,8 +100,9 @@ static enum {
     ST_write_flux_drain,
 } floppy_state = ST_inactive;
 
-#define FLOPPY_EP 2
-#define FLOPPY_MPS 64
+/* USB Endpoints for CDC ACM communications. */
+#define EP_RX 2
+#define EP_TX 3
 
 static uint8_t u_buf[8192];
 static uint32_t u_cons, u_prod;
@@ -361,9 +362,9 @@ static void auto_off_arm(void)
 static void floppy_end_command(void *ack, unsigned int ack_len)
 {
     auto_off_arm();
-    usb_write(FLOPPY_EP, ack, ack_len);
+    usb_write(EP_TX, ack, ack_len);
     u_cons = u_prod = 0;
-    if (ack_len == FLOPPY_MPS) {
+    if (ack_len == USB_FS_MPS) {
         ASSERT(floppy_state == ST_command_wait);
         floppy_state = ST_zlp;
     }
@@ -382,7 +383,7 @@ static struct {
     bool_t write_finished;
     unsigned int packet_len;
     unsigned int nr_samples;
-    uint8_t packet[FLOPPY_MPS];
+    uint8_t packet[USB_FS_MPS];
 } rw;
 
 static struct {
@@ -522,11 +523,11 @@ static void floppy_read(void)
         rdata_encode_flux();
         avail = (uint32_t)(u_prod - u_cons);
 
-    } else if ((avail < FLOPPY_MPS)
+    } else if ((avail < USB_FS_MPS)
                && !rw.packet_ready
-               && ep_tx_ready(FLOPPY_EP)) {
+               && ep_tx_ready(EP_TX)) {
 
-        memset(rw.packet, 0, FLOPPY_MPS);
+        memset(rw.packet, 0, USB_FS_MPS);
         make_read_packet(avail);
         floppy_state = ST_command_wait;
         floppy_end_command(rw.packet, avail+1);
@@ -538,18 +539,18 @@ static void floppy_read(void)
     if (avail > sizeof(u_buf)) {
         /* Overflow */
         printk("OVERFLOW %u %u %u %u\n", u_cons, u_prod,
-               rw.packet_ready, ep_tx_ready(FLOPPY_EP));
+               rw.packet_ready, ep_tx_ready(EP_TX));
         floppy_flux_end();
         rw.status = ACK_FLUX_OVERFLOW;
         floppy_state = ST_read_flux_drain;
         u_cons = u_prod = 0;
     }
 
-    if (!rw.packet_ready && (avail >= FLOPPY_MPS))
-        make_read_packet(FLOPPY_MPS);
+    if (!rw.packet_ready && (avail >= USB_FS_MPS))
+        make_read_packet(USB_FS_MPS);
 
-    if (rw.packet_ready && ep_tx_ready(FLOPPY_EP)) {
-        usb_write(FLOPPY_EP, rw.packet, FLOPPY_MPS);
+    if (rw.packet_ready && ep_tx_ready(EP_TX)) {
+        usb_write(EP_TX, rw.packet, USB_FS_MPS);
         rw.packet_ready = FALSE;
     }
 }
@@ -627,10 +628,10 @@ static void wdata_decode_flux(void)
 
 static void floppy_process_write_packet(void)
 {
-    int len = ep_rx_ready(FLOPPY_EP);
+    int len = ep_rx_ready(EP_RX);
 
     if ((len >= 0) && !rw.packet_ready) {
-        usb_read(FLOPPY_EP, rw.packet, len);
+        usb_read(EP_RX, rw.packet, len);
         rw.packet_ready = TRUE;
         rw.packet_len = len;
     }
@@ -734,7 +735,7 @@ static void floppy_write_check_underflow(void)
 
         /* Underflow */
         printk("UNDERFLOW %u %u %u %u\n", u_cons, u_prod,
-               rw.packet_ready, ep_rx_ready(FLOPPY_EP));
+               rw.packet_ready, ep_rx_ready(EP_RX));
         floppy_flux_end();
         rw.status = ACK_FLUX_UNDERFLOW;
         floppy_state = ST_write_flux_drain;
@@ -780,7 +781,7 @@ static void floppy_write_drain(void)
     }
 
     /* Wait for space to write ACK packet. */
-    if (!ep_tx_ready(FLOPPY_EP))
+    if (!ep_tx_ready(EP_TX))
         return;
 
     /* ACK with Status byte. */
@@ -892,27 +893,30 @@ void floppy_process(void)
         floppy_motor(FALSE);
         drive_deselect();
         auto_off.armed = FALSE;
+        gpio_write_pin(gpioa, 0, LOW);
+        delay_ms(100); /* XXX */
+        gpio_write_pin(gpioa, 0, HIGH);
     }
 
     switch (floppy_state) {
 
     case ST_command_wait:
 
-        len = ep_rx_ready(FLOPPY_EP);
+        len = ep_rx_ready(EP_RX);
         if ((len >= 0) && (len < (sizeof(u_buf)-u_prod))) {
-            usb_read(FLOPPY_EP, &u_buf[u_prod], len);
+            usb_read(EP_RX, &u_buf[u_prod], len);
             u_prod += len;
         }
 
-        if ((u_prod >= 2) && (u_prod >= u_buf[1]) && ep_tx_ready(FLOPPY_EP)) {
+        if ((u_prod >= 2) && (u_prod >= u_buf[1]) && ep_tx_ready(EP_TX)) {
             process_command();
         }
 
         break;
 
     case ST_zlp:
-        if (ep_tx_ready(FLOPPY_EP)) {
-            usb_write(FLOPPY_EP, NULL, 0);
+        if (ep_tx_ready(EP_TX)) {
+            usb_write(EP_TX, NULL, 0);
             floppy_state = ST_command_wait;
         }
         break;

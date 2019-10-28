@@ -122,6 +122,7 @@ int ep_rx_ready(uint8_t ep);
 void usb_read(uint8_t ep, void *buf, uint32_t len);
 bool_t ep_tx_ready(uint8_t ep);
 void usb_write(uint8_t ep, const void *buf, uint32_t len);
+#define USB_FS_MPS 64 /* Full Speed Max Packet Size */
 
 /* Floppy */
 void floppy_init(void);

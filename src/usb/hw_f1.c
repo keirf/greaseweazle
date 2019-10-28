@@ -11,11 +11,15 @@
 
 static uint16_t buf_end;
 
-/* We track which endpoints have been marked CTR (Correct TRansfer).
- * On receive side, checking EPR_STAT_RX == NAK races update of the
- * Buffer Descriptor's COUNT_RX by the hardware. */
-static bool_t _ep_rx_ready[8];
-static bool_t _ep_tx_ready[8];
+static struct {
+    /* We track which endpoints have been marked CTR (Correct TRansfer). On 
+     * receive side, checking EPR_STAT_RX == NAK races update of the Buffer 
+     * Descriptor's COUNT_RX by the hardware. */
+    bool_t rx_ready;
+    bool_t tx_ready;
+    /* Is this a double-buffered BULK endpoint? */
+    bool_t dbl_buf;
+} eps[8];
 
 void usb_init(void)
 {
@@ -60,33 +64,60 @@ static void dump_ep(uint8_t ep)
 
 int ep_rx_ready(uint8_t ep)
 {
-    return _ep_rx_ready[ep] ? usb_bufd[ep].count_rx & 0x3ff : -1;
+    uint16_t count, epr;
+    volatile struct usb_bufd *bd;
+
+    if (!eps[ep].rx_ready)
+        return -1;
+
+    bd = &usb_bufd[ep];
+    epr = usb->epr[ep];
+
+    count = !(epr & USB_EPR_EP_KIND_DBL_BUF) ? bd->count_rx
+        : (epr & 0x0040) ? bd->count_1 : bd->count_0;
+
+    return count & 0x3ff;
 }
 
 bool_t ep_tx_ready(uint8_t ep)
 {
-    return _ep_tx_ready[ep];
+    return eps[ep].tx_ready;
 }
 
 void usb_read(uint8_t ep, void *buf, uint32_t len)
 {
-    unsigned int i, base = (uint16_t)usb_bufd[ep].addr_rx >> 1;
-    uint16_t epr, *p = buf;
+    unsigned int i, base;
+    uint16_t epr = usb->epr[ep], *p = buf;
+    volatile struct usb_bufd *bd = &usb_bufd[ep];
+
+    if (epr & USB_EPR_EP_KIND_DBL_BUF) {
+        base = (epr & 0x0040) ? bd->addr_1 : bd->addr_0;
+        /* If HW is pointing at same buffer as us, we have to process both 
+         * buffers, and should defer clearing rx_ready until we've done so. */
+        if ((epr ^ (epr>>8)) & 0x40)
+            eps[ep].rx_ready = FALSE;
+    } else {
+        base = bd->addr_rx;
+        eps[ep].rx_ready = FALSE;
+    }
+    base = (uint16_t)base >> 1;
 
     for (i = 0; i < len/2; i++)
         *p++ = usb_buf[base + i];
     if (len&1)
         *(uint8_t *)p = usb_buf[base + i];
 
-    /* Clear CTR_RX and set status NAK->VALID. */
-    epr = usb->epr[ep];
-    epr &= 0x370f;
-    epr |= 0x0080;
-    epr ^= USB_EPR_STAT_RX(USB_STAT_VALID);
+    if (epr & USB_EPR_EP_KIND_DBL_BUF) {
+        /* Toggle SW_BUF. Status remains VALID at all times. */
+        epr &= 0x070f; /* preserve rw & t fields */
+        epr |= 0x80c0; /* preserve rc_w0 fields, toggle SW_BUF */
+    } else {
+        /* Set status NAK->VALID. */
+        epr &= 0x370f; /* preserve rw & t fields (except STAT_RX) */
+        epr |= 0x8080; /* preserve rc_w0 fields */
+        epr ^= USB_EPR_STAT_RX(USB_STAT_VALID); /* modify STAT_RX */
+    }
     usb->epr[ep] = epr;
-
-    /* Await next CTR_RX notification. */
-    _ep_rx_ready[ep] = FALSE;
 }
 
 void usb_write(uint8_t ep, const void *buf, uint32_t len)
@@ -110,7 +141,7 @@ void usb_write(uint8_t ep, const void *buf, uint32_t len)
     usb->epr[ep] = epr;
 
     /* Await next CTR_TX notification. */
-    _ep_tx_ready[ep] = FALSE;
+    eps[ep].tx_ready = FALSE;
 }
 
 static void usb_write_ep0(void)
@@ -147,10 +178,12 @@ static void usb_stall(uint8_t ep)
 void usb_configure_ep(uint8_t ep, uint8_t type, uint32_t size)
 {
     uint16_t old_epr, new_epr;
-    bool_t in;
+    bool_t in, dbl_buf;
+    volatile struct usb_bufd *bd;
 
     in = !!(ep & 0x80);
     ep &= 0x7f;
+    bd = &usb_bufd[ep];
 
     old_epr = usb->epr[ep];
 
@@ -158,24 +191,40 @@ void usb_configure_ep(uint8_t ep, uint8_t type, uint32_t size)
      * Clears: CTR_RX and CTR_TX. */
     new_epr = USB_EPR_EP_TYPE(type) | USB_EPR_EA(ep);
 
+    dbl_buf = (size > USB_FS_MPS);
+    if (dbl_buf) {
+        ASSERT(type == USB_EP_TYPE_BULK);
+        ASSERT(size == 2*USB_FS_MPS);
+        new_epr |= USB_EPR_EP_KIND_DBL_BUF;
+    }
+
     if (in || (ep == 0)) {
-        usb_bufd[ep].addr_tx = buf_end;
+        bd->addr_tx = buf_end;
         buf_end += size;
-        usb_bufd[ep].count_tx = 0;
+        bd->count_tx = 0;
         /* TX: Clears data toggle and sets status to NAK. */
         new_epr |= (old_epr & 0x0070) ^ USB_EPR_STAT_TX(USB_STAT_NAK);
         /* IN Endpoint is immediately ready to transmit. */
-        _ep_tx_ready[ep] = TRUE;
+        eps[ep].tx_ready = TRUE;
     }
 
     if (!in) {
-        usb_bufd[ep].addr_rx = buf_end;
-        buf_end += size;
-        usb_bufd[ep].count_rx = 0x8400; /* USB_FS_MPS = 64 bytes */
+        if (dbl_buf) {
+            bd->addr_0 = buf_end;
+            bd->addr_1 = buf_end + size/2;
+            bd->count_0 = bd->count_1 = 0x8400; /* USB_FS_MPS = 64 bytes */
+            buf_end += size;
+            /* RX: Clears SW_BUF. */
+            new_epr |= old_epr & 0x0040;
+        } else {
+            bd->addr_rx = buf_end;
+            buf_end += size;
+            bd->count_rx = 0x8400; /* USB_FS_MPS = 64 bytes */
+        }
         /* RX: Clears data toggle and sets status to VALID. */
         new_epr |= (old_epr & 0x7000) ^ USB_EPR_STAT_RX(USB_STAT_VALID);
         /* OUT Endpoint must wait for a packet from the Host. */
-        _ep_rx_ready[ep] = FALSE;
+        eps[ep].rx_ready = FALSE;
     }
 
     usb->epr[ep] = new_epr;
@@ -186,9 +235,8 @@ static void handle_reset(void)
     /* Reinitialise floppy subsystem. */
     floppy_reset();
 
-    /* All Endpoints in invalid Tx/Rx state. */
-    memset(_ep_rx_ready, 0, sizeof(_ep_rx_ready));
-    memset(_ep_tx_ready, 0, sizeof(_ep_tx_ready));
+    /* Clear endpoint soft state. */
+    memset(eps, 0, sizeof(eps));
 
     /* Clear any in-progress Control Transfer. */
     ep0.data_len = -1;
@@ -202,24 +250,28 @@ static void handle_reset(void)
     usb->istr &= ~USB_ISTR_RESET;
 }
 
+static void clear_ctr(uint8_t ep, uint16_t ctr)
+{
+    uint16_t epr = usb->epr[ep];
+    epr &= 0x070f; /* preserve rw & t fields */
+    epr |= 0x8080; /* preserve rc_w0 fields */
+    epr &= ~ctr;   /* clear specified rc_w0 field */
+    usb->epr[ep] = epr;
+}
+
 static void handle_rx_transfer(uint8_t ep)
 {
-    uint16_t epr;
+    uint16_t epr = usb->epr[ep];
     bool_t ready;
 
-    /* Clear CTR_RX. */
-    epr = usb->epr[ep];
-    epr &= 0x070f;
-    epr |= 0x0080;
-    usb->epr[ep] = epr;
-    _ep_rx_ready[ep] = TRUE;
+    clear_ctr(ep, USB_EPR_CTR_RX);
+    eps[ep].rx_ready = TRUE;
 
     /* We only handle Control Transfers here (endpoint 0). */
     if (ep != 0)
         return;
 
     ready = FALSE;
-    epr = usb->epr[ep];
 
     if (epr & USB_EPR_SETUP) {
 
@@ -291,14 +343,8 @@ static void handle_rx_transfer(uint8_t ep)
 
 static void handle_tx_transfer(uint8_t ep)
 {
-    uint16_t epr;
-
-    /* Clear CTR_TX. */
-    epr = usb->epr[ep];
-    epr &= 0x070f;
-    epr |= 0x8000;
-    usb->epr[ep] = epr;
-    _ep_tx_ready[ep] = TRUE;
+    clear_ctr(ep, USB_EPR_CTR_TX);
+    eps[ep].tx_ready = TRUE;
 
     /* We only handle Control Transfers here (endpoint 0). */
     if (ep != 0)

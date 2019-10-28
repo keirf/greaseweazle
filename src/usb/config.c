@@ -90,7 +90,7 @@ const uint8_t config_descriptor[] __aligned(2) = {
 /* Data IN Endpoint descriptor */
     0x07, /* 0 bLength */
     DESC_ENDPOINT, /* 1 bDescriptorType */
-    0x82, /* 2 bEndpointAddress */
+    0x83, /* 2 bEndpointAddress */
     0x02, /* 3 bmAttributes */
     0x40, /* 4 wMaxPacketSize - Low byte */
     0x00, /* 5 wMaxPacketSize - High byte */
