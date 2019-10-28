@@ -122,26 +122,46 @@ void usb_read(uint8_t ep, void *buf, uint32_t len)
 
 void usb_write(uint8_t ep, const void *buf, uint32_t len)
 {
-    unsigned int i, base = (uint16_t)usb_bufd[ep].addr_tx >> 1;
-    uint16_t epr;
+    unsigned int i, base;
+    uint16_t epr = usb->epr[ep];
     const uint16_t *p = buf;
+    volatile struct usb_bufd *bd = &usb_bufd[ep];
+
+    if (epr & USB_EPR_EP_KIND_DBL_BUF) {
+        if (epr & 0x4000) {
+            base = bd->addr_1;
+            bd->count_1 = len;
+        } else {
+            base = bd->addr_0;
+            bd->count_0 = len;
+        }
+        /* If HW is pointing at same buffer as us, we have space for two
+         * packets, and do not need to clear tx_ready. */
+        if ((epr ^ (epr>>8)) & 0x40)
+            eps[ep].tx_ready = FALSE;
+    } else {
+        base = bd->addr_tx;
+        bd->count_tx = len;
+        eps[ep].tx_ready = FALSE;
+    }
+    base = (uint16_t)base >> 1;
 
     for (i = 0; i < len/2; i++)
         usb_buf[base + i] = *p++;
     if (len&1)
         usb_buf[base + i] = *(const uint8_t *)p;
 
-    usb_bufd[ep].count_tx = len;
-
-    /* Set status NAK->VALID. */
-    epr = usb->epr[ep];
-    epr &= 0x073f;
-    epr |= 0x8080;
-    epr ^= USB_EPR_STAT_TX(USB_STAT_VALID);
+    if (epr & USB_EPR_EP_KIND_DBL_BUF) {
+        /* Toggle SW_BUF. Status remains VALID at all times. */
+        epr &= 0x070f; /* preserve rw & t fields */
+        epr |= 0xc080; /* preserve rc_w0 fields, toggle SW_BUF */
+    } else {
+        /* Set status NAK->VALID. */
+        epr &= 0x073f; /* preserve rw & t fields (except STAT_TX) */
+        epr |= 0x8080; /* preserve rc_w0 fields */
+        epr ^= USB_EPR_STAT_TX(USB_STAT_VALID); /* modify STAT_TX */
+    }
     usb->epr[ep] = epr;
-
-    /* Await next CTR_TX notification. */
-    eps[ep].tx_ready = FALSE;
 }
 
 static void usb_write_ep0(void)
@@ -193,27 +213,36 @@ void usb_configure_ep(uint8_t ep, uint8_t type, uint32_t size)
 
     dbl_buf = (size > USB_FS_MPS);
     if (dbl_buf) {
+        ASSERT(ep != 0);
         ASSERT(type == USB_EP_TYPE_BULK);
         ASSERT(size == 2*USB_FS_MPS);
         new_epr |= USB_EPR_EP_KIND_DBL_BUF;
+        bd->addr_0 = buf_end;
+        bd->addr_1 = buf_end + size/2;
+        buf_end += size;
     }
 
     if (in || (ep == 0)) {
-        bd->addr_tx = buf_end;
-        buf_end += size;
-        bd->count_tx = 0;
-        /* TX: Clears data toggle and sets status to NAK. */
-        new_epr |= (old_epr & 0x0070) ^ USB_EPR_STAT_TX(USB_STAT_NAK);
+        if (dbl_buf) {
+            bd->count_0 = bd->count_1 = 0;
+            /* TX: Clears SW_BUF. */
+            new_epr |= old_epr & 0x4000;
+            /* TX: Clears data toggle and sets status to VALID. */
+            new_epr |= (old_epr & 0x0070) ^ USB_EPR_STAT_TX(USB_STAT_VALID);
+        } else {
+            bd->addr_tx = buf_end;
+            buf_end += size;
+            bd->count_tx = 0;
+            /* TX: Clears data toggle and sets status to NAK. */
+            new_epr |= (old_epr & 0x0070) ^ USB_EPR_STAT_TX(USB_STAT_NAK);
+        }
         /* IN Endpoint is immediately ready to transmit. */
         eps[ep].tx_ready = TRUE;
     }
 
     if (!in) {
         if (dbl_buf) {
-            bd->addr_0 = buf_end;
-            bd->addr_1 = buf_end + size/2;
             bd->count_0 = bd->count_1 = 0x8400; /* USB_FS_MPS = 64 bytes */
-            buf_end += size;
             /* RX: Clears SW_BUF. */
             new_epr |= old_epr & 0x0040;
         } else {
