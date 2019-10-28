@@ -17,8 +17,6 @@ static struct {
      * Descriptor's COUNT_RX by the hardware. */
     bool_t rx_ready;
     bool_t tx_ready;
-    /* Is this a double-buffered BULK endpoint? */
-    bool_t dbl_buf;
 } eps[8];
 
 void usb_init(void)
@@ -225,8 +223,8 @@ void usb_configure_ep(uint8_t ep, uint8_t type, uint32_t size)
     if (in || (ep == 0)) {
         if (dbl_buf) {
             bd->count_0 = bd->count_1 = 0;
-            /* TX: Clears SW_BUF. */
-            new_epr |= old_epr & 0x4000;
+            /* TX: Sets SW_BUF. */
+            new_epr |= (old_epr & 0x4000) ^ 0x4000;
             /* TX: Clears data toggle and sets status to VALID. */
             new_epr |= (old_epr & 0x0070) ^ USB_EPR_STAT_TX(USB_STAT_VALID);
         } else {
