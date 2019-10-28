@@ -9,6 +9,9 @@
  * See the file COPYING for more details, or visit <http://unlicense.org>.
  */
 
+/* Full Speed Max Packet Size */
+#define USB_FS_MPS 64
+
 /* bRequest: Standard Request Codes */
 #define GET_STATUS          0
 #define CLEAR_FEATURE       1
@@ -56,6 +59,7 @@ extern struct ep0 {
     struct {
         const uint8_t *p;
         int todo;
+        bool_t trunc;
     } tx;
 } ep0;
 #define ep0_data_out() (!(ep0.req.bmRequestType & 0x80))

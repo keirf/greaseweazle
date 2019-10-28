@@ -113,26 +113,26 @@ void usb_write(uint8_t ep, const void *buf, uint32_t len)
     _ep_tx_ready[ep] = FALSE;
 }
 
-static void usb_continue_write_ep0(void)
+static void usb_write_ep0(void)
 {
     uint32_t len;
 
     if ((ep0.tx.todo < 0) || !ep_tx_ready(0))
         return;
 
-    len = min_t(uint32_t, ep0.tx.todo, 64);
+    len = min_t(uint32_t, ep0.tx.todo, USB_FS_MPS);
     usb_write(0, ep0.tx.p, len);
 
-    if ((ep0.tx.todo -= len) == 0)
-        ep0.tx.todo = -1;
     ep0.tx.p += len;
-}
+    ep0.tx.todo -= len;
 
-static void usb_start_write_ep0(const void *buf, uint32_t len)
-{
-    ep0.tx.p = buf;
-    ep0.tx.todo = len;
-    usb_continue_write_ep0();
+    if (ep0.tx.todo == 0) {
+        /* USB Spec 1.1, Section 5.5.3: Data stage of a control transfer is
+         * complete when we have transferred the exact amount of data specified
+         * during Setup *or* transferred a short/zero packet. */
+        if (!ep0.tx.trunc || (len < USB_FS_MPS))
+            ep0.tx.todo = -1;
+    }
 }
 
 static void usb_stall(uint8_t ep)
@@ -171,7 +171,7 @@ void usb_configure_ep(uint8_t ep, uint8_t type, uint32_t size)
     if (!in) {
         usb_bufd[ep].addr_rx = buf_end;
         buf_end += size;
-        usb_bufd[ep].count_rx = 0x8400; /* 64 bytes */
+        usb_bufd[ep].count_rx = 0x8400; /* USB_FS_MPS = 64 bytes */
         /* RX: Clears data toggle and sets status to VALID. */
         new_epr |= (old_epr & 0x7000) ^ USB_EPR_STAT_RX(USB_STAT_VALID);
         /* OUT Endpoint must wait for a packet from the Host. */
@@ -197,7 +197,7 @@ static void handle_reset(void)
     /* Prepare for Enumeration: Set up Endpoint 0 at Address 0. */
     pending_addr = 0;
     buf_end = 64;
-    usb_configure_ep(0, USB_EP_TYPE_CONTROL, 64);
+    usb_configure_ep(0, USB_EP_TYPE_CONTROL, USB_FS_MPS);
     usb->daddr = USB_DADDR_EF | USB_DADDR_ADD(0);
     usb->istr &= ~USB_ISTR_RESET;
 }
@@ -253,6 +253,7 @@ static void handle_rx_transfer(uint8_t ep)
 
         /* IN Control Transfer: Status from Host. */
         usb_read(ep, NULL, 0);
+        ep0.tx.todo = -1;
         ep0.data_len = -1; /* Complete */
 
     }
@@ -271,12 +272,18 @@ static void handle_rx_transfer(uint8_t ep)
     } else if (ep0_data_in()) {
 
         /* IN Control Transfer: Send Data to Host. */
-        usb_start_write_ep0(ep0.data, ep0.data_len);
+        ep0.tx.p = ep0.data;
+        ep0.tx.todo = ep0.data_len;
+        ep0.tx.trunc = (ep0.data_len < ep0.req.wLength);
+        usb_write_ep0();
 
     } else {
 
         /* OUT Control Transfer: Send Status to Host. */
-        usb_start_write_ep0(NULL, 0);
+        ep0.tx.p = NULL;
+        ep0.tx.todo = 0;
+        ep0.tx.trunc = FALSE;
+        usb_write_ep0();
         ep0.data_len = -1; /* Complete */
 
     }
@@ -297,9 +304,9 @@ static void handle_tx_transfer(uint8_t ep)
     if (ep != 0)
         return;
 
-    usb_continue_write_ep0();
+    usb_write_ep0();
 
-    if (pending_addr) {
+    if (pending_addr && (ep0.tx.todo == -1)) {
         /* We have just completed the Status stage of a SET_ADDRESS request. 
          * Now is the time to apply the address update. */
         usb->daddr = USB_DADDR_EF | USB_DADDR_ADD(pending_addr);

@@ -82,9 +82,15 @@ static struct dma_ring {
     uint16_t buf[512];
 } dma;
 
+static struct {
+    time_t deadline;
+    bool_t armed;
+} auto_off;
+
 static enum {
     ST_inactive,
     ST_command_wait,
+    ST_zlp,
     ST_read_flux_wait_index,
     ST_read_flux,
     ST_read_flux_drain,
@@ -110,7 +116,7 @@ static struct delay_params {
     .step_delay = 3,
     .seek_settle = 15,
     .motor_delay = 750,
-    .auto_off = 3000
+    .auto_off = 10000
 };
 
 static void step_one_out(void)
@@ -224,6 +230,7 @@ void floppy_reset(void)
     unsigned int i;
 
     floppy_state = ST_inactive;
+    auto_off.armed = FALSE;
 
     floppy_flux_end();
 
@@ -344,6 +351,23 @@ const static struct __packed gw_info {
     .max_rev = 7, .max_cmd = CMD_GET_READ_INFO,
     .sample_freq = SYSCLK_MHZ * 1000000u
 };
+
+static void auto_off_arm(void)
+{
+    auto_off.armed = TRUE;
+    auto_off.deadline = time_now() + time_ms(delay_params.auto_off);
+}
+
+static void floppy_end_command(void *ack, unsigned int ack_len)
+{
+    auto_off_arm();
+    usb_write(FLOPPY_EP, ack, ack_len);
+    u_cons = u_prod = 0;
+    if (ack_len == FLOPPY_MPS) {
+        ASSERT(floppy_state == ST_command_wait);
+        floppy_state = ST_zlp;
+    }
+}
 
 /*
  * READ PATH
@@ -504,8 +528,8 @@ static void floppy_read(void)
 
         memset(rw.packet, 0, FLOPPY_MPS);
         make_read_packet(avail);
-        usb_write(FLOPPY_EP, rw.packet, avail+1);
-        floppy_configured();
+        floppy_state = ST_command_wait;
+        floppy_end_command(rw.packet, avail+1);
         drive_deselect();
         return; /* FINISHED */
 
@@ -761,10 +785,8 @@ static void floppy_write_drain(void)
 
     /* ACK with Status byte. */
     u_buf[0] = rw.status;
-    usb_write(FLOPPY_EP, u_buf, 1);
-
-    /* Reset for next command. */
-    floppy_configured();
+    floppy_state = ST_command_wait;
+    floppy_end_command(u_buf, 1);
     drive_deselect();
 }
 
@@ -773,6 +795,8 @@ static void process_command(void)
     uint8_t cmd = u_buf[0];
     uint8_t len = u_buf[1];
     uint8_t resp_sz = 2;
+
+    auto_off_arm();
 
     switch (cmd) {
     case CMD_GET_INFO: {
@@ -845,7 +869,7 @@ static void process_command(void)
 
     u_buf[1] = ACK_OKAY;
 out:
-    usb_write(FLOPPY_EP, u_buf, resp_sz);
+    floppy_end_command(u_buf, resp_sz);
     return;
 
 bad_command:
@@ -863,6 +887,13 @@ void floppy_process(void)
 {
     int len;
 
+    if (auto_off.armed && (time_since(auto_off.deadline) >= 0)) {
+        floppy_flux_end();
+        floppy_motor(FALSE);
+        drive_deselect();
+        auto_off.armed = FALSE;
+    }
+
     switch (floppy_state) {
 
     case ST_command_wait:
@@ -874,11 +905,16 @@ void floppy_process(void)
         }
 
         if ((u_prod >= 2) && (u_prod >= u_buf[1]) && ep_tx_ready(FLOPPY_EP)) {
-            /* Process command and reset for next command. */
             process_command();
-            u_cons = u_prod = 0;
         }
 
+        break;
+
+    case ST_zlp:
+        if (ep_tx_ready(FLOPPY_EP)) {
+            usb_write(FLOPPY_EP, NULL, 0);
+            floppy_state = ST_command_wait;
+        }
         break;
 
     case ST_read_flux_wait_index:

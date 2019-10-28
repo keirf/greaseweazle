@@ -100,7 +100,7 @@ const uint8_t config_descriptor[] __aligned(2) = {
 const char *string_descriptors[] = {
     "\x09\x04", /* LANGID: US English */
     "Keir Fraser",
-    "GreaseWeazle",
+    "Greaseweazle",
 };
 
 /*
