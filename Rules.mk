@@ -3,6 +3,8 @@ CC = $(TOOL_PREFIX)gcc
 OBJCOPY = $(TOOL_PREFIX)objcopy
 LD = $(TOOL_PREFIX)ld
 
+PYTHON = python
+
 ifneq ($(VERBOSE),1)
 TOOL_PREFIX := @$(TOOL_PREFIX)
 endif
@@ -16,6 +18,10 @@ FLAGS += -Wno-unused-value
 
 ifneq ($(debug),y)
 FLAGS += -DNDEBUG
+endif
+
+ifeq ($(bootloader),y)
+FLAGS += -DBOOTLOADER=1
 endif
 
 FLAGS += -MMD -MF .$(@F).d
@@ -84,7 +90,7 @@ build.o: $(OBJS)
 	$(CC) $(AFLAGS) -c $< -o $@
 
 clean:: $(addprefix _clean_,$(SUBDIRS) $(SUBDIRS-n) $(SUBDIRS-))
-	rm -f *~ *.o *.elf *.hex *.bin *.ld $(DEPS)
+	rm -f *.orig *.rej *~ *.o *.elf *.hex *.bin *.ld $(DEPS)
 _clean_%: FORCE
 	$(MAKE) -f $(ROOT)/Rules.mk -C $* clean
 

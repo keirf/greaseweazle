@@ -1,17 +1,18 @@
+RPATH = ../src
+
 OBJS += board.o
 OBJS += build_info.o
+OBJS += crc.o
 OBJS += vectors.o
-OBJS += main.o
+OBJS += fw_update.o
 OBJS += string.o
 OBJS += stm32f10x.o
-OBJS += time.o
-OBJS += timer.o
 OBJS += util.o
-OBJS += floppy.o
+OBJS += fpec.o
 
 OBJS-$(debug) += console.o
 
 SUBDIRS += usb
 
-.PHONY: build_info.c
+.PHONY: $(RPATH)/build_info.c
 build_info.o: CFLAGS += -DFW_MAJOR=$(FW_MAJOR) -DFW_MINOR=$(FW_MINOR)

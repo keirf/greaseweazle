@@ -9,21 +9,6 @@
  * See the file COPYING for more details, or visit <http://unlicense.org>.
  */
 
-void filename_extension(const char *filename, char *extension, size_t size)
-{
-    const char *p;
-    unsigned int i;
-
-    extension[0] = '\0';
-    if ((p = strrchr(filename, '.')) == NULL)
-        return;
-
-    for (i = 0; i < (size-1); i++)
-        if ((extension[i] = tolower(p[i+1])) == '\0')
-            break;
-    extension[i] = '\0';
-}
-
 void *memset(void *s, int c, size_t n)
 {
     char *p = s;
@@ -148,17 +133,6 @@ int strncmp(const char *s1, const char *s2, size_t n)
     return 0;
 }
 
-char *strrchr(const char *s, int c)
-{
-    char *p = NULL;
-    int d;
-    while ((d = *s)) {
-        if (d == c) p = (char *)s;
-        s++;
-    }
-    return p;
-}
-
 char *strcpy(char *dest, const char *src)
 {
     char *p = dest;
@@ -166,72 +140,6 @@ char *strcpy(char *dest, const char *src)
     while ((*p++ = *q++) != '\0')
         continue;
     return dest;
-}
-
-int tolower(int c)
-{
-    if ((c >= 'A') && (c <= 'Z'))
-        c += 'a' - 'A';
-    return c;
-}
-
-int isspace(int c)
-{
-    return (c == ' ') || (c == '\t') || (c == '\n') || (c == '\r')
-        || (c == '\f') || (c == '\v');
-}
-
-long int strtol(const char *nptr, char **endptr, int base)
-{
-    long int val = 0;
-    const char *p = nptr;
-    bool_t is_neg = FALSE;
-    int c;
-
-    /* Optional whitespace prefix. */
-    while (isspace(*p))
-        p++;
-    c = tolower(*p);
-
-    /* Optional sign prefix: +, -. */
-    if ((c == '+') || (c == '-')) {
-        is_neg = (c == '-');
-        c = tolower(*++p);
-    }
-
-    /* Optional base prefix: 0, 0x. */
-    if (c == '0') {
-        if (base == 0)
-            base = 8;
-        c = tolower(*++p);
-        if (c == 'x') {
-            if (base == 0)
-                base = 16;
-            if (base != 16)
-                goto out;
-            c = tolower(*++p);
-        }
-    }
-
-    /* Digits. */
-    for (;;) {
-        /* Convert c to a digit [0123456789abcdefghijklmnopqrstuvwxyz]. */
-        if ((c >= '0') && (c <= '9'))
-            c -= '0';
-        else if ((c >= 'a') && (c <= 'z'))
-            c -= 'a' - 10;
-        else
-            break;
-        if (c >= base)
-            break;
-        val = (val * base) + c;
-        c = tolower(*++p);
-    }
-
-out:
-    if (endptr)
-        *endptr = (char *)p;
-    return is_neg ? -val : val;
 }
 
 /*

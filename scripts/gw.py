@@ -7,8 +7,11 @@
 # This is free and unencumbered software released into the public domain.
 # See the file COPYING for more details, or visit <http://unlicense.org>.
 
+import crcmod.predefined
 import sys, struct, argparse, serial, collections
 from timeit import default_timer as timer
+
+from greaseweazle import version
 
 # 40MHz
 scp_freq = 40000000
@@ -24,6 +27,9 @@ CMD_WRITE_FLUX      = 7
 CMD_GET_FLUX_STATUS = 8
 CMD_GET_READ_INFO   = 9
 
+# Bootloader-specific:
+CMD_UPDATE          = 1
+
 ACK_OKAY            = 0
 ACK_BAD_COMMAND     = 1
 ACK_NO_INDEX        = 2
@@ -38,7 +44,8 @@ ack_str = [
   "Flux Overflow", "Flux Underflow", "Disk is Write Protected" ]
 
 class CmdError(Exception):
-  def __init__(self, code):
+  def __init__(self, cmd, code):
+    self.cmd = cmd
     self.code = code
   def __str__(self):
     if self.code <= ACK_MAX:
@@ -50,7 +57,7 @@ def send_cmd(cmd):
   (c,r) = struct.unpack("2B", ser.read(2))
   assert c == cmd[0]
   if r != 0:
-    raise CmdError(r)
+    raise CmdError(c,r)
 
 def get_fw_info():
   send_cmd(struct.pack("3B", CMD_GET_INFO, 3, 0))
@@ -300,11 +307,33 @@ def write(args):
     write_flux(flux)
   print()
 
+def update(args):
+  with open(args.file, "rb") as f:
+    dat = f.read()
+  (sig, maj, min, pad1, pad2, crc) = struct.unpack(">2s4BH", dat[-8:])
+  if len(dat) & 3 != 0 or sig != b'GW' or pad1 != 0 or pad2 != 0:
+    print("%s: Bad update file" % (args.file))
+    return
+  crc16 = crcmod.predefined.Crc('crc-ccitt-false')
+  crc16.update(dat)
+  if crc16.crcValue != 0:
+    print("%s: Bad CRC" % (args.file))
+  print("Updating to v%u.%u..." % (maj, min))
+  send_cmd(struct.pack("<2BI", CMD_UPDATE, 6, len(dat)))
+  ser.write(dat)
+  (ack,) = struct.unpack("B", ser.read(1))
+  if ack != 0:
+    print("** UPDATE FAILED: Please retry!")
+    return
+  print("Done.")
+  print("** Now remove the Programming Jumper and reconnect.")
+
 def main(argv):
 
   actions = {
     "read" : read,
-    "write" : write
+    "write" : write,
+    "update" : update
   }
   
   parser = argparse.ArgumentParser(
@@ -323,6 +352,12 @@ def main(argv):
   parser.add_argument("device", help="serial device")
   args = parser.parse_args(argv[1:])
 
+  if not args.action in actions:
+    print("** Action \"%s\" is not recognised" % args.action)
+    print("Valid actions: ", end="")
+    print(", ".join(str(key) for key in actions.keys()))
+    return
+  
   global ser
   ser = serial.Serial(args.device)
   ser.send_break()
@@ -330,19 +365,36 @@ def main(argv):
 
   global sample_freq
   info = get_fw_info()
-  #print_fw_info(info)
   sample_freq = info[4]
+  update_mode = (info[2] == 0)
+
+  print("** Greaseweazle %sv%u.%u"
+        % (("","Bootloader ")[update_mode], info[0], info[1]))
+
+  if update_mode and args.action != "update":
+    print("Greaseweazle is in Firmware Update Mode:")
+    print(" The only available action is \"update <update_file>\"")
+    if info[4] & 1:
+      print(" Remove the Update Jumper for normal operation")
+    else:
+      print(" Main firmware is erased: You *must* perform an update!")
+    return
+
+  if not update_mode and args.action == "update":
+    print("Greaseweazle is in Normal Mode:")
+    print(" To \"update\" you must install the Update Jumper")
+    return
   
   #set_delays(step_delay=3)
   #print_delays(get_delays())
 
   actions[args.action](args)
 
-  motor(False)
+  if not update_mode:
+    motor(False)
   
 if __name__ == "__main__":
   try:
     main(sys.argv)
   except CmdError as error:
     print("Command Failed: %s" % error)
-    motor(False)

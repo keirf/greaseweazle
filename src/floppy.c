@@ -100,10 +100,6 @@ static enum {
     ST_write_flux_drain,
 } floppy_state = ST_inactive;
 
-/* USB Endpoints for CDC ACM communications. */
-#define EP_RX 2
-#define EP_TX 3
-
 static uint8_t u_buf[8192];
 static uint32_t u_cons, u_prod;
 #define U_MASK(x) ((x)&(sizeof(u_buf)-1))
@@ -226,7 +222,7 @@ static void floppy_flux_end(void)
     gpio_configure_pin(gpio_data, pin_wdata, GPO_bus);    
 }
 
-void floppy_reset(void)
+static void floppy_reset(void)
 {
     unsigned int i;
 
@@ -311,44 +307,7 @@ void floppy_init(void)
     dma_wdata.cmar = (uint32_t)(unsigned long)dma.buf;
 }
 
-
-/* CMD_GET_INFO, length=3, 0. Returns 32 bytes after ACK. */
-#define CMD_GET_INFO        0
-/* CMD_SEEK, length=3, cyl# */
-#define CMD_SEEK            1
-/* CMD_SIDE, length=3, side# (0=bottom) */
-#define CMD_SIDE            2
-/* CMD_SET_DELAYS, length=2+4*2, <delay_params> */
-#define CMD_SET_DELAYS      3
-/* CMD_GET_DELAYS, length=2. Returns 4*2 bytes after ACK. */
-#define CMD_GET_DELAYS      4
-/* CMD_MOTOR, length=3, motor_state */
-#define CMD_MOTOR           5
-/* CMD_READ_FLUX, length=3, #revs. Returns flux readings until EOStream. */
-#define CMD_READ_FLUX       6
-/* CMD_WRITE_FLUX, length=2. Host follows with flux readings until EOStream. */
-#define CMD_WRITE_FLUX      7
-/* CMD_GET_FLUX_STATUS, length=2. Last read/write status returned in ACK. */
-#define CMD_GET_FLUX_STATUS 8
-/* CMD_GET_READ_INFO, length=2. Returns 7*8 bytes after ACK. */
-#define CMD_GET_READ_INFO   9
-
-#define ACK_OKAY            0
-#define ACK_BAD_COMMAND     1
-#define ACK_NO_INDEX        2
-#define ACK_NO_TRK0         3
-#define ACK_FLUX_OVERFLOW   4
-#define ACK_FLUX_UNDERFLOW  5
-#define ACK_WRPROT          6
-
-const static struct __packed gw_info {
-    uint8_t fw_major;
-    uint8_t fw_minor;
-    uint8_t max_rev;
-    uint8_t max_cmd;
-    uint32_t sample_freq;
-} gw_info = {
-    .fw_major = 0, .fw_minor = 1,
+static struct gw_info gw_info = {
     .max_rev = 7, .max_cmd = CMD_GET_READ_INFO,
     .sample_freq = SYSCLK_MHZ * 1000000u
 };
@@ -805,6 +764,8 @@ static void process_command(void)
         if (len != 3) goto bad_command;
         if (idx != 0) goto bad_command;
         memset(&u_buf[2], 0, 32);
+        gw_info.fw_major = fw_major;
+        gw_info.fw_minor = fw_minor;
         memcpy(&u_buf[2], &gw_info, sizeof(gw_info));
         resp_sz += 32;
         break;
@@ -878,7 +839,7 @@ bad_command:
     goto out;
 }
 
-void floppy_configured(void)
+static void floppy_configured(void)
 {
     floppy_state = ST_command_wait;
     u_cons = u_prod = 0;
@@ -951,6 +912,11 @@ void floppy_process(void)
 
     }
 }
+
+const struct usb_class_ops usb_cdc_acm_ops = {
+    .reset = floppy_reset,
+    .configure = floppy_configured
+};
 
 /*
  * INTERRUPT HANDLERS

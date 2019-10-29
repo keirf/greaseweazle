@@ -76,8 +76,8 @@ bool_t cdc_acm_handle_class_request(void)
     case CDC_SEND_BREAK:
         /* wValue = #millisecs. We ignore it and return success. */
         TRC("BREAK\n");
-        floppy_reset();
-        floppy_configured();
+        usb_cdc_acm_ops.reset();
+        usb_cdc_acm_ops.configure();
         break;
 
     default:
@@ -94,6 +94,12 @@ bool_t cdc_acm_set_configuration(void)
 {
     uint8_t bulk_type = USB_EP_TYPE_BULK_DBLBUF;
 
+#ifdef BOOTLOADER
+    /* We don't bother with the complicated double-buffered endpoints. The 
+     * regular bulk endpoints are fast enough and possibly more reliable. */
+    bulk_type = USB_EP_TYPE_BULK;
+#endif
+
     /* Notification Element (D->H) */
     usb_configure_ep(0x81, USB_EP_TYPE_INTERRUPT, 0);
     /* Bulk Pipe (H->D) */
@@ -101,7 +107,7 @@ bool_t cdc_acm_set_configuration(void)
     /* Bulk Pipe (D->H) */
     usb_configure_ep(0x83, bulk_type, USB_FS_MPS);
 
-    floppy_configured();
+    usb_cdc_acm_ops.configure();
 
     return TRUE;
 }

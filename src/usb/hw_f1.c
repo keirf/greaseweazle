@@ -259,8 +259,8 @@ void usb_configure_ep(uint8_t ep, uint8_t type, uint32_t size)
 
 static void handle_reset(void)
 {
-    /* Reinitialise floppy subsystem. */
-    floppy_reset();
+    /* Reinitialise class-specific subsystem. */
+    usb_cdc_acm_ops.reset();
 
     /* Clear endpoint soft state. */
     memset(eps, 0, sizeof(eps));

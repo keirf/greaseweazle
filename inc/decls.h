@@ -20,8 +20,9 @@
 #include "intrinsics.h"
 
 #include "time.h"
-#include "cancellation.h"
 #include "timer.h"
+#include "usb.h"
+#include "cdc_acm_protocol.h"
 
 /*
  * Local variables:

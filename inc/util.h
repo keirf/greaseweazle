@@ -61,11 +61,6 @@ size_t strlen(const char *s);
 size_t strnlen(const char *s, size_t maxlen);
 int strcmp(const char *s1, const char *s2);
 int strncmp(const char *s1, const char *s2, size_t n);
-char *strrchr(const char *s, int c);
-int tolower(int c);
-int isspace(int c);
-
-long int strtol(const char *nptr, char **endptr, int base);
 
 int vsnprintf(char *str, size_t size, const char *format, va_list ap)
     __attribute__ ((format (printf, 3, 0)));
@@ -81,12 +76,6 @@ int snprintf(char *str, size_t size, const char *format, ...)
 #define be32toh(x) _rev32(x)
 #define htobe16(x) _rev16(x)
 #define htobe32(x) _rev32(x)
-
-/* Arena-based memory allocation */
-void *arena_alloc(uint32_t sz);
-uint32_t arena_total(void);
-uint32_t arena_avail(void);
-void arena_init(void);
 
 /* Board-specific callouts */
 void board_init(void);
@@ -115,26 +104,15 @@ static inline int printk(const char *format, ...) { return 0; }
 
 #endif
 
-/* USB */
-void usb_init(void);
-void usb_process(void);
-int ep_rx_ready(uint8_t ep);
-void usb_read(uint8_t ep, void *buf, uint32_t len);
-bool_t ep_tx_ready(uint8_t ep);
-void usb_write(uint8_t ep, const void *buf, uint32_t len);
-#define USB_FS_MPS 64 /* Full Speed Max Packet Size */
-
 /* Floppy */
 void floppy_init(void);
-void floppy_reset(void);
-void floppy_configured(void);
 void floppy_process(void);
 
 /* CRC-CCITT */
 uint16_t crc16_ccitt(const void *buf, size_t len, uint16_t crc);
 
 /* Build info. */
-extern const char fw_ver[];
+extern const uint8_t fw_major, fw_minor;
 
 /* Text/data/BSS address ranges. */
 extern char _stext[], _etext[];

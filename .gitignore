@@ -11,4 +11,5 @@
 *.upd
 *.adf
 *.scp
+*.pyc
 Greaseweazle-*
