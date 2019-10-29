@@ -204,21 +204,21 @@ void usb_configure_ep(uint8_t ep, uint8_t type, uint32_t size)
     bd = &usb_bufd[ep];
 
     old_epr = usb->epr[ep];
+    new_epr = 0;
+
+    dbl_buf = (type == USB_EP_TYPE_BULK_DBLBUF);
+    if (dbl_buf) {
+        ASSERT(ep != 0);
+        type = USB_EP_TYPE_BULK;
+        new_epr |= USB_EPR_EP_KIND_DBL_BUF;
+        bd->addr_0 = buf_end;
+        bd->addr_1 = buf_end + size;
+        buf_end += 2*size;
+    }
 
     /* Sets: Type and Endpoint Address.
      * Clears: CTR_RX and CTR_TX. */
-    new_epr = USB_EPR_EP_TYPE(type) | USB_EPR_EA(ep);
-
-    dbl_buf = (size > USB_FS_MPS);
-    if (dbl_buf) {
-        ASSERT(ep != 0);
-        ASSERT(type == USB_EP_TYPE_BULK);
-        ASSERT(size == 2*USB_FS_MPS);
-        new_epr |= USB_EPR_EP_KIND_DBL_BUF;
-        bd->addr_0 = buf_end;
-        bd->addr_1 = buf_end + size/2;
-        buf_end += size;
-    }
+    new_epr |= USB_EPR_EP_TYPE(type) | USB_EPR_EA(ep);
 
     if (in || (ep == 0)) {
         if (dbl_buf) {

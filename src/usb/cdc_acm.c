@@ -92,12 +92,14 @@ bool_t cdc_acm_handle_class_request(void)
 
 bool_t cdc_acm_set_configuration(void)
 {
+    uint8_t bulk_type = USB_EP_TYPE_BULK_DBLBUF;
+
     /* Notification Element (D->H) */
     usb_configure_ep(0x81, USB_EP_TYPE_INTERRUPT, 0);
     /* Bulk Pipe (H->D) */
-    usb_configure_ep(0x02, USB_EP_TYPE_BULK, 2*USB_FS_MPS);
+    usb_configure_ep(0x02, bulk_type, USB_FS_MPS);
     /* Bulk Pipe (D->H) */
-    usb_configure_ep(0x83, USB_EP_TYPE_BULK, 2*USB_FS_MPS);
+    usb_configure_ep(0x83, bulk_type, USB_FS_MPS);
 
     floppy_configured();
 

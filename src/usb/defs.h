@@ -71,6 +71,7 @@ extern uint8_t pending_addr;
 bool_t handle_control_request(void);
 
 /* USB Hardware */
+#define USB_EP_TYPE_BULK_DBLBUF 4u /* Create a double-buffered Endpoint */
 void usb_configure_ep(uint8_t ep, uint8_t type, uint32_t size);
 
 #define WARN printk
