@@ -328,7 +328,7 @@ def update(args):
   print("Done.")
   print("** Now remove the Programming Jumper and reconnect.")
 
-def main(argv):
+def _main(argv):
 
   actions = {
     "read" : read,
@@ -392,9 +392,12 @@ def main(argv):
 
   if not update_mode:
     motor(False)
-  
-if __name__ == "__main__":
+
+def main(argv):
   try:
-    main(sys.argv)
+    _main(argv)
   except CmdError as error:
     print("Command Failed: %s" % error)
+    
+if __name__ == "__main__":
+  main(sys.argv)
