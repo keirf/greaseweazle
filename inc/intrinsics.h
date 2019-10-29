@@ -59,6 +59,12 @@ struct exception_frame {
 #define IRQ_global_disable() asm volatile ("cpsid i" ::: "memory")
 #define IRQ_global_enable() asm volatile ("cpsie i" ::: "memory")
 
+#define IRQ_global_save(flags) ({               \
+    (flags) = read_special(primask) & 1;        \
+    IRQ_global_disable(); })
+#define IRQ_global_restore(flags) ({            \
+    if (flags == 0) IRQ_global_enable(); })
+
 /* Save/restore IRQ priority levels. 
  * NB. IRQ disable via MSR is self-synchronising. I have confirmed this on 
  * Cortex-M3: any pending IRQs are handled before they are disabled by 

@@ -191,7 +191,7 @@ void gpio_configure_pin(GPIO gpio, unsigned int pin, unsigned int mode)
 
 void system_reset(void)
 {
-    console_sync();
+    IRQ_global_disable();
     printk("Resetting...\n");
     /* Wait for serial console TX to idle. */
     while (!(usart1->sr & USART_SR_TXE) || !(usart1->sr & USART_SR_TC))

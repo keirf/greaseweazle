@@ -85,7 +85,6 @@ extern uint8_t board_id;
 
 /* Serial console control */
 void console_init(void);
-void console_sync(void);
 void console_crash_on_input(void);
 
 /* Serial console output */
@@ -97,7 +96,6 @@ int printk(const char *format, ...)
 #else /* NDEBUG */
 
 #define console_init() ((void)0)
-#define console_sync() IRQ_global_disable()
 #define console_crash_on_input() ((void)0)
 static inline int vprintk(const char *format, va_list ap) { return 0; }
 static inline int printk(const char *format, ...) { return 0; }
@@ -130,8 +128,6 @@ void EXC_unused(void);
 #define RESET_IRQ_PRI         0
 #define INDEX_IRQ_PRI         2
 #define TIMER_IRQ_PRI         4
-#define USB_IRQ_PRI          14
-#define CONSOLE_IRQ_PRI      15
 
 /*
  * Local variables:
