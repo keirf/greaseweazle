@@ -329,7 +329,7 @@ def update(args):
     print("** UPDATE FAILED: Please retry!")
     return
   print("Done.")
-  print("** Now remove the Programming Jumper and reconnect.")
+  print("** Disconnect Greaseweazle and remove the Programming Jumper.")
 
 def _main(argv):
 
