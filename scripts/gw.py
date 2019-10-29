@@ -372,9 +372,18 @@ def _main(argv):
   sample_freq = info[4]
   update_mode = (info[2] == 0)
 
-  print("** %s v%u.%u"
-        % (("Greaseweazle","Bootloader")[update_mode], info[0], info[1]))
-
+  print("** %s v%u.%u, Host Tools v%u.%u"
+        % (("Greaseweazle","Bootloader")[update_mode], info[0], info[1],
+           version.major, version.minor))
+  
+  if (not update_mode
+      and (version.major > info[0]
+           or (version.major == info[0] and version.minor > info[1]))):
+    print("Firmware is out of date: Require >= v%u.%u"
+          % (version.major, version.minor))
+    print("Install the Update Jumper and \"update <update_file>\"")
+    return
+  
   if update_mode and args.action != "update":
     print("Greaseweazle is in Firmware Update Mode:")
     print(" The only available action is \"update <update_file>\"")

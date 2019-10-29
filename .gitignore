@@ -12,4 +12,5 @@
 *.adf
 *.scp
 *.pyc
+scripts/greaseweazle/version.py
 Greaseweazle-*
