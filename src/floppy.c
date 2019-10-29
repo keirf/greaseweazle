@@ -839,7 +839,7 @@ bad_command:
     goto out;
 }
 
-static void floppy_configured(void)
+static void floppy_configure(void)
 {
     floppy_state = ST_command_wait;
     u_cons = u_prod = 0;
@@ -915,7 +915,7 @@ void floppy_process(void)
 
 const struct usb_class_ops usb_cdc_acm_ops = {
     .reset = floppy_reset,
-    .configure = floppy_configured
+    .configure = floppy_configure
 };
 
 /*

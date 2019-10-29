@@ -56,6 +56,14 @@ bool_t cdc_acm_handle_class_request(void)
         struct line_coding *lc = (struct line_coding *)ep0.data;
         TRC("SET_LINE_CODING: ");
         dump_line_coding(lc);
+        if (line_coding.baud != lc->baud) {
+            switch (lc->baud) {
+            case BAUD_CLEAR_COMMS:
+                usb_cdc_acm_ops.configure();
+                printk("Comms Line Cleared\n");
+                break;
+            }
+        }
         line_coding = *lc;
         break;
     }

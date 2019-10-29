@@ -16,6 +16,9 @@ from greaseweazle import version
 # 40MHz
 scp_freq = 40000000
 
+BAUD_CLEAR_COMMS    = 10000
+BAUD_NORMAL         = 9600
+
 CMD_GET_INFO        = 0
 CMD_SEEK            = 1
 CMD_SIDE            = 2
@@ -360,7 +363,8 @@ def _main(argv):
   
   global ser
   ser = serial.Serial(args.device)
-  ser.send_break()
+  ser.baudrate = BAUD_CLEAR_COMMS
+  ser.baudrate = BAUD_NORMAL
   ser.reset_input_buffer()
 
   global sample_freq

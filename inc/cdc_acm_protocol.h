@@ -43,6 +43,8 @@
 #define ACK_FLUX_UNDERFLOW  5
 #define ACK_WRPROT          6
 
+#define BAUD_CLEAR_COMMS  10000
+
 struct __packed gw_info {
     uint8_t fw_major;
     uint8_t fw_minor;
