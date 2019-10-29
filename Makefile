@@ -26,13 +26,15 @@ dist:
 	$(MAKE) clean
 	$(MAKE) all
 	cp -a $(PROJ)-$(VER).hex $(PROJ)-$(VER)/
+	cp -a $(PROJ)-$(VER).upd $(PROJ)-$(VER)/
 	$(MAKE) clean
 	cp -a COPYING $(PROJ)-$(VER)/
 	cp -a README.md $(PROJ)-$(VER)/
-	cp -a scripts/49-greaseweazle.rules $(PROJ)-$(VER)/scripts/.
-	cp -a scripts/gw.py $(PROJ)-$(VER)/scripts/.
-	cp -a scripts/greaseweazle/*.py $(PROJ)-$(VER)/scripts/*.py
-#	cp -a RELEASE_NOTES $(PROJ)-$(VER)/
+	cp -a gw.py $(PROJ)-$(VER)/
+	cp -a scripts/49-greaseweazle.rules $(PROJ)-$(VER)/scripts/
+	cp -a scripts/gw.py $(PROJ)-$(VER)/scripts/
+	cp -a scripts/greaseweazle/*.py $(PROJ)-$(VER)/scripts/greaseweazle/
+	cp -a RELEASE_NOTES $(PROJ)-$(VER)/
 	zip -r $(PROJ)-$(VER).zip $(PROJ)-$(VER)
 
 mrproper: clean

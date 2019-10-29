@@ -1,0 +1,15 @@
+************************************
+** Greaseweazle Release Notes
+** Keir Fraser <keir.xen@gmail.com>
+************************************
+
+** v0.2 - 29 October 2019
+ - USB: Fix hangs during "gw.py read"
+   - Thanks to Charlie Smurthwaite for telling me how to fix this!
+ - USB: Improved bandwidth (double-buffered IN/OUT endpoints)
+   - Reduces risk of buffer underflow/overflow during disk operations
+ - Firmware Update: Requires a jumper across A14 (aka DCL) and GND
+   - eg. "python gw.py update Greaseweazle-v0.2.upd COM3"
+
+** v0.1 - 17 October 2019
+ - First release
