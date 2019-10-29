@@ -356,18 +356,35 @@ static bool_t rdata_encode_flux(void)
     uint16_t cons, prod, prev = dma.prev_sample, curr, next;
     unsigned int nr_samples;
 
+    ASSERT(rw.rev < rw.nr_revs);
+
+    /* We don't want to race the Index IRQ handler. */
+    IRQ_global_disable();
+
     /* Find out where the DMA engine's producer index has got to. */
     prod = ARRAY_SIZE(dma.buf) - dma_rdata.cndtr;
     nr_samples = (prod - dma.cons) & buf_mask;
 
     if (rw.rev != index.count) {
-        unsigned int final_samples = U_MASK(index.read_prod - dma.cons);
+        /* We have just passed the index mark: Record information about 
+         * the just-completed revolution. */
+        unsigned int final_samples = (index.read_prod - dma.cons) & buf_mask;
+        if (final_samples > nr_samples) {
+            /* Only way this can happen is if the producer has overflowed 
+             * past the consumer since the Index IRQ. We will report it 
+             * back to the caller by setting an overflow on the USB ring. */
+            printk("DMA OVERFLOW\n");
+            u_prod = u_cons + sizeof(u_buf) + 1;
+            final_samples = nr_samples;
+        }
         read_info[rw.rev].time = sysclk_stk(index.duration);
         read_info[rw.rev].samples = rw.nr_samples + final_samples;
-        rw.rev++;
         nr_samples -= final_samples;
         rw.nr_samples = 0;
+        rw.rev++;
     }
+
+    IRQ_global_enable();
 
     rw.nr_samples += nr_samples;
 
@@ -474,18 +491,32 @@ static void floppy_read(void)
 
     if (floppy_state == ST_read_flux) {
 
-        if (index.count >= rw.nr_revs) {
-            floppy_flux_end();
-            floppy_state = ST_read_flux_drain;
-        }
-
         rdata_encode_flux();
         avail = (uint32_t)(u_prod - u_cons);
+
+        if (avail > sizeof(u_buf)) {
+
+            /* Overflow */
+            printk("OVERFLOW %u %u %u %u\n", u_cons, u_prod,
+                   rw.packet_ready, ep_tx_ready(EP_TX));
+            floppy_flux_end();
+            rw.status = ACK_FLUX_OVERFLOW;
+            floppy_state = ST_read_flux_drain;
+            u_cons = u_prod = avail = 0;
+
+        } else if (rw.rev >= rw.nr_revs) {
+
+            /* Read all requested revolutions. */
+            floppy_flux_end();
+            floppy_state = ST_read_flux_drain;
+
+        }
 
     } else if ((avail < USB_FS_MPS)
                && !rw.packet_ready
                && ep_tx_ready(EP_TX)) {
 
+        /* Final packet, including ACK byte (NUL). */
         memset(rw.packet, 0, USB_FS_MPS);
         make_read_packet(avail);
         floppy_state = ST_command_wait;
@@ -493,16 +524,6 @@ static void floppy_read(void)
         drive_deselect();
         return; /* FINISHED */
 
-    }
-
-    if (avail > sizeof(u_buf)) {
-        /* Overflow */
-        printk("OVERFLOW %u %u %u %u\n", u_cons, u_prod,
-               rw.packet_ready, ep_tx_ready(EP_TX));
-        floppy_flux_end();
-        rw.status = ACK_FLUX_OVERFLOW;
-        floppy_state = ST_read_flux_drain;
-        u_cons = u_prod = 0;
     }
 
     if (!rw.packet_ready && (avail >= USB_FS_MPS))
