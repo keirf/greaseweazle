@@ -372,8 +372,8 @@ def _main(argv):
   sample_freq = info[4]
   update_mode = (info[2] == 0)
 
-  print("** Greaseweazle %sv%u.%u"
-        % (("","Bootloader ")[update_mode], info[0], info[1]))
+  print("** %s v%u.%u"
+        % (("Greaseweazle","Bootloader")[update_mode], info[0], info[1]))
 
   if update_mode and args.action != "update":
     print("Greaseweazle is in Firmware Update Mode:")

@@ -17,7 +17,7 @@ all:
 
 clean:
 	rm -f *.hex *.upd scripts/greaseweazle/*.pyc
-	rm -rf scripts/greaseweazle/__pycache__
+	find . -name __pycache__ | xargs rm -rf
 	$(MAKE) -f $(ROOT)/Rules.mk $@
 
 dist:
