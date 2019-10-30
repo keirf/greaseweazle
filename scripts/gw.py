@@ -260,9 +260,9 @@ def read(args):
                            0,         # Version
                            0x80,      # DiskType = Other
                            args.revs, # Nr Revolutions
-                           args.scyl, # Start track
-                           args.ecyl, # End track
-                           0x21,      # Flags = Index, Footer
+                           track_range.start, # Start track
+                           track_range.stop-1, # End track
+                           0x01,      # Flags = Index
                            0,         # 16-bit cell width
                            ds_flag,   # Double Sided
                            0,         # 25ns capture
