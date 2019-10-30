@@ -9,29 +9,11 @@
  * See the file COPYING for more details, or visit <http://unlicense.org>.
  */
 
-/* Main bootloader: flashes the main firmware (last 96kB of Flash). */
+/* Main bootloader: flashes the main firmware. */
 #define FIRMWARE_START 0x08002000
 #define FIRMWARE_END   0x08010000
 
 int EXC_reset(void) __attribute__((alias("main")));
-
-static void canary_init(void)
-{
-    _irq_stackbottom[0] = _thread_stackbottom[0] = 0xdeadbeef;
-}
-
-static void canary_check(void)
-{
-    ASSERT(_irq_stackbottom[0] == 0xdeadbeef);
-    ASSERT(_thread_stackbottom[0] == 0xdeadbeef);
-}
-
-static void erase_old_firmware(void)
-{
-    uint32_t p;
-    for (p = FIRMWARE_START; p < FIRMWARE_END; p += FLASH_PAGE_SIZE)
-        fpec_page_erase(p);
-}
 
 static enum {
     ST_inactive,
@@ -41,6 +23,8 @@ static enum {
 
 static uint8_t u_buf[256];
 static uint32_t u_prod;
+
+static bool_t pa14_strapped;
 
 static struct gw_info gw_info = {
     /* Max Revs == 0 signals that this is the Bootloader. */
@@ -76,13 +60,20 @@ static struct {
     uint32_t cur;
 } update;
 
+static void erase_old_firmware(void)
+{
+    uint32_t p;
+    for (p = FIRMWARE_START; p < FIRMWARE_END; p += FLASH_PAGE_SIZE)
+        fpec_page_erase(p);
+}
+
 static void update_prep(uint32_t len)
 {
     fpec_init();
     erase_old_firmware();
 
     state = ST_update;
-    memset(&update, 0, sizeof(update));
+    update.cur = 0;
     update.len = len;
 
     printk("Update: %u bytes\n", len);
@@ -105,12 +96,14 @@ static void update_continue(void)
         memcpy(u_buf, &u_buf[nr], u_prod);
     }
 
-    if (update.cur >= update.len) {
+    if ((update.cur >= update.len) && ep_tx_ready(EP_TX)) {
         uint16_t crc = crc16_ccitt((void *)FIRMWARE_START, update.len, 0xffff);
         printk("Final CRC: %04x (%s)\n", crc, crc ? "FAIL" : "OK");
         u_buf[0] = !!crc;
         state = ST_command_wait;
         end_command(u_buf, 1);
+        if (crc)
+            erase_old_firmware();
     }
 }
 
@@ -130,7 +123,7 @@ static void process_command(void)
         gw_info.fw_minor = fw_minor;
         /* sample_freq is used as flags: bit 0 indicates if we entered 
          * the bootloader because PA14 is strapped to GND. */
-        gw_info.sample_freq = !gpio_read_pin(gpioa, 14);
+        gw_info.sample_freq = pa14_strapped;
         memcpy(&u_buf[2], &gw_info, sizeof(gw_info));
         resp_sz += 32;
         break;
@@ -193,17 +186,24 @@ int main(void)
         memcpy(_sdat, _ldat, _edat-_sdat);
     memset(_sbss, 0, _ebss-_sbss);
 
+    /* Turn on AFIO and GPIOA clocks. */
+    rcc->apb2enr = RCC_APB2ENR_IOPAEN | RCC_APB2ENR_AFIOEN;
+
     /* Turn off serial-wire JTAG and reclaim the GPIOs. */
     afio->mapr = AFIO_MAPR_SWJ_CFG_DISABLED;
 
     /* Enable GPIOA, set all pins as floating, except PA14 = weak pull-up. */
-    rcc->apb2enr = RCC_APB2ENR_IOPAEN;
     gpioa->odr = 0xffffu;
     gpioa->crh = 0x48444444u;
-    gpioc->crl = 0x44444444u;
+    gpioa->crl = 0x44444444u;
+
+    /* Wait for PA14 to be pulled HIGH. */
+    cpu_relax();
+    cpu_relax();
 
     /* Enter update mode only if PA14 (DCLK) is strapped to GND. */
-    if (gpio_read_pin(gpioa, 14)) {
+    pa14_strapped = !gpio_read_pin(gpioa, 14);
+    if (!pa14_strapped) {
         /* Nope, so jump straight at the main firmware. */
         uint32_t sp = *(uint32_t *)FIRMWARE_START;
         uint32_t pc = *(uint32_t *)(FIRMWARE_START + 4);
@@ -214,7 +214,6 @@ int main(void)
         }
     }
 
-    canary_init();
     stm32_init();
     console_init();
     console_crash_on_input();
@@ -225,12 +224,9 @@ int main(void)
     printk("** Keir Fraser <keir.xen@gmail.com>\n");
     printk("** https://github.com/keirf/Greaseweazle\n\n");
 
-    gpio_configure_pin(gpioa, 14, GPI_pull_up);
-
     usb_init();
 
     for (;;) {
-        canary_check();
         usb_process();
         update_process();
     }

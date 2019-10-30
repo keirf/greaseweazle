@@ -79,7 +79,6 @@ int snprintf(char *str, size_t size, const char *format, ...)
 
 /* Board-specific callouts */
 void board_init(void);
-extern uint8_t board_id;
 
 #ifndef NDEBUG
 

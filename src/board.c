@@ -1,15 +1,13 @@
 /*
- * gotek/board.c
+ * board.c
  * 
- * Gotek board-specific setup and management.
+ * Board-specific setup and management.
  * 
  * Written & released by Keir Fraser <keir.xen@gmail.com>
  * 
  * This is free and unencumbered software released into the public domain.
  * See the file COPYING for more details, or visit <http://unlicense.org>.
  */
-
-uint8_t board_id;
 
 /* Pull up currently unused and possibly-floating pins. */
 static void gpio_pull_up_pins(GPIO gpio, uint16_t mask)
@@ -24,23 +22,10 @@ static void gpio_pull_up_pins(GPIO gpio, uint16_t mask)
 
 void board_init(void)
 {
-    uint16_t pa_skip, pb_skip;
-
-    /* PA0-7 (floppy outputs), PA9-10 (serial console), PA11-12 (USB) */
-    pa_skip = 0x1eff;
-
-    /* PB0 (USB disconnect), PB4,6,8,13 (floppy inputs). */
-    pb_skip = 0x2151;
-
-    /* Pull up all PCx pins. */
-    gpio_pull_up_pins(gpioc, ~0x0000);
-
-    /* Wait for ID to stabilise at PC[15:12]. */
-    delay_us(5);
-    board_id = (gpioc->idr >> 12) & 0xf;
-
-    gpio_pull_up_pins(gpioa, ~pa_skip);
-    gpio_pull_up_pins(gpiob, ~pb_skip);
+    /* Pull up all unused pins. */
+    gpio_pull_up_pins(gpioa, 0xe1fe); /* PA1-8,13-15 */
+    gpio_pull_up_pins(gpiob, 0x0027); /* PB0-2,5 */
+    gpio_pull_up_pins(gpioc, 0xffff); /* PC0-15 */
 }
 
 /*
