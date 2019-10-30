@@ -218,7 +218,6 @@ int main(void)
     console_init();
     console_crash_on_input();
     board_init();
-    delay_ms(200); /* 5v settle */
 
     printk("\n** Greaseweazle Update Bootloader v%u.%u\n", fw_major, fw_minor);
     printk("** Keir Fraser <keir.xen@gmail.com>\n");
