@@ -74,7 +74,6 @@ void console_init(void)
     /* BAUD, 8n1. */
     usart1->brr = SYSCLK / BAUD;
     usart1->cr1 = (USART_CR1_UE | USART_CR1_TE | USART_CR1_RE);
-    usart1->cr3 = USART_CR3_DMAT;
 }
 
 /* Debug helper: if we get stuck somewhere, calling this beforehand will cause 

@@ -5,7 +5,7 @@ export FW_MINOR := 3
 PROJ = Greaseweazle
 VER := v$(FW_MAJOR).$(FW_MINOR)
 
-SUBDIRS += src bootloader
+SUBDIRS += src bootloader blinky_test
 
 .PHONY: all clean dist mrproper flash start serial
 
@@ -23,10 +23,15 @@ clean:
 dist:
 	rm -rf $(PROJ)-*
 	mkdir -p $(PROJ)-$(VER)/scripts/greaseweazle
+	mkdir -p $(PROJ)-$(VER)/alt
 	$(MAKE) clean
 	$(MAKE) all
 	cp -a $(PROJ)-$(VER).hex $(PROJ)-$(VER)/
 	cp -a $(PROJ)-$(VER).upd $(PROJ)-$(VER)/
+	$(MAKE) clean
+	$(MAKE) -C blinky_test -f $(ROOT)/Rules.mk \
+		Blinky.elf Blinky.bin Blinky.hex
+	cp -a blinky_test/Blinky.hex $(PROJ)-$(VER)/alt/Blinky_Test-$(VER).hex
 	$(MAKE) clean
 	cp -a COPYING $(PROJ)-$(VER)/
 	cp -a README.md $(PROJ)-$(VER)/
