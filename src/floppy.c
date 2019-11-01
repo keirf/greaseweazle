@@ -342,6 +342,7 @@ static struct {
     bool_t write_finished;
     unsigned int packet_len;
     unsigned int nr_samples;
+    uint32_t ticks_since_flux;
     uint8_t packet[USB_FS_MPS];
 } rw;
 
@@ -350,7 +351,7 @@ static struct {
     uint32_t samples;
 } read_info[7];
 
-static bool_t rdata_encode_flux(void)
+static void rdata_encode_flux(void)
 {
     const uint16_t buf_mask = ARRAY_SIZE(dma.buf) - 1;
     uint16_t cons, prod, prev = dma.prev_sample, curr, next;
@@ -392,6 +393,7 @@ static bool_t rdata_encode_flux(void)
     for (cons = dma.cons; cons != prod; cons = (cons+1) & buf_mask) {
         next = dma.buf[cons];
         curr = next - prev;
+        prev = next;
 
         if (curr == 0) {
             /* 0: Skip. */
@@ -401,11 +403,11 @@ static bool_t rdata_encode_flux(void)
         } else {
             unsigned int high = curr / 250;
             if (high <= 5) {
-                /* 250-1500: Two bytes. */
+                /* 250-1499: Two bytes. */
                 u_buf[U_MASK(u_prod++)] = 249 + high;
                 u_buf[U_MASK(u_prod++)] = 1 + (curr % 250);
             } else {
-                /* 1501-(2^28-1): Five bytes */
+                /* 1500-(2^28-1): Five bytes */
                 u_buf[U_MASK(u_prod++)] = 0xff;
                 u_buf[U_MASK(u_prod++)] = 1 | (curr << 1);
                 u_buf[U_MASK(u_prod++)] = 1 | (curr >> 6);
@@ -413,14 +415,11 @@ static bool_t rdata_encode_flux(void)
                 u_buf[U_MASK(u_prod++)] = 1 | (curr >> 20);
             }
         }
-
-        prev = next;
     }
 
     /* Save our progress for next time. */
     dma.cons = cons;
     dma.prev_sample = prev;
-    return FALSE;
 }
 
 static void floppy_read_prep(unsigned int revs)
@@ -543,6 +542,7 @@ static void floppy_read(void)
 static unsigned int _wdata_decode_flux(uint16_t *tbuf, unsigned int nr)
 {
     unsigned int todo = nr;
+    uint32_t ticks = rw.ticks_since_flux;
 
     if (todo == 0)
         return 0;
@@ -568,7 +568,6 @@ static unsigned int _wdata_decode_flux(uint16_t *tbuf, unsigned int nr)
             val |= (u_buf[U_MASK(u_cons++)] & 0xfe) <<  6;
             val |= (u_buf[U_MASK(u_cons++)] & 0xfe) << 13;
             val |= (u_buf[U_MASK(u_cons++)] & 0xfe) << 20;
-            val = val ?: 1; /* Force non-zero */
         } else {
             /* 250-254: Two bytes */
             if ((uint32_t)(u_prod - u_cons) < 2)
@@ -578,12 +577,18 @@ static unsigned int _wdata_decode_flux(uint16_t *tbuf, unsigned int nr)
             val += u_buf[U_MASK(u_cons++)] - 1;
         }
 
-        *tbuf++ = val - 1 ?: 1; /* Force non-zero */
+        ticks += val;
+        if (ticks < sysclk_ns(800))
+            continue;
+
+        *tbuf++ = ticks - 1;
+        ticks = 0;
         if (!--todo)
             goto out;
     }
 
 out:
+    rw.ticks_since_flux = ticks;
     return nr - todo;
 }
 
@@ -665,7 +670,6 @@ static void floppy_write_wait_data(void)
         && !rw.write_finished)
         return;
 
-    index.count = 0;
     floppy_state = ST_write_flux_wait_index;
     rw.start = time_now();
 
@@ -677,6 +681,13 @@ static void floppy_write_wait_data(void)
                      DMA_CCR_CIRC |
                      DMA_CCR_DIR_M2P |
                      DMA_CCR_EN);
+
+    /* Preload timer with first flux value. */
+    tim_wdata->egr = TIM_EGR_UG;
+    tim_wdata->sr = 0; /* dummy write, gives h/w time to process EGR.UG=1 */
+
+    barrier(); /* Trigger timer update /then/ wait for next index pulse */
+    index.count = 0;
 }
 
 static void floppy_write_wait_index(void)
@@ -692,8 +703,6 @@ static void floppy_write_wait_index(void)
     }
 
     /* Start timer. */
-    tim_wdata->egr = TIM_EGR_UG;
-    tim_wdata->sr = 0; /* dummy write, gives h/w time to process EGR.UG=1 */
     tim_wdata->cr1 = TIM_CR1_CEN;
 
     /* Enable output. */
