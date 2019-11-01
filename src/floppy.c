@@ -354,7 +354,8 @@ static struct {
 static void rdata_encode_flux(void)
 {
     const uint16_t buf_mask = ARRAY_SIZE(dma.buf) - 1;
-    uint16_t cons, prod, prev = dma.prev_sample, curr, next;
+    uint16_t cons = dma.cons, prod, prev = dma.prev_sample, curr, next;
+    uint32_t ticks = rw.ticks_since_flux;
     unsigned int nr_samples;
 
     ASSERT(rw.rev < rw.nr_revs);
@@ -364,12 +365,12 @@ static void rdata_encode_flux(void)
 
     /* Find out where the DMA engine's producer index has got to. */
     prod = ARRAY_SIZE(dma.buf) - dma_rdata.cndtr;
-    nr_samples = (prod - dma.cons) & buf_mask;
+    nr_samples = (prod - cons) & buf_mask;
 
     if (rw.rev != index.count) {
         /* We have just passed the index mark: Record information about 
          * the just-completed revolution. */
-        unsigned int final_samples = (index.read_prod - dma.cons) & buf_mask;
+        unsigned int final_samples = (index.read_prod - cons) & buf_mask;
         if (final_samples > nr_samples) {
             /* Only way this can happen is if the producer has overflowed 
              * past the consumer since the Index IRQ. We will report it 
@@ -390,36 +391,52 @@ static void rdata_encode_flux(void)
     rw.nr_samples += nr_samples;
 
     /* Process the flux timings into the raw bitcell buffer. */
-    for (cons = dma.cons; cons != prod; cons = (cons+1) & buf_mask) {
+    for (; cons != prod; cons = (cons+1) & buf_mask) {
         next = dma.buf[cons];
         curr = next - prev;
         prev = next;
 
-        if (curr == 0) {
+        ticks += curr;
+
+        if (ticks == 0) {
             /* 0: Skip. */
-        } else if (curr < 250) {
+        } else if (ticks < 250) {
             /* 1-249: One byte. */
-            u_buf[U_MASK(u_prod++)] = curr;
+            u_buf[U_MASK(u_prod++)] = ticks;
         } else {
-            unsigned int high = curr / 250;
+            unsigned int high = ticks / 250;
             if (high <= 5) {
                 /* 250-1499: Two bytes. */
                 u_buf[U_MASK(u_prod++)] = 249 + high;
-                u_buf[U_MASK(u_prod++)] = 1 + (curr % 250);
+                u_buf[U_MASK(u_prod++)] = 1 + (ticks % 250);
             } else {
                 /* 1500-(2^28-1): Five bytes */
                 u_buf[U_MASK(u_prod++)] = 0xff;
-                u_buf[U_MASK(u_prod++)] = 1 | (curr << 1);
-                u_buf[U_MASK(u_prod++)] = 1 | (curr >> 6);
-                u_buf[U_MASK(u_prod++)] = 1 | (curr >> 13);
-                u_buf[U_MASK(u_prod++)] = 1 | (curr >> 20);
+                u_buf[U_MASK(u_prod++)] = 1 | (ticks << 1);
+                u_buf[U_MASK(u_prod++)] = 1 | (ticks >> 6);
+                u_buf[U_MASK(u_prod++)] = 1 | (ticks >> 13);
+                u_buf[U_MASK(u_prod++)] = 1 | (ticks >> 20);
             }
         }
+
+        ticks = 0;
+    }
+
+    /* If it has been a long time since the last flux timing, transfer some of
+     * the accumulated time from the 16-bit timestamp into the 32-bit
+     * accumulator. This avoids 16-bit overflow and because, we take care to
+     * keep the 16-bit timestamp at least 200us behind, we cannot race the next
+     * flux timestamp. */
+    curr = tim_rdata->cnt - prev;
+    if (unlikely(curr > sysclk_us(400))) {
+        prev += sysclk_us(200);
+        ticks += sysclk_us(200);
     }
 
     /* Save our progress for next time. */
     dma.cons = cons;
     dma.prev_sample = prev;
+    rw.ticks_since_flux = ticks;
 }
 
 static void floppy_read_prep(unsigned int revs)

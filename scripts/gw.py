@@ -233,13 +233,13 @@ def read(args):
     for x in flux:
       y = x * factor + rem
       val = int(round(y))
+      if (val & 65535) == 0:
+        val += 1
       rem = y - val
       while val >= 65536:
         trk_dat.append(0)
         trk_dat.append(0)
         val -= 65536
-      if val == 0:
-        val = 1
       trk_dat.append(val>>8)
       trk_dat.append(val&255)
   print()
