@@ -109,6 +109,10 @@ void usb_read(uint8_t ep, void *buf, uint32_t len)
         /* Toggle SW_BUF. Status remains VALID at all times. */
         epr &= 0x070f; /* preserve rw & t fields */
         epr |= 0x80c0; /* preserve rc_w0 fields, toggle SW_BUF */
+        if (eps[ep].rx_ready) {
+            /* Clear CTR_RX if we have already spotted the next packet. */
+            epr &= ~USB_EPR_CTR_RX;
+        }
     } else {
         /* Set status NAK->VALID. */
         epr &= 0x370f; /* preserve rw & t fields (except STAT_RX) */
@@ -153,6 +157,10 @@ void usb_write(uint8_t ep, const void *buf, uint32_t len)
         /* Toggle SW_BUF. Status remains VALID at all times. */
         epr &= 0x070f; /* preserve rw & t fields */
         epr |= 0xc080; /* preserve rc_w0 fields, toggle SW_BUF */
+        if (eps[ep].tx_ready) {
+            /* Clear CTR_TX if we have already spotted the next empty space. */
+            epr &= ~USB_EPR_CTR_TX;
+        }
     } else {
         /* Set status NAK->VALID. */
         epr &= 0x073f; /* preserve rw & t fields (except STAT_TX) */
