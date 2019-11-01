@@ -542,14 +542,13 @@ static void floppy_read(void)
 static unsigned int _wdata_decode_flux(uint16_t *tbuf, unsigned int nr)
 {
     unsigned int todo = nr;
-    uint32_t ticks = rw.ticks_since_flux;
+    uint32_t x, ticks = rw.ticks_since_flux;
 
     if (todo == 0)
         return 0;
 
     while (u_cons != u_prod) {
-        uint8_t x = u_buf[U_MASK(u_cons)];
-        uint32_t val = x;
+        x = u_buf[U_MASK(u_cons)];
         if (x == 0) {
             /* 0: Terminate */
             u_cons++;
@@ -558,25 +557,25 @@ static unsigned int _wdata_decode_flux(uint16_t *tbuf, unsigned int nr)
         } else if (x < 250) {
             /* 1-249: One byte */
             u_cons++;
-        } else if (x == 255) {
-            /* 255: Five bytes */
-            if ((uint32_t)(u_prod - u_cons) < 5)
-                goto out;
-            u_cons++;
-            val  = (u_buf[U_MASK(u_cons++)]       ) >>  1;
-            val |= (u_buf[U_MASK(u_cons++)] & 0xfe) <<  6;
-            val |= (u_buf[U_MASK(u_cons++)] & 0xfe) << 13;
-            val |= (u_buf[U_MASK(u_cons++)] & 0xfe) << 20;
-        } else {
+        } else if (x < 255) {
             /* 250-254: Two bytes */
             if ((uint32_t)(u_prod - u_cons) < 2)
                 goto out;
             u_cons++;
-            val = (x - 249) * 250;
-            val += u_buf[U_MASK(u_cons++)] - 1;
+            x = (x - 249) * 250;
+            x += u_buf[U_MASK(u_cons++)] - 1;
+        } else {
+            /* 255: Five bytes */
+            if ((uint32_t)(u_prod - u_cons) < 5)
+                goto out;
+            u_cons++;
+            x  = (u_buf[U_MASK(u_cons++)]       ) >>  1;
+            x |= (u_buf[U_MASK(u_cons++)] & 0xfe) <<  6;
+            x |= (u_buf[U_MASK(u_cons++)] & 0xfe) << 13;
+            x |= (u_buf[U_MASK(u_cons++)] & 0xfe) << 20;
         }
 
-        ticks += val;
+        ticks += x;
         if (ticks < sysclk_ns(800))
             continue;
 
