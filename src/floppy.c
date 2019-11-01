@@ -560,7 +560,6 @@ static unsigned int _wdata_decode_flux(uint16_t *tbuf, unsigned int nr)
             u_cons++;
         } else if (x == 255) {
             /* 255: Five bytes */
-            uint32_t val;
             if ((uint32_t)(u_prod - u_cons) < 5)
                 goto out;
             u_cons++;
