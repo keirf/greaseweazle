@@ -3,12 +3,7 @@
  * 
  * LED blink test to validate STM32F103C8 chips. This test will find
  * remarked and cloned low-density devices with less than 20kB RAM,
- * and/or missing timer TIM4.
- * 
- * Tests are applied in the following order:
- *  1. If TIM4 is missing, the onboard LED (pin B12 or C13) will not light.
- *  2. If there is not at least 20kB SRAM, the onboard LED will remain light.
- *  3. If TIM4 and >=20kB SRAM are both present, the LED will blink at 2Hz.
+ * less than 64kB Flash, and/or missing timers TIM1-4.
  * 
  * As the LED blinks, a character is written to USART1 at 9600 baud (8n1).
  * 
@@ -58,6 +53,9 @@ static uint32_t rand(void)
 
 int main(void)
 {
+    uint32_t fp, *p;
+    int i;
+
     /* Relocate DATA. Initialise BSS. */
     if (_sdat != _ldat)
         memcpy(_sdat, _ldat, _edat-_sdat);
@@ -76,7 +74,12 @@ int main(void)
     gpio_configure_pin(gpiob, 12, GPO_opendrain(_2MHz, HIGH));
     gpio_configure_pin(gpioc, 13, GPO_opendrain(_2MHz, HIGH));
 
-    /* (Attempt to) Configure TIM4 to overflow at 2Hz. */
+    /* Touch TIM1 to TIM3, just see if they're there. */
+    tim1->arr = tim2->arr = tim3->arr = 123;
+    if ((tim1->arr != 123) || (tim2->arr != 123) | (tim3->arr != 123))
+        goto fail;
+
+    /* Configure TIM4 to overflow at 2Hz. */
     tim4->psc = sysclk_us(100)-1;
     tim4->arr = 5000-1;
     tim4->dier = TIM_DIER_UIE;
@@ -88,6 +91,21 @@ int main(void)
     IRQx_clear_pending(IRQ_TIM4);
     IRQx_enable(IRQ_TIM4);
 
+    /* Erase and write the last page of Flash below 64kB. Check it reads 
+     * back okay. */
+    fpec_init();
+    fp = (uint32_t)(_stext + 64*1024 - FLASH_PAGE_SIZE);
+    fpec_page_erase(fp);
+    memset(_ebss, 0xff, FLASH_PAGE_SIZE);
+    if (memcmp((void *)fp, _ebss, FLASH_PAGE_SIZE))
+        goto fail; /* didn't erase ok */
+    p = (uint32_t *)_ebss;
+    for (i = 0; i < FLASH_PAGE_SIZE/4; i++)
+        *p++ = rand();
+    fpec_write(_ebss, FLASH_PAGE_SIZE, fp);
+    if (memcmp((void *)fp, _ebss, FLASH_PAGE_SIZE))
+        goto fail; /* didn't write ok */
+
     /* Endlessly test SRAM by filling with pseudorandom junk and then 
      * testing the values read back okay. */
     for (;;) {
@@ -98,10 +116,10 @@ int main(void)
         p = (uint32_t *)_ebss;
         while (p < (uint32_t *)(0x20000000 + 20*1024))
             if (*p++ != rand())
-                goto ram_fail;
+                goto fail;
     }
 
-ram_fail:
+fail:
     /* On SRAM failure we light the LED(s) and hang. */
     IRQ_global_disable();
     gpio_write_pin(gpiob, 12, LOW);
