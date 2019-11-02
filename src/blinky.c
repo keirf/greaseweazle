@@ -2,8 +2,10 @@
  * blinky.c
  * 
  * LED blink test to validate STM32F103C8 chips. This test will find
- * remarked and cloned low-density devices with less than 20kB RAM,
- * less than 64kB Flash, and/or missing timers TIM1-4.
+ * remarked and cloned low-density devices with:
+ *  - Less than 20kB RAM
+ *  - Less than 64kB Flash
+ *  - Missing peripherals TIM1-4, I2C1-2, SPI1-2
  * 
  * As the LED blinks, a character is written to USART1 at 9600 baud (8n1).
  * 
@@ -74,7 +76,24 @@ int main(void)
     gpio_configure_pin(gpiob, 12, GPO_opendrain(_2MHz, HIGH));
     gpio_configure_pin(gpioc, 13, GPO_opendrain(_2MHz, HIGH));
 
-    /* Touch TIM1 to TIM3, just see if they're there. */
+    /* Touch I2C peripherals. */
+    rcc->apb1enr |= RCC_APB1ENR_I2C1EN;
+    i2c1->oar1 = i2c1->oar2 = 0x26;
+    if ((i2c1->oar1 != 0x26) || (i2c1->oar2 != 0x26))
+        goto fail;
+    rcc->apb1enr |= RCC_APB1ENR_I2C2EN;
+    i2c2->oar1 = i2c2->oar2 = 0x26;
+    if ((i2c2->oar1 != 0x26) || (i2c2->oar2 != 0x26))
+        goto fail;
+
+    /* Touch SPI peripherals. */
+    rcc->apb2enr |= RCC_APB2ENR_SPI1EN;
+    rcc->apb1enr |= RCC_APB1ENR_SPI2EN;
+    spi1->cr2 = spi2->cr2 = 3;
+    if ((spi1->cr2 != 3) || (spi2->cr2 != 3))
+        goto fail;
+
+    /* Touch TIM peripherals. */
     tim1->arr = tim2->arr = tim3->arr = 123;
     if ((tim1->arr != 123) || (tim2->arr != 123) | (tim3->arr != 123))
         goto fail;
