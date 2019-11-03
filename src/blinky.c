@@ -17,20 +17,52 @@
 
 #define FLASH_KB 64
 #define SRAM_KB  20
+#define NR_I2C    2
+#define NR_SPI    2
+#define NR_TIM    4
 
 int EXC_reset(void) __attribute__((alias("main")));
 
 void IRQ_30(void) __attribute__((alias("IRQ_tim4")));
 #define IRQ_TIM4 30
 
-static void FAIL(void)
+/* All exceptions print a simple report and then hang. */
+void EXC_nmi(void) __attribute__((alias("EXC_blinky")));
+void EXC_hard_fault(void) __attribute__((alias("EXC_blinky")));
+void EXC_memory_management_fault(void) __attribute__((alias("EXC_blinky")));
+void EXC_bus_fault(void) __attribute__((alias("EXC_blinky")));
+void EXC_usage_fault(void) __attribute__((alias("EXC_blinky")));
+void EXC_7(void) __attribute__((alias("EXC_blinky")));
+void EXC_8(void) __attribute__((alias("EXC_blinky")));
+void EXC_9(void) __attribute__((alias("EXC_blinky")));
+void EXC_10(void) __attribute__((alias("EXC_blinky")));
+void EXC_sv_call(void) __attribute__((alias("EXC_blinky")));
+void EXC_12(void) __attribute__((alias("EXC_blinky")));
+void EXC_13(void) __attribute__((alias("EXC_blinky")));
+void EXC_pend_sv(void) __attribute__((alias("EXC_blinky")));
+void EXC_systick(void) __attribute__((alias("EXC_blinky")));
+static void EXC_blinky(void)
 {
-    /* Light the LED(s) and hang. */
+    uint8_t exc = (uint8_t)read_special(psr);
+    /* Extinguish the LED(s) permanently. */
     IRQ_global_disable();
-    printk("FAILED\n");
-    gpio_write_pin(gpiob, 12, LOW);
-    gpio_write_pin(gpioc, 13, LOW);
-    for (;;) ;
+    printk("**FAILED** [Exception #%u]\n", exc);
+    gpio_write_pin(gpiob, 12, HIGH);
+    gpio_write_pin(gpioc, 13, HIGH);
+    for (;;);
+}
+
+static void report(bool_t ok)
+{
+    if (ok) {
+        printk("OK\n");
+    } else {
+        /* Extinguish the LED(s) permanently. */
+        IRQ_global_disable();
+        printk("**FAILED**\n");
+        gpio_write_pin(gpiob, 12, HIGH);
+        gpio_write_pin(gpioc, 13, HIGH);
+    }
 }
 
 static void IRQ_tim4(void)
@@ -71,9 +103,7 @@ static void i2c_test(I2C i2c, int nr)
                 I2C_CR2_ITEVTEN |
                 I2C_CR2_ITBUFEN);
     i2c->cr1 = I2C_CR1_ACK | I2C_CR1_PE;
-    if ((i2c->oar1 != 0x10) || (i2c->cr1 != (I2C_CR1_ACK | I2C_CR1_PE)))
-        FAIL();
-    printk("Done\n");
+    report((i2c->oar1 == 0x10) && (i2c->cr1 == (I2C_CR1_ACK | I2C_CR1_PE)));
 }
 
 static void spi_test(SPI spi, int nr)
@@ -86,9 +116,7 @@ static void spi_test(SPI spi, int nr)
                 SPI_CR1_DFF | /* 16-bit */
                 SPI_CR1_CPHA |
                 SPI_CR1_BR_DIV4);
-    if (spi->cr2 != (SPI_CR2_TXDMAEN | SPI_CR2_RXDMAEN))
-        FAIL();
-    printk("Done\n");
+    report(spi->cr2 == (SPI_CR2_TXDMAEN | SPI_CR2_RXDMAEN));
 }
 
 static void tim_test(TIM tim, int nr)
@@ -100,16 +128,36 @@ static void tim_test(TIM tim, int nr)
     tim->dier = TIM_DIER_UIE;
     tim->cr2 = 0;
     tim->cr1 = TIM_CR1_URS | TIM_CR1_CEN;
-    if (tim->arr != (5000-1))
-        FAIL();
-    printk("Done\n");
+    report(tim->arr == (5000-1));
 }
 
-int main(void)
+static void flash_test(void)
 {
     uint32_t fp, *p;
     int i;
 
+    /* Erase and write the last page of Flash. Check it reads back okay. */
+    printk("Testing %ukB Flash... ", FLASH_KB);
+    fpec_init();
+    fp = (uint32_t)(_stext + FLASH_KB*1024 - FLASH_PAGE_SIZE);
+    fpec_page_erase(fp);
+    memset(_ebss, 0xff, FLASH_PAGE_SIZE);
+    if (memcmp((void *)fp, _ebss, FLASH_PAGE_SIZE))
+        goto fail; /* didn't erase ok */
+    p = (uint32_t *)_ebss;
+    for (i = 0; i < FLASH_PAGE_SIZE/4; i++)
+        *p++ = rand();
+    fpec_write(_ebss, FLASH_PAGE_SIZE, fp);
+    if (memcmp((void *)fp, _ebss, FLASH_PAGE_SIZE))
+        goto fail; /* didn't write ok */
+    report(TRUE);
+    return;
+fail:
+    report(FALSE);
+}
+
+int main(void)
+{
     /* Relocate DATA. Initialise BSS. */
     if (_sdat != _ldat)
         memcpy(_sdat, _ldat, _edat-_sdat);
@@ -127,46 +175,48 @@ int main(void)
     gpio_configure_pin(gpioc, 13, GPO_opendrain(_2MHz, HIGH));
 
     /* Test I2C peripherals. */
+#if NR_I2C >= 1
     rcc->apb1enr |= RCC_APB1ENR_I2C1EN;
     i2c_test(i2c1, 1);
+#endif
+#if NR_I2C >= 2
     rcc->apb1enr |= RCC_APB1ENR_I2C2EN;
     i2c_test(i2c2, 2);
+#endif
 
     /* Test SPI peripherals. */
+#if NR_SPI >= 1
     rcc->apb2enr |= RCC_APB2ENR_SPI1EN;
     spi_test(spi1, 1);
+#endif
+#if NR_SPI >= 2
     rcc->apb1enr |= RCC_APB1ENR_SPI2EN;
     spi_test(spi2, 2);
+#endif
 
     /* Test TIM peripherals, set up to overflow at 2Hz. */
+#if NR_TIM >= 1
     tim_test(tim1, 1);
+#endif
+#if NR_TIM >= 2
     tim_test(tim2, 2);
+#endif
+#if NR_TIM >= 3
     tim_test(tim3, 3);
+#endif
+#if NR_TIM >= 4
     tim_test(tim4, 4);
+#endif
+
+    /* Test Flash. */
+    flash_test();
 
     /* Enable TIM4 IRQ, to be triggered at 2Hz. */
-    printk("Testing TIM4 IRQ... ");
+    printk("Enable TIM4 IRQ... ");
     IRQx_set_prio(IRQ_TIM4, TIMER_IRQ_PRI);
     IRQx_clear_pending(IRQ_TIM4);
     IRQx_enable(IRQ_TIM4);
-    printk("Enabled\n");
-
-    /* Erase and write the last page of Flash below 64kB. Check it reads 
-     * back okay. */
-    printk("Testing %ukB Flash... ", FLASH_KB);
-    fpec_init();
-    fp = (uint32_t)(_stext + FLASH_KB*1024 - FLASH_PAGE_SIZE);
-    fpec_page_erase(fp);
-    memset(_ebss, 0xff, FLASH_PAGE_SIZE);
-    if (memcmp((void *)fp, _ebss, FLASH_PAGE_SIZE))
-        goto fail; /* didn't erase ok */
-    p = (uint32_t *)_ebss;
-    for (i = 0; i < FLASH_PAGE_SIZE/4; i++)
-        *p++ = rand();
-    fpec_write(_ebss, FLASH_PAGE_SIZE, fp);
-    if (memcmp((void *)fp, _ebss, FLASH_PAGE_SIZE))
-        goto fail; /* didn't write ok */
-    printk("Done\n");
+    report(TRUE);
 
     /* Endlessly test SRAM by filling with pseudorandom junk and then 
      * testing the values read back okay. */
@@ -177,13 +227,14 @@ int main(void)
             *p++ = rand();
         srand = sr;
         p = (uint32_t *)_ebss;
-        while (p < (uint32_t *)(0x20000000 + SRAM_KB*1024))
-            if (*p++ != rand())
-                goto fail;
+        while (p < (uint32_t *)(0x20000000 + SRAM_KB*1024)) {
+            if (*p++ != rand()) {
+                report(FALSE);
+                for (;;);
+            }
+        }
     }
 
-fail:
-    FAIL();
     return 0;
 }
 

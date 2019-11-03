@@ -28,9 +28,6 @@ dist:
 	$(MAKE) all
 	cp -a $(PROJ)-$(VER).hex $(PROJ)-$(VER)/
 	cp -a $(PROJ)-$(VER).upd $(PROJ)-$(VER)/
-	$(MAKE) clean
-	debug=y $(MAKE) -C blinky_test -f $(ROOT)/Rules.mk \
-		Blinky.elf Blinky.bin Blinky.hex
 	cp -a blinky_test/Blinky.hex $(PROJ)-$(VER)/alt/Blinky_Test-$(VER).hex
 	$(MAKE) clean
 	cp -a COPYING $(PROJ)-$(VER)/
@@ -51,6 +48,8 @@ all: scripts/greaseweazle/version.py
 	$(MAKE) -C src -f $(ROOT)/Rules.mk $(PROJ).elf $(PROJ).bin $(PROJ).hex
 	bootloader=y $(MAKE) -C bootloader -f $(ROOT)/Rules.mk \
 		Bootloader.elf Bootloader.bin Bootloader.hex
+	debug=y $(MAKE) -C blinky_test -f $(ROOT)/Rules.mk \
+		Blinky.elf Blinky.bin Blinky.hex
 	srec_cat bootloader/Bootloader.hex -Intel src/$(PROJ).hex -Intel \
 	-o $(PROJ)-$(VER).hex -Intel
 	$(PYTHON) ./scripts/mk_update.py src/$(PROJ).bin $(PROJ)-$(VER).upd
