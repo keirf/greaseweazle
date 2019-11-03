@@ -26,6 +26,9 @@ int EXC_reset(void) __attribute__((alias("main")));
 void IRQ_30(void) __attribute__((alias("IRQ_tim4")));
 #define IRQ_TIM4 30
 
+void IRQ_11(void) __attribute__((alias("IRQ_dma_tc")));
+#define IRQ_DMA 11
+
 /* All exceptions print a simple report and then hang. */
 void EXC_nmi(void) __attribute__((alias("EXC_blinky")));
 void EXC_hard_fault(void) __attribute__((alias("EXC_blinky")));
@@ -52,13 +55,14 @@ static void EXC_blinky(void)
     for (;;);
 }
 
+static bool_t failed;
 static void report(bool_t ok)
 {
     if (ok) {
         printk("OK\n");
     } else {
         /* Extinguish the LED(s) permanently. */
-        IRQ_global_disable();
+        failed = TRUE;
         printk("**FAILED**\n");
         gpio_write_pin(gpiob, 12, HIGH);
         gpio_write_pin(gpioc, 13, HIGH);
@@ -72,6 +76,11 @@ static void IRQ_tim4(void)
     /* Quiesce the IRQ source. */
     tim4->sr = 0;
 
+    if (failed) {
+        IRQx_disable(IRQ_TIM4);
+        return;
+    }
+
     /* Blink the LED. */
     gpio_write_pin(gpiob, 12, x);
     gpio_write_pin(gpioc, 13, x);
@@ -79,6 +88,14 @@ static void IRQ_tim4(void)
 
     /* Write to the serial line. */
     printk(".");
+}
+
+static volatile int dmac;
+static void IRQ_dma_tc(void)
+{
+    dma1->ifcr = DMA_IFCR_CGIF(1);
+    dma1->ch1.ccr = 0;
+    dmac++;
 }
 
 /* Pseudorandom LFSR. */
@@ -103,6 +120,10 @@ static void i2c_test(I2C i2c, int nr)
                 I2C_CR2_ITEVTEN |
                 I2C_CR2_ITBUFEN);
     i2c->cr1 = I2C_CR1_ACK | I2C_CR1_PE;
+    /*i2c->cr1 = I2C_CR1_ACK | I2C_CR1_PE;*/
+    /* Fake chips may not latch I2C_CR1_ACK on this 1st write */
+    if ((i2c->oar1 == 0x10) && (i2c->cr1 == I2C_CR1_PE))
+        printk("[Fake Chip?] ");
     report((i2c->oar1 == 0x10) && (i2c->cr1 == (I2C_CR1_ACK | I2C_CR1_PE)));
 }
 
@@ -129,6 +150,36 @@ static void tim_test(TIM tim, int nr)
     tim->cr2 = 0;
     tim->cr1 = TIM_CR1_URS | TIM_CR1_CEN;
     report(tim->arr == (5000-1));
+}
+
+static void dma_test(void *a, void *b, int nr)
+{
+    /* Fake chips seem to be fussy about completion IRQs: They give extra
+     * spurious interrupts and get upset if they are disabled (CCR=0) too
+     * quickly. */
+    printk("DMA Test #%u... ", nr);
+    dma1->ifcr = DMA_IFCR_CGIF(1);
+    dma1->ch1.ccr = 0;
+    dma1->ch1.cmar = (uint32_t)(unsigned long)a;
+    dma1->ch1.cpar = (uint32_t)(unsigned long)b;
+    dma1->ch1.cndtr = 1024;
+    memset(b, 0x12, 1024); /* scratch the destination */
+    dmac = 0;
+    dma1->ch1.ccr = (DMA_CCR_MSIZE_8BIT |
+                     DMA_CCR_PSIZE_8BIT |
+                     DMA_CCR_MINC |
+                     DMA_CCR_PINC |
+                     DMA_CCR_DIR_M2P |
+                     DMA_CCR_MEM2MEM |
+                     DMA_CCR_TCIE |
+                     DMA_CCR_EN);
+    while (!dmac)
+        continue;
+    if (dmac > 1)
+        printk("[Spurious IRQ: Fake Chip?] ", dmac-1);
+    if (memcmp(a, b, 1024))
+        printk("[Bad Data] ");
+    report((dmac == 1) && !memcmp(a, b, 1024));
 }
 
 static void flash_test(void)
@@ -164,6 +215,7 @@ int main(void)
     memset(_sbss, 0, _ebss-_sbss);
 
     stm32_init();
+    rcc->apb1enr |= RCC_APB1ENR_BKPEN | RCC_APB1ENR_PWREN;
     console_init();
 
     printk("\n** Blinky Test **\n");
@@ -208,6 +260,16 @@ int main(void)
     tim_test(tim4, 4);
 #endif
 
+    /* DMA tests (just simple memory-to-memory). */
+    dma1->ifcr = DMA_IFCR_CGIF(1);
+    IRQx_set_prio(IRQ_DMA, TIMER_IRQ_PRI);
+    IRQx_clear_pending(IRQ_DMA);
+    IRQx_enable(IRQ_DMA);
+    dma_test(_stext, _ebss, 1);
+    dma_test(_stext+1, _ebss, 2);
+    dma_test(_stext, _ebss+1, 3);
+    dma_test(_stext+1, _ebss+1, 4);
+
     /* Test Flash. */
     flash_test();
 
@@ -230,6 +292,7 @@ int main(void)
         while (p < (uint32_t *)(0x20000000 + SRAM_KB*1024)) {
             if (*p++ != rand()) {
                 report(FALSE);
+                IRQ_global_disable();
                 for (;;);
             }
         }
