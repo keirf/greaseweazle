@@ -29,7 +29,7 @@ dist:
 	cp -a $(PROJ)-$(VER).hex $(PROJ)-$(VER)/
 	cp -a $(PROJ)-$(VER).upd $(PROJ)-$(VER)/
 	$(MAKE) clean
-	$(MAKE) -C blinky_test -f $(ROOT)/Rules.mk \
+	debug=y $(MAKE) -C blinky_test -f $(ROOT)/Rules.mk \
 		Blinky.elf Blinky.bin Blinky.hex
 	cp -a blinky_test/Blinky.hex $(PROJ)-$(VER)/alt/Blinky_Test-$(VER).hex
 	$(MAKE) clean

@@ -9,7 +9,9 @@
  * See the file COPYING for more details, or visit <http://unlicense.org>.
  */
 
+#ifndef BAUD
 #define BAUD 3000000 /* 3Mbaud */
+#endif
 
 #define USART1_IRQ 37
 
