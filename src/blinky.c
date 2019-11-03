@@ -25,6 +25,15 @@ void IRQ_30(void) __attribute__((alias("IRQ_tim4")));
 int printk(const char *format, ...) { return 0; }
 #endif
 
+static void FAIL(void)
+{
+    /* Light the LED(s) and hang. */
+    IRQ_global_disable();
+    gpio_write_pin(gpiob, 12, LOW);
+    gpio_write_pin(gpioc, 13, LOW);
+    for (;;) ;
+}
+
 static void IRQ_tim4(void)
 {
     static bool_t x;
@@ -53,6 +62,44 @@ static uint32_t rand(void)
     return x;
 }
 
+static void i2c_test(I2C i2c)
+{
+    i2c->cr1 = 0;
+    i2c->oar1 = 0x10;
+    i2c->cr2 = (I2C_CR2_FREQ(36) |
+                I2C_CR2_ITERREN |
+                I2C_CR2_ITEVTEN |
+                I2C_CR2_ITBUFEN);
+    i2c->cr1 = I2C_CR1_ACK | I2C_CR1_PE;
+    if ((i2c->oar1 != 0x10) || (i2c->cr1 != (I2C_CR1_ACK | I2C_CR1_PE)))
+        FAIL();
+}
+
+static void spi_test(SPI spi)
+{
+    spi->cr2 = (SPI_CR2_TXDMAEN | SPI_CR2_RXDMAEN);
+    spi->cr1 = (SPI_CR1_MSTR | /* master */
+                SPI_CR1_SSM | SPI_CR1_SSI | /* software NSS */
+                SPI_CR1_SPE | /* enable */
+                SPI_CR1_DFF | /* 16-bit */
+                SPI_CR1_CPHA |
+                SPI_CR1_BR_DIV4);
+    if (spi->cr2 != (SPI_CR2_TXDMAEN | SPI_CR2_RXDMAEN))
+        FAIL();
+}
+
+static void tim_test(TIM tim)
+{
+    /* Configure to overflow at 2Hz. */
+    tim->psc = sysclk_us(100)-1;
+    tim->arr = 5000-1;
+    tim->dier = TIM_DIER_UIE;
+    tim->cr2 = 0;
+    tim->cr1 = TIM_CR1_URS | TIM_CR1_CEN;
+    if (tim->arr != (5000-1))
+        FAIL();
+}
+
 int main(void)
 {
     uint32_t fp, *p;
@@ -76,34 +123,23 @@ int main(void)
     gpio_configure_pin(gpiob, 12, GPO_opendrain(_2MHz, HIGH));
     gpio_configure_pin(gpioc, 13, GPO_opendrain(_2MHz, HIGH));
 
-    /* Touch I2C peripherals. */
+    /* Test I2C peripherals. */
     rcc->apb1enr |= RCC_APB1ENR_I2C1EN;
-    i2c1->oar1 = i2c1->oar2 = 0x26;
-    if ((i2c1->oar1 != 0x26) || (i2c1->oar2 != 0x26))
-        goto fail;
+    i2c_test(i2c1);
     rcc->apb1enr |= RCC_APB1ENR_I2C2EN;
-    i2c2->oar1 = i2c2->oar2 = 0x26;
-    if ((i2c2->oar1 != 0x26) || (i2c2->oar2 != 0x26))
-        goto fail;
+    i2c_test(i2c2);
 
-    /* Touch SPI peripherals. */
+    /* Test SPI peripherals. */
     rcc->apb2enr |= RCC_APB2ENR_SPI1EN;
+    spi_test(spi1);
     rcc->apb1enr |= RCC_APB1ENR_SPI2EN;
-    spi1->cr2 = spi2->cr2 = 3;
-    if ((spi1->cr2 != 3) || (spi2->cr2 != 3))
-        goto fail;
+    spi_test(spi2);
 
-    /* Touch TIM peripherals. */
-    tim1->arr = tim2->arr = tim3->arr = 123;
-    if ((tim1->arr != 123) || (tim2->arr != 123) | (tim3->arr != 123))
-        goto fail;
-
-    /* Configure TIM4 to overflow at 2Hz. */
-    tim4->psc = sysclk_us(100)-1;
-    tim4->arr = 5000-1;
-    tim4->dier = TIM_DIER_UIE;
-    tim4->cr2 = 0;
-    tim4->cr1 = TIM_CR1_URS | TIM_CR1_CEN;
+    /* Test TIM peripherals, set up to overflow at 2Hz. */
+    tim_test(tim1);
+    tim_test(tim2);
+    tim_test(tim3);
+    tim_test(tim4);
 
     /* Enable TIM4 IRQ, to be triggered at 2Hz. */
     IRQx_set_prio(IRQ_TIM4, TIMER_IRQ_PRI);
@@ -139,12 +175,7 @@ int main(void)
     }
 
 fail:
-    /* On SRAM failure we light the LED(s) and hang. */
-    IRQ_global_disable();
-    gpio_write_pin(gpiob, 12, LOW);
-    gpio_write_pin(gpioc, 13, LOW);
-    for (;;) ;
-
+    FAIL();
     return 0;
 }
 
