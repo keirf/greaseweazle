@@ -1,6 +1,6 @@
 
 export FW_MAJOR := 0
-export FW_MINOR := 3
+export FW_MINOR := 4
 
 PROJ = Greaseweazle
 VER := v$(FW_MAJOR).$(FW_MINOR)

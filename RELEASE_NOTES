@@ -3,6 +3,13 @@
 ** Keir Fraser <keir.xen@gmail.com>
 ************************************
 
+** v0.4 - 5 November 2019
+ - Blinky: Diagnostic test firmware to detect fake STM32 chips
+   - https://github.com/keirf/Greaseweazle/wiki/STM32-Fakes
+ - Floppy Write: Fix for very short flux timings
+ - Floppy Read: Fix for very long flux timings
+ - USB: Small improvement to double-buffer logic
+
 ** v0.3 - 30 October 2019
  - Bootloader: Fix Programming-Jumper detection
  - Read Track: Various minor fixes
