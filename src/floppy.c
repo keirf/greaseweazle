@@ -111,13 +111,9 @@ static uint8_t u_buf[8192];
 static uint32_t u_cons, u_prod;
 #define U_MASK(x) ((x)&(sizeof(u_buf)-1))
 
-static struct delay_params {
-    uint16_t step_delay;
-    uint16_t seek_settle;
-    uint16_t motor_delay;
-    uint16_t auto_off;
-} delay_params = {
-    .step_delay = 3,
+static struct gw_delay delay_params = {
+    .select_delay = 10,
+    .step_delay = 3000,
     .seek_settle = 15,
     .motor_delay = 750,
     .auto_off = 10000
@@ -130,7 +126,7 @@ static void step_one_out(void)
     write_pin(step, TRUE);
     delay_us(10);
     write_pin(step, FALSE);
-    delay_ms(delay_params.step_delay);
+    delay_us(delay_params.step_delay);
 }
 
 static void step_one_in(void)
@@ -140,27 +136,22 @@ static void step_one_in(void)
     write_pin(step, TRUE);
     delay_us(10);
     write_pin(step, FALSE);
-    delay_ms(delay_params.step_delay);
+    delay_us(delay_params.step_delay);
 }
 
 static int cur_cyl = -1;
 
-static void drive_select(void)
+static void drive_select(bool_t on)
 {
-    write_pin(sel0, TRUE);
-    delay_us(10);
-}
-
-static void drive_deselect(void)
-{
-    delay_us(10);
-    write_pin(sel0, FALSE);
+    if (read_pin(sel0) == on)
+        return;
+    write_pin(sel0, on);
+    if (on)
+        delay_us(delay_params.select_delay);
 }
 
 static bool_t floppy_seek(unsigned int cyl)
 {
-    drive_select();
-
     if ((cyl == 0) || (cur_cyl < 0)) {
 
         unsigned int i;
@@ -171,7 +162,6 @@ static bool_t floppy_seek(unsigned int cyl)
         }
         cur_cyl = 0;
         if (get_trk0() == HIGH) {
-            drive_deselect();
             cur_cyl = -1;
             return FALSE;
         }
@@ -194,15 +184,13 @@ static bool_t floppy_seek(unsigned int cyl)
 
     }
 
-    drive_deselect();
-
     delay_ms(delay_params.seek_settle);
     cur_cyl = cyl;
 
     return TRUE;
 }
 
-static void floppy_motor(bool_t on)
+static void drive_motor(bool_t on)
 {
     if (read_pin(motor) == on)
         return;
@@ -318,7 +306,7 @@ void floppy_init(void)
 }
 
 static struct gw_info gw_info = {
-    .max_index = 15, .max_cmd = CMD_GET_INDEX_TIMES,
+    .max_index = 15, .max_cmd = CMD_SELECT,
     .sample_freq = SYSCLK_MHZ * 1000000u
 };
 
@@ -433,8 +421,11 @@ static void rdata_encode_flux(void)
     rw.ticks_since_index = ticks_since_index;
 }
 
-static void floppy_read_prep(unsigned int nr_idx)
+static uint8_t floppy_read_prep(struct gw_read_flux *rf)
 {
+    if ((rf->nr_idx == 0) || (rf->nr_idx > gw_info.max_index))
+        return ACK_BAD_COMMAND;
+
     /* Start DMA. */
     dma_rdata.cndtr = ARRAY_SIZE(dma.buf);
     dma_rdata.ccr = (DMA_CCR_PL_HIGH |
@@ -449,9 +440,6 @@ static void floppy_read_prep(unsigned int nr_idx)
     dma.cons = 0;
     dma.prev_sample = tim_rdata->cnt;
 
-    drive_select();
-    floppy_motor(TRUE);
-
     /* Start timer. */
     tim_rdata->ccer = TIM_CCER_CC2E | TIM_CCER_CC2P;
     tim_rdata->cr1 = TIM_CR1_CEN;
@@ -459,9 +447,11 @@ static void floppy_read_prep(unsigned int nr_idx)
     index.count = 0;
     floppy_state = ST_read_flux;
     memset(&rw, 0, sizeof(rw));
-    rw.nr_idx = nr_idx;
+    rw.nr_idx = rf->nr_idx;
     rw.start = time_now();
     rw.status = ACK_OKAY;
+
+    return ACK_OKAY;
 }
 
 static void make_read_packet(unsigned int n)
@@ -524,7 +514,6 @@ static void floppy_read(void)
         make_read_packet(avail);
         floppy_state = ST_command_wait;
         floppy_end_command(rw.packet, avail+1);
-        drive_deselect();
         return; /* FINISHED */
 
     }
@@ -641,27 +630,23 @@ static void floppy_process_write_packet(void)
     }
 }
 
-static void floppy_write_prep(struct gw_write_flux *wf)
+static uint8_t floppy_write_prep(struct gw_write_flux *wf)
 {
+    if (get_wrprot() == LOW)
+        return ACK_WRPROT;
+
     /* Initialise DMA ring indexes (consumer index is implicit). */
     dma_wdata.cndtr = ARRAY_SIZE(dma.buf);
     dma.prod = 0;
-
-    drive_select();
-    floppy_motor(TRUE);
 
     floppy_state = ST_write_flux_wait_data;
     memset(&rw, 0, sizeof(rw));
     rw.status = ACK_OKAY;
 
-    if (get_wrprot() == LOW) {
-        floppy_flux_end();
-        rw.status = ACK_WRPROT;
-        floppy_state = ST_write_flux_drain;
-    }
-
     index.delay = time_sysclk(wf->index_delay_ticks);
     rw.terminate_at_index = wf->terminate_at_index;
+
+    return ACK_OKAY;
 }
 
 static void floppy_write_wait_data(void)
@@ -787,7 +772,6 @@ static void floppy_write_drain(void)
     u_buf[0] = rw.status;
     floppy_state = ST_command_wait;
     floppy_end_command(u_buf, 1);
-    drive_deselect();
 
     /* Reset INDEX handling. */
     IRQ_global_disable();
@@ -808,70 +792,91 @@ static void process_command(void)
     switch (cmd) {
     case CMD_GET_INFO: {
         uint8_t idx = u_buf[2];
-        if (len != 3) goto bad_command;
-        if (idx != 0) goto bad_command;
-        memset(&u_buf[2], 0, 32);
+        uint8_t nr = u_buf[3];
+        if ((len != 4) || (idx != 0) || (nr > 32))
+            goto bad_command;
+        memset(&u_buf[2], 0, nr);
         gw_info.fw_major = fw_major;
         gw_info.fw_minor = fw_minor;
         memcpy(&u_buf[2], &gw_info, sizeof(gw_info));
-        resp_sz += 32;
+        resp_sz += nr;
         break;
     }
     case CMD_SEEK: {
         uint8_t cyl = u_buf[2];
-        if (len != 3) goto bad_command;
-        if (cyl > 85) goto bad_command;
+        if ((len != 3) || (cyl > 85))
+            goto bad_command;
         u_buf[1] = floppy_seek(cyl) ? ACK_OKAY : ACK_NO_TRK0;
         goto out;
     }
     case CMD_SIDE: {
         uint8_t side = u_buf[2];
-        if (len != 3) goto bad_command;
-        if (side > 1) goto bad_command;
+        if ((len != 3) || (side > 1))
+            goto bad_command;
         write_pin(side, side);
         break;
     }
-    case CMD_SET_DELAYS: {
-        if (len != (2+sizeof(delay_params))) goto bad_command;
-        memcpy(&delay_params, &u_buf[2], sizeof(delay_params));
+    case CMD_SET_PARAMS: {
+        uint8_t idx = u_buf[2];
+        if ((len < 3) || (idx != PARAMS_DELAYS)
+            || (len > (3 + sizeof(delay_params))))
+            goto bad_command;
+        memcpy(&delay_params, &u_buf[3], len-3);
         break;
     }
-    case CMD_GET_DELAYS: {
-        if (len != 2) goto bad_command;
-        memcpy(&u_buf[2], &delay_params, sizeof(delay_params));
-        resp_sz += sizeof(delay_params);
+    case CMD_GET_PARAMS: {
+        uint8_t idx = u_buf[2];
+        uint8_t nr = u_buf[3];
+        if ((len != 4) || (idx != PARAMS_DELAYS)
+            || (nr > sizeof(delay_params)))
+            goto bad_command;
+        memcpy(&u_buf[2], &delay_params, nr);
+        resp_sz += nr;
         break;
     }
     case CMD_MOTOR: {
-        uint8_t state = u_buf[2];
-        if (len != 3) goto bad_command;
-        if (state > 1) goto bad_command;
-        floppy_motor(state);
+        uint8_t mask = u_buf[2];
+        if ((len != 3) || (mask & ~1))
+            goto bad_command;
+        drive_motor(mask & 1);
         break;
     }
     case CMD_READ_FLUX: {
-        uint8_t nr_idx = u_buf[2];
-        if (len != 3) goto bad_command;
-        if ((nr_idx == 0) || (nr_idx > gw_info.max_index)) goto bad_command;
-        floppy_read_prep(nr_idx);
-        break;
+        struct gw_read_flux rf = { .nr_idx = 2 };
+        if ((len < 2) || (len > (2 + sizeof(rf))))
+            goto bad_command;
+        memcpy(&rf, &u_buf[2], len-2);
+        u_buf[1] = floppy_read_prep(&rf);
+        goto out;
     }
     case CMD_WRITE_FLUX: {
         struct gw_write_flux wf = { 0 };
-        if ((len < 2) || (len > (2 + sizeof(wf)))) goto bad_command;
+        if ((len < 2) || (len > (2 + sizeof(wf))))
+            goto bad_command;
         memcpy(&wf, &u_buf[2], len-2);
-        floppy_write_prep(&wf);
-        break;
+        u_buf[1] = floppy_write_prep(&wf);
+        goto out;
+
     }
     case CMD_GET_FLUX_STATUS: {
-        if (len != 2) goto bad_command;
+        if (len != 2)
+            goto bad_command;
         u_buf[1] = rw.status;
         goto out;
     }
     case CMD_GET_INDEX_TIMES: {
-        if (len != 2) goto bad_command;
-        memcpy(&u_buf[2], rw.index_ticks, sizeof(rw.index_ticks));
-        resp_sz += sizeof(rw.index_ticks);
+        uint8_t f = u_buf[2], n = u_buf[3];
+        if ((len != 4) || (n > 15) || ((f+n) > gw_info.max_index))
+            goto bad_command;
+        memcpy(&u_buf[2], rw.index_ticks+f, n*4);
+        resp_sz += n*4;
+        break;
+    }
+    case CMD_SELECT: {
+        uint8_t mask = u_buf[2];
+        if ((len != 3) || (mask & ~1))
+            goto bad_command;
+        drive_select(mask & 1);
         break;
     }
     default:
@@ -900,8 +905,8 @@ void floppy_process(void)
 
     if (auto_off.armed && (time_since(auto_off.deadline) >= 0)) {
         floppy_flux_end();
-        floppy_motor(FALSE);
-        drive_deselect();
+        drive_motor(FALSE);
+        drive_select(FALSE);
         auto_off.armed = FALSE;
         //gpio_write_pin(gpioa, 0, LOW);
         //delay_ms(100); /* force disconnect */

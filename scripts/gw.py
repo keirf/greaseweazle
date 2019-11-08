@@ -19,16 +19,17 @@ scp_freq = 40000000
 BAUD_CLEAR_COMMS    = 10000
 BAUD_NORMAL         = 9600
 
-CMD_GET_INFO        = 0
-CMD_SEEK            = 1
-CMD_SIDE            = 2
-CMD_SET_DELAYS      = 3
-CMD_GET_DELAYS      = 4
-CMD_MOTOR           = 5
-CMD_READ_FLUX       = 6
-CMD_WRITE_FLUX      = 7
-CMD_GET_FLUX_STATUS = 8
-CMD_GET_INDEX_TIMES = 9
+CMD_GET_INFO        =  0
+CMD_SEEK            =  1
+CMD_SIDE            =  2
+CMD_SET_PARAMS      =  3
+CMD_GET_PARAMS      =  4
+CMD_MOTOR           =  5
+CMD_READ_FLUX       =  6
+CMD_WRITE_FLUX      =  7
+CMD_GET_FLUX_STATUS =  8
+CMD_GET_INDEX_TIMES =  9
+CMD_SELECT          = 10
 
 # Bootloader-specific:
 CMD_UPDATE          = 1
@@ -41,6 +42,9 @@ ACK_FLUX_OVERFLOW   = 4
 ACK_FLUX_UNDERFLOW  = 5
 ACK_WRPROT          = 6
 ACK_MAX             = 6
+
+# CMD_{GET,SET}_PARAMS:
+PARAMS_DELAYS       = 0
 
 ack_str = [
   "Okay", "Bad Command", "No Index", "Track 0 not found",
@@ -63,9 +67,8 @@ def send_cmd(cmd):
     raise CmdError(c,r)
 
 def get_fw_info():
-  send_cmd(struct.pack("3B", CMD_GET_INFO, 3, 0))
-  x = struct.unpack("<4BI24x", ser.read(32))
-  return x
+  send_cmd(struct.pack("4B", CMD_GET_INFO, 4, 0, 8))
+  return struct.unpack("<4BI", ser.read(8))
 
 def print_fw_info(info):
   (major, minor, max_index, max_cmd, freq) = info
@@ -79,34 +82,39 @@ def seek(cyl, side):
   send_cmd(struct.pack("3B", CMD_SIDE, 3, side))
 
 def get_delays():
-  send_cmd(struct.pack("2B", CMD_GET_DELAYS, 2))
-  return struct.unpack("<4H", ser.read(4*2))
+  send_cmd(struct.pack("4B", CMD_GET_PARAMS, 4, PARAMS_DELAYS, 5*2))
+  return struct.unpack("<5H", ser.read(5*2))
   
 def print_delays(x):
-  (step_delay, seek_settle, motor_delay, auto_off) = x
-  print("Step Delay: %ums" % step_delay)
+  (select_delay, step_delay, seek_settle, motor_delay, auto_off) = x
+  print("Select Delay: %uus" % select_delay)
+  print("Step Delay: %uus" % step_delay)
   print("Settle Time: %ums" % seek_settle)
   print("Motor Delay: %ums" % motor_delay)
   print("Auto Off: %ums" % auto_off)
 
-def set_delays(step_delay = None, seek_settle = None,
+def set_delays(seek_delay = None, step_delay = None, seek_settle = None,
                motor_delay = None, auto_off = None):
-  (_step_delay, _seek_settle, _motor_delay, _auto_off) = get_delays()
+  (_seek_delay, _step_delay, _seek_settle,
+   _motor_delay, _auto_off) = get_delays()
+  if not seek_delay: seek_delay = _seek_delay
   if not step_delay: step_delay = _step_delay
   if not seek_settle: seek_settle = _seek_settle
   if not motor_delay: motor_delay = _motor_delay
   if not auto_off: auto_off = _auto_off
-  send_cmd(struct.pack("<2B4H", CMD_SET_DELAYS, 10,
-                            step_delay, seek_settle, motor_delay, auto_off))
+  send_cmd(struct.pack("<3B5H", CMD_SET_PARAMS, 3+5*2, PARAMS_DELAYS,
+                       seek_delay, step_delay, seek_settle,
+                       motor_delay, auto_off))
 
-def motor(state):
+def drive_select(state):
+  send_cmd(struct.pack("3B", CMD_SELECT, 3, int(state)))
+
+def drive_motor(state):
   send_cmd(struct.pack("3B", CMD_MOTOR, 3, int(state)))
 
-def get_index_times():
-  send_cmd(struct.pack("2B", CMD_GET_INDEX_TIMES, 2))
-  x = []
-  for i in range(15):
-    x.append(struct.unpack("<I", ser.read(4))[0])
+def get_index_times(nr):
+  send_cmd(struct.pack("4B", CMD_GET_INDEX_TIMES, 4, 0, nr))
+  x = struct.unpack("<%dI" % nr, ser.read(4*nr))
   return x
 
 def print_index_times(index_times):
@@ -221,7 +229,7 @@ def flux_to_scp(flux, track, nr_revs):
 
   factor = scp_freq / sample_freq
 
-  index_times = get_index_times()[:nr_revs+1]
+  index_times = get_index_times(nr_revs+1)
   tdh = struct.pack("<3sB", b"TRK", track)
   dat = bytearray()
 
@@ -466,13 +474,28 @@ def _main(argv):
     print(" To \"update\" you must install the Update Jumper")
     return
   
-  #set_delays(step_delay=3)
-  #print_delays(get_delays())
-
-  actions[args.action](args)
+  set_delays(step_delay=5000)
+  print_delays(get_delays())
 
   if not update_mode:
-    motor(False)
+    drive_select(True)
+    drive_motor(True)
+  
+  try:
+    actions[args.action](args)
+  except:
+    if not update_mode:
+      ser.reset_output_buffer()
+      ser.baudrate = BAUD_CLEAR_COMMS
+      ser.baudrate = BAUD_NORMAL
+      ser.reset_input_buffer()
+      drive_motor(False)
+      drive_select(False)
+    raise
+  else:
+    if not update_mode:
+      drive_motor(False)
+      drive_select(False)
 
 
 def main(argv):
