@@ -102,6 +102,13 @@ struct nvic {
 
 #define NVIC_BASE 0xe000e100
 
+struct dbg {
+    uint32_t mcu_idcode; /* 00: MCU ID code */
+    uint32_t mcu_cr;     /* 04: Debug MCU configuration */
+};
+
+#define DBG_BASE 0xe0042000
+
 /* Flash memory interface */
 struct flash {
     uint32_t acr;      /* 00: Flash access control */

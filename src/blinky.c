@@ -209,6 +209,8 @@ fail:
 
 int main(void)
 {
+    uint32_t id, dev_id, rev_id;
+
     /* Relocate DATA. Initialise BSS. */
     if (_sdat != _ldat)
         memcpy(_sdat, _ldat, _edat-_sdat);
@@ -225,6 +227,26 @@ int main(void)
     /* Configure LED pin(s). LED is connected to VDD. */
     gpio_configure_pin(gpiob, 12, GPO_opendrain(_2MHz, HIGH));
     gpio_configure_pin(gpioc, 13, GPO_opendrain(_2MHz, HIGH));
+
+    printk("Serial = %04x:%04x:%04x:%04x:%04x:%04x\n",
+           *(volatile uint16_t *)0x1ffff7e8,
+           *(volatile uint16_t *)0x1ffff7ea,
+           *(volatile uint16_t *)0x1ffff7ec,
+           *(volatile uint16_t *)0x1ffff7ee,
+           *(volatile uint16_t *)0x1ffff7f0,
+           *(volatile uint16_t *)0x1ffff7f2);
+    printk("Flash Size  = %ukB\n", *(volatile uint16_t *)0x1ffff7e0);
+
+    id = dbg->mcu_idcode;
+    dev_id = id & 0xfff;
+    rev_id = id >> 16;
+    printk("Device ID = 0x%04x\n", dev_id);
+    printk("Revision  = 0x%04x\n", rev_id);
+    if (id != 0) {
+        /* Erratum 2.3 in STM32F10xx8/B Errata Sheet. */
+        /* I feel bad outright failing on this, so just warn. */
+        printk("**WARNING**: 10xx8/B device returned valid IDCODE! Fake?\n");
+    }
 
     /* Test I2C peripherals. */
 #if NR_I2C >= 1

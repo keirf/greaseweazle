@@ -13,6 +13,7 @@
 #define STK volatile struct stk * const
 #define SCB volatile struct scb * const
 #define NVIC volatile struct nvic * const
+#define DBG volatile struct dbg * const
 #define FLASH volatile struct flash * const
 #define PWR volatile struct pwr * const
 #define BKP volatile struct bkp * const
@@ -35,6 +36,7 @@
 static STK stk = (struct stk *)STK_BASE;
 static SCB scb = (struct scb *)SCB_BASE;
 static NVIC nvic = (struct nvic *)NVIC_BASE;
+static DBG dbg = (struct dbg *)DBG_BASE;
 static FLASH flash = (struct flash *)FLASH_BASE;
 static PWR pwr = (struct pwr *)PWR_BASE;
 static BKP bkp = (struct bkp *)BKP_BASE;
