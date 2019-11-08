@@ -141,7 +141,7 @@ def write_flux(flux):
   retry = 0
   while True:
     start = timer()
-    send_cmd(struct.pack("2B", CMD_WRITE_FLUX, 2))
+    send_cmd(struct.pack("<2BIB", CMD_WRITE_FLUX, 7, 0, 1))
     ser.write(x)
     ser.read(1) # Sync with Greaseweazle
     try:

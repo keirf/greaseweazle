@@ -63,10 +63,20 @@ static struct {
 
 #define irq_index 23
 void IRQ_23(void) __attribute__((alias("IRQ_INDEX_changed"))); /* EXTI9_5 */
-static volatile struct index {
-    unsigned int count;
-    unsigned int rdata_cnt;
+static struct index {
+    /* Main code can reset this at will. */
+    volatile unsigned int count;
+    /* For synchronising index pulse reporting to the RDATA flux stream. */
+    volatile unsigned int rdata_cnt;
+    /* Following fields are for delayed-index writes. */
+    unsigned int delay;
+    struct timer delay_timer;
+    time_t timestamp;
 } index;
+
+#define irq_index_delay 31
+void IRQ_31(void) __attribute__((alias("IRQ_INDEX_delay")));
+static void index_delay_timer(void *unused);
 
 /* A DMA buffer for running a timer associated with a floppy-data I/O pin. */
 static struct dma_ring {
@@ -261,7 +271,10 @@ void floppy_init(void)
     /* PB[15:0] -> EXT[15:0] */
     afio->exticr1 = afio->exticr2 = afio->exticr3 = afio->exticr4 = 0x1111;
 
-    /* Configure INDEX-changed IRQ. */
+    /* Configure INDEX-changed IRQs and timer. */
+    timer_init(&index.delay_timer, index_delay_timer, NULL);
+    IRQx_set_prio(irq_index_delay, TIMER_IRQ_PRI);
+    IRQx_enable(irq_index_delay);
     exti->rtsr = 0;
     exti->imr = exti->ftsr = m(pin_index);
     IRQx_set_prio(irq_index, INDEX_IRQ_PRI);
@@ -336,6 +349,7 @@ static struct {
     uint8_t idx, nr_idx;
     bool_t packet_ready;
     bool_t write_finished;
+    bool_t terminate_at_index;
     unsigned int packet_len;
     int ticks_since_index;
     uint32_t ticks_since_flux;
@@ -627,7 +641,7 @@ static void floppy_process_write_packet(void)
     }
 }
 
-static void floppy_write_prep(void)
+static void floppy_write_prep(struct gw_write_flux *wf)
 {
     /* Initialise DMA ring indexes (consumer index is implicit). */
     dma_wdata.cndtr = ARRAY_SIZE(dma.buf);
@@ -645,6 +659,9 @@ static void floppy_write_prep(void)
         rw.status = ACK_WRPROT;
         floppy_state = ST_write_flux_drain;
     }
+
+    index.delay = time_sysclk(wf->index_delay_ticks);
+    rw.terminate_at_index = wf->terminate_at_index;
 }
 
 static void floppy_write_wait_data(void)
@@ -727,6 +744,10 @@ static void floppy_write(void)
     floppy_process_write_packet();
     wdata_decode_flux();
 
+    /* Early termination on index pulse? */
+    if (rw.terminate_at_index && (index.count != 0))
+        goto terminate;
+
     if (!rw.write_finished) {
         floppy_write_check_underflow();
         return;
@@ -735,15 +756,16 @@ static void floppy_write(void)
     /* Wait for DMA ring to drain. */
     todo = ~0;
     do {
-        /* Early termination on index pulse? */
-//        if (wr->terminate_at_index && (index.count != index_count))
-//            goto out;
+        /* Check for early termination on index pulse. */
+        if (rw.terminate_at_index && (index.count != 0))
+            goto terminate;
         /* Check progress of draining the DMA ring. */
         prev_todo = todo;
         dmacons = ARRAY_SIZE(dma.buf) - dma_wdata.cndtr;
         todo = (dma.prod - dmacons) & (ARRAY_SIZE(dma.buf) - 1);
     } while ((todo != 0) && (todo <= prev_todo));
 
+terminate:
     floppy_flux_end();
     floppy_state = ST_write_flux_drain;
 }
@@ -766,6 +788,13 @@ static void floppy_write_drain(void)
     floppy_state = ST_command_wait;
     floppy_end_command(u_buf, 1);
     drive_deselect();
+
+    /* Reset INDEX handling. */
+    IRQ_global_disable();
+    index.delay = 0;
+    IRQx_clear_pending(irq_index_delay);
+    timer_cancel(&index.delay_timer);
+    IRQ_global_enable();
 }
 
 static void process_command(void)
@@ -828,8 +857,10 @@ static void process_command(void)
         break;
     }
     case CMD_WRITE_FLUX: {
-        if (len != 2) goto bad_command;
-        floppy_write_prep();
+        struct gw_write_flux wf = { 0 };
+        if ((len < 2) || (len > (2 + sizeof(wf)))) goto bad_command;
+        memcpy(&wf, &u_buf[2], len-2);
+        floppy_write_prep(&wf);
         break;
     }
     case CMD_GET_FLUX_STATUS: {
@@ -936,13 +967,29 @@ const struct usb_class_ops usb_cdc_acm_ops = {
  * INTERRUPT HANDLERS
  */
 
+static void index_delay_timer(void *unused)
+{
+    index.count++;
+}
+
+static void IRQ_INDEX_delay(void)
+{
+    timer_set(&index.delay_timer, index.timestamp + index.delay);
+}
+
 static void IRQ_INDEX_changed(void)
 {
     /* Clear INDEX-changed flag. */
     exti->pr = m(pin_index);
 
-    index.count++;
     index.rdata_cnt = tim_rdata->cnt;
+    index.timestamp = time_now();
+
+    if (index.delay != 0) {
+        IRQx_set_pending(irq_index_delay);
+    } else {
+        index.count++;
+    }
 }
 
 /*

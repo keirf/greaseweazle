@@ -21,9 +21,11 @@
 #define CMD_GET_DELAYS      4
 /* CMD_MOTOR, length=3, motor_state */
 #define CMD_MOTOR           5
-/* CMD_READ_FLUX, length=3, #revs. Returns flux readings until EOStream. */
+/* CMD_READ_FLUX, length=3, #index_pulses.
+ * Returns flux readings until EOStream. */
 #define CMD_READ_FLUX       6
-/* CMD_WRITE_FLUX, length=2. Host follows with flux readings until EOStream. */
+/* CMD_WRITE_FLUX, length=2-7. Optionally include all or part of gw_write_flux.
+ * Host follows with flux readings until EOStream. */
 #define CMD_WRITE_FLUX      7
 /* CMD_GET_FLUX_STATUS, length=2. Last read/write status returned in ACK. */
 #define CMD_GET_FLUX_STATUS 8
@@ -51,6 +53,11 @@ struct __packed gw_info {
     uint8_t max_index;
     uint8_t max_cmd;
     uint32_t sample_freq;
+};
+
+struct __packed gw_write_flux {
+    uint32_t index_delay_ticks; /* default: 0 */
+    uint8_t terminate_at_index; /* default: 0 */
 };
 
 /*
