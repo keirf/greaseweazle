@@ -28,7 +28,7 @@ CMD_MOTOR           = 5
 CMD_READ_FLUX       = 6
 CMD_WRITE_FLUX      = 7
 CMD_GET_FLUX_STATUS = 8
-CMD_GET_READ_INFO   = 9
+CMD_GET_INDEX_TIMES = 9
 
 # Bootloader-specific:
 CMD_UPDATE          = 1
@@ -68,9 +68,9 @@ def get_fw_info():
   return x
 
 def print_fw_info(info):
-  (major, minor, max_revs, max_cmd, freq) = info
+  (major, minor, max_index, max_cmd, freq) = info
   print("Greaseweazle v%u.%u" % (major, minor))
-  print("Max revs %u" % (max_revs))
+  print("Max index timings %u" % (max_index))
   print("Max cmd %u" % (max_cmd))
   print("Sample frequency: %.2f MHz" % (freq / 1000000))
   
@@ -102,17 +102,20 @@ def set_delays(step_delay = None, seek_settle = None,
 def motor(state):
   send_cmd(struct.pack("3B", CMD_MOTOR, 3, int(state)))
 
-def get_read_info():
-  send_cmd(struct.pack("2B", CMD_GET_READ_INFO, 2))
+def get_index_times():
+  send_cmd(struct.pack("2B", CMD_GET_INDEX_TIMES, 2))
   x = []
-  for i in range(7):
-    x.append(struct.unpack("<2I", ser.read(2*4)))
+  for i in range(15):
+    x.append(struct.unpack("<I", ser.read(4))[0])
   return x
 
-def print_read_info(info):
-  for (time, samples) in info:
-    print("%u ticks, %u samples" % (time, samples))
+def print_index_times(index_times):
+  for ticks in index_times:
+    print("%u ticks" % (ticks))
 
+
+# write_flux:
+# Write the current track via Greaseweazle with the specified flux timings.
 def write_flux(flux):
   start = timer()
   x = bytearray()
@@ -152,13 +155,18 @@ def write_flux(flux):
     end = timer()
     #print("Track written in %f seconds" % (end-start))
     break
-  
-def read_flux(nr_revs):
+
+
+# read_flux:
+# Read flux timings from Greaseweazle for the current track.
+def read_flux(nr_idx):
+
+  # Read the encoded flux stream, retrying if necessary.
   retry = 0
   while True:
     start = timer()
     x = collections.deque()
-    send_cmd(struct.pack("3B", CMD_READ_FLUX, 3, nr_revs))
+    send_cmd(struct.pack("3B", CMD_READ_FLUX, 3, nr_idx))
     nr = 0
     while True:
       x += ser.read(1)
@@ -180,6 +188,7 @@ def read_flux(nr_revs):
     
   #print("Read %u bytes in %u batches in %f seconds" % (len(x), nr, end-start))
 
+  # Decode the flux stream into a list of flux samples.
   start = timer()
   y = []
   while x:
@@ -204,8 +213,78 @@ def read_flux(nr_revs):
 
   return y
 
-def read(args):
+
+# flux_to_scp:
+# Converts Greaseweazle flux samples into a Supercard Pro Track.
+# Returns the Track Data Header (TDH) and the SCP "bitcell" array.
+def flux_to_scp(flux, track, nr_revs):
+
   factor = scp_freq / sample_freq
+
+  index_times = get_index_times()[:nr_revs+1]
+  tdh = struct.pack("<3sB", b"TRK", track)
+  dat = bytearray()
+
+  len_at_index = rev = 0
+  to_index = index_times[0]
+  rem = 0.0
+
+  for x in flux:
+
+    # Are we processing initial samples before the first revolution?
+    if rev == 0:
+      if to_index >= x:
+        # Discard initial samples
+        to_index -= x
+        continue
+      # Now starting the first full revolution
+      rev = 1
+      to_index += index_times[rev]
+
+    # Does the next flux interval cross the index mark?  
+    while to_index < x:
+      # Append to the Track Data Header for the previous full revolution
+      tdh += struct.pack("<III",
+                         int(round(index_times[rev]*factor)),
+                         (len(dat) - len_at_index) // 2,
+                         4 + nr_revs*12 + len_at_index)
+      # Set up for the next revolution
+      len_at_index = len(dat)
+      rev += 1
+      if rev > nr_revs:
+        # We're done: We simply discard any surplus flux samples
+        return (tdh, dat)
+      to_index += index_times[rev]
+
+    # Process the current flux sample into SCP "bitcell" format
+    to_index -= x
+    y = x * factor + rem
+    val = int(round(y))
+    if (val & 65535) == 0:
+      val += 1
+    rem = y - val
+    while val >= 65536:
+      dat.append(0)
+      dat.append(0)
+      val -= 65536
+    dat.append(val>>8)
+    dat.append(val&255)
+
+  # Header for last track(s) in case we ran out of flux timings.
+  while rev <= nr_revs:
+    tdh += struct.pack("<III",
+                       int(round(index_times[rev]*factor)),
+                       (len(dat) - len_at_index) // 2,
+                       4 + nr_revs*12 + len_at_index)
+    len_at_index = len(dat)
+    rev += 1
+    
+  return (tdh, dat)
+
+
+# read_to_scp:
+# Reads a floppy disk and dumps it into a new Supercard Pro image file.
+def read_to_scp(args):
   trk_dat = bytearray()
   trk_offs = []
   if args.single_sided:
@@ -214,34 +293,16 @@ def read(args):
   else:
     track_range = range(args.scyl*2, (args.ecyl+1)*2)
     nr_sides = 2
-  for i in track_range:
-    cyl = i >> (nr_sides - 1)
-    side = i & (nr_sides - 1)
+  for track in track_range:
+    cyl = track >> (nr_sides - 1)
+    side = track & (nr_sides - 1)
     print("\rReading Track %u.%u..." % (cyl, side), end="")
     trk_offs.append(len(trk_dat))
     seek(cyl, side)
-    flux = read_flux(args.revs)
-    info = get_read_info()[:args.revs]
-    #print_read_info(info)
-    trk_dat += struct.pack("<3sB", b"TRK", i)
-    dat_off = 4 + args.revs*12
-    for (time, samples) in info:
-      time = int(round(time * factor))
-      trk_dat += struct.pack("<III", time, samples, dat_off)
-      dat_off += samples * 2
-    rem = 0.0
-    for x in flux:
-      y = x * factor + rem
-      val = int(round(y))
-      if (val & 65535) == 0:
-        val += 1
-      rem = y - val
-      while val >= 65536:
-        trk_dat.append(0)
-        trk_dat.append(0)
-        val -= 65536
-      trk_dat.append(val>>8)
-      trk_dat.append(val&255)
+    flux = read_flux(args.revs+1)
+    (tdh, dat) = flux_to_scp(flux, track, args.revs)
+    trk_dat += tdh
+    trk_dat += dat
   print()
   csum = 0
   for x in trk_dat:
@@ -272,7 +333,10 @@ def read(args):
     f.write(trk_offs_dat)
     f.write(trk_dat)
 
-def write(args):
+
+# write_from_scp:
+# Writes the specified Supercard Pro image file to floppy disk.
+def write_from_scp(args):
   factor = sample_freq / scp_freq
   with open(args.file, "rb") as f:
     dat = f.read()
@@ -310,7 +374,10 @@ def write(args):
     write_flux(flux)
   print()
 
-def update(args):
+
+# update_firmware:
+# Updates the Greaseweazle firmware using the specified Update File.
+def update_firmware(args):
   with open(args.file, "rb") as f:
     dat = f.read()
   (sig, maj, min, pad1, pad2, crc) = struct.unpack(">2s4BH", dat[-8:])
@@ -331,12 +398,15 @@ def update(args):
   print("Done.")
   print("** Disconnect Greaseweazle and remove the Programming Jumper.")
 
+
+# _main:
+# Argument processing and dispatch.
 def _main(argv):
 
   actions = {
-    "read" : read,
-    "write" : write,
-    "update" : update
+    "read" : read_to_scp,
+    "write" : write_from_scp,
+    "update" : update_firmware
   }
   
   parser = argparse.ArgumentParser(
@@ -349,8 +419,6 @@ def _main(argv):
   parser.add_argument("--ecyl", type=int, default=81,
                       help="last cylinder to read/write")
   parser.add_argument("--single-sided", action="store_true")
-#  parser.add_argument("--total", type=float, default=8.0,
-#                      help="total length, seconds")
   parser.add_argument("file", help="in/out filename")
   parser.add_argument("device", help="serial device")
   args = parser.parse_args(argv[1:])
@@ -406,11 +474,13 @@ def _main(argv):
   if not update_mode:
     motor(False)
 
+
 def main(argv):
   try:
     _main(argv)
   except CmdError as error:
     print("Command Failed: %s" % error)
-    
+
+
 if __name__ == "__main__":
   main(sys.argv)

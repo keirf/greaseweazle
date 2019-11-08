@@ -27,8 +27,8 @@ static uint32_t u_prod;
 static bool_t pa14_strapped;
 
 static struct gw_info gw_info = {
-    /* Max Revs == 0 signals that this is the Bootloader. */
-    .max_rev = 0,
+    /* Max Index == 0 signals that this is the Bootloader. */
+    .max_index = 0,
     /* Only support two commands: GET_INFO and UPDATE. */
     .max_cmd = CMD_UPDATE,
 };

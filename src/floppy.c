@@ -65,9 +65,7 @@ static struct {
 void IRQ_23(void) __attribute__((alias("IRQ_INDEX_changed"))); /* EXTI9_5 */
 static volatile struct index {
     unsigned int count;
-    time_t timestamp;
-    time_t duration;
-    unsigned int read_prod;
+    unsigned int rdata_cnt;
 } index;
 
 /* A DMA buffer for running a timer associated with a floppy-data I/O pin. */
@@ -91,7 +89,6 @@ static enum {
     ST_inactive,
     ST_command_wait,
     ST_zlp,
-    ST_read_flux_wait_index,
     ST_read_flux,
     ST_read_flux_drain,
     ST_write_flux_wait_data,
@@ -308,7 +305,7 @@ void floppy_init(void)
 }
 
 static struct gw_info gw_info = {
-    .max_rev = 7, .max_cmd = CMD_GET_READ_INFO,
+    .max_index = 15, .max_cmd = CMD_GET_INDEX_TIMES,
     .sample_freq = SYSCLK_MHZ * 1000000u
 };
 
@@ -336,59 +333,40 @@ static void floppy_end_command(void *ack, unsigned int ack_len)
 static struct {
     time_t start;
     uint8_t status;
-    uint8_t rev;
-    uint8_t nr_revs;
+    uint8_t idx, nr_idx;
     bool_t packet_ready;
     bool_t write_finished;
     unsigned int packet_len;
-    unsigned int nr_samples;
+    int ticks_since_index;
     uint32_t ticks_since_flux;
+    uint32_t index_ticks[15];
     uint8_t packet[USB_FS_MPS];
 } rw;
-
-static struct {
-    uint32_t time;
-    uint32_t samples;
-} read_info[7];
 
 static void rdata_encode_flux(void)
 {
     const uint16_t buf_mask = ARRAY_SIZE(dma.buf) - 1;
     uint16_t cons = dma.cons, prod, prev = dma.prev_sample, curr, next;
     uint32_t ticks = rw.ticks_since_flux;
-    unsigned int nr_samples;
+    int ticks_since_index = rw.ticks_since_index;
 
-    ASSERT(rw.rev < rw.nr_revs);
+    ASSERT(rw.idx < rw.nr_idx);
 
     /* We don't want to race the Index IRQ handler. */
     IRQ_global_disable();
 
     /* Find out where the DMA engine's producer index has got to. */
     prod = ARRAY_SIZE(dma.buf) - dma_rdata.cndtr;
-    nr_samples = (prod - cons) & buf_mask;
 
-    if (rw.rev != index.count) {
+    if (rw.idx != index.count) {
         /* We have just passed the index mark: Record information about 
          * the just-completed revolution. */
-        unsigned int final_samples = (index.read_prod - cons) & buf_mask;
-        if (final_samples > nr_samples) {
-            /* Only way this can happen is if the producer has overflowed 
-             * past the consumer since the Index IRQ. We will report it 
-             * back to the caller by setting an overflow on the USB ring. */
-            printk("DMA OVERFLOW\n");
-            u_prod = u_cons + sizeof(u_buf) + 1;
-            final_samples = nr_samples;
-        }
-        read_info[rw.rev].time = sysclk_stk(index.duration);
-        read_info[rw.rev].samples = rw.nr_samples + final_samples;
-        nr_samples -= final_samples;
-        rw.nr_samples = 0;
-        rw.rev++;
+        int partial_flux = ticks + (uint16_t)(index.rdata_cnt - prev);
+        rw.index_ticks[rw.idx++] = ticks_since_index + partial_flux;
+        ticks_since_index = -partial_flux;
     }
 
     IRQ_global_enable();
-
-    rw.nr_samples += nr_samples;
 
     /* Process the flux timings into the raw bitcell buffer. */
     for (; cons != prod; cons = (cons+1) & buf_mask) {
@@ -419,6 +397,7 @@ static void rdata_encode_flux(void)
             }
         }
 
+        ticks_since_index += ticks;
         ticks = 0;
     }
 
@@ -437,9 +416,10 @@ static void rdata_encode_flux(void)
     dma.cons = cons;
     dma.prev_sample = prev;
     rw.ticks_since_flux = ticks;
+    rw.ticks_since_index = ticks_since_index;
 }
 
-static void floppy_read_prep(unsigned int revs)
+static void floppy_read_prep(unsigned int nr_idx)
 {
     /* Start DMA. */
     dma_rdata.cndtr = ARRAY_SIZE(dma.buf);
@@ -458,33 +438,16 @@ static void floppy_read_prep(unsigned int revs)
     drive_select();
     floppy_motor(TRUE);
 
-    index.count = 0;
-    floppy_state = ST_read_flux_wait_index;
-    memset(&rw, 0, sizeof(rw));
-    rw.nr_revs = revs;
-    rw.start = time_now();
-    rw.status = ACK_OKAY;
-}
-
-static void floppy_read_wait_index(void)
-{
-    if (index.count == 0) {
-        if (time_since(rw.start) > time_ms(2000)) {
-            /* Timeout */
-            printk("NO INDEX\n");
-            floppy_flux_end();
-            rw.status = ACK_NO_INDEX;
-            floppy_state = ST_read_flux_drain;
-        }
-        return;
-    }
-
     /* Start timer. */
     tim_rdata->ccer = TIM_CCER_CC2E | TIM_CCER_CC2P;
     tim_rdata->cr1 = TIM_CR1_CEN;
 
     index.count = 0;
     floppy_state = ST_read_flux;
+    memset(&rw, 0, sizeof(rw));
+    rw.nr_idx = nr_idx;
+    rw.start = time_now();
+    rw.status = ACK_OKAY;
 }
 
 static void make_read_packet(unsigned int n)
@@ -520,11 +483,21 @@ static void floppy_read(void)
             floppy_state = ST_read_flux_drain;
             u_cons = u_prod = avail = 0;
 
-        } else if (rw.rev >= rw.nr_revs) {
+        } else if (rw.idx >= rw.nr_idx) {
 
             /* Read all requested revolutions. */
             floppy_flux_end();
             floppy_state = ST_read_flux_drain;
+
+        } else if ((index.count == 0)
+                   && (time_since(rw.start) > time_ms(2000))) {
+
+            /* Timeout */
+            printk("NO INDEX\n");
+            floppy_flux_end();
+            rw.status = ACK_NO_INDEX;
+            floppy_state = ST_read_flux_drain;
+            u_cons = u_prod = avail = 0;
 
         }
 
@@ -848,10 +821,10 @@ static void process_command(void)
         break;
     }
     case CMD_READ_FLUX: {
-        uint8_t revs = u_buf[2];
+        uint8_t nr_idx = u_buf[2];
         if (len != 3) goto bad_command;
-        if ((revs == 0) || (revs > 7)) goto bad_command;
-        floppy_read_prep(revs);
+        if ((nr_idx == 0) || (nr_idx > gw_info.max_index)) goto bad_command;
+        floppy_read_prep(nr_idx);
         break;
     }
     case CMD_WRITE_FLUX: {
@@ -864,10 +837,10 @@ static void process_command(void)
         u_buf[1] = rw.status;
         goto out;
     }
-    case CMD_GET_READ_INFO: {
+    case CMD_GET_INDEX_TIMES: {
         if (len != 2) goto bad_command;
-        memcpy(&u_buf[2], &read_info, sizeof(read_info));
-        resp_sz += sizeof(read_info);
+        memcpy(&u_buf[2], rw.index_ticks, sizeof(rw.index_ticks));
+        resp_sz += sizeof(rw.index_ticks);
         break;
     }
     default:
@@ -927,10 +900,6 @@ void floppy_process(void)
         }
         break;
 
-    case ST_read_flux_wait_index:
-        floppy_read_wait_index();
-        break;
-
     case ST_read_flux:
     case ST_read_flux_drain:
         floppy_read();
@@ -969,15 +938,11 @@ const struct usb_class_ops usb_cdc_acm_ops = {
 
 static void IRQ_INDEX_changed(void)
 {
-    time_t now = time_now();
-
     /* Clear INDEX-changed flag. */
     exti->pr = m(pin_index);
 
     index.count++;
-    index.duration = time_diff(index.timestamp, now);
-    index.timestamp = now;
-    index.read_prod = ARRAY_SIZE(dma.buf) - dma_rdata.cndtr;
+    index.rdata_cnt = tim_rdata->cnt;
 }
 
 /*

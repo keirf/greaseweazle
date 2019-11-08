@@ -27,8 +27,8 @@
 #define CMD_WRITE_FLUX      7
 /* CMD_GET_FLUX_STATUS, length=2. Last read/write status returned in ACK. */
 #define CMD_GET_FLUX_STATUS 8
-/* CMD_GET_READ_INFO, length=2. Returns 7*8 bytes after ACK. */
-#define CMD_GET_READ_INFO   9
+/* CMD_GET_INDEX_TIMES, length=2. Returns 15*4 bytes after ACK. */
+#define CMD_GET_INDEX_TIMES 9
 
 /* [BOOTLOADER] CMD_UPDATE, length=6, <update_len>. 
  * Host follows with <update_len> bytes.
@@ -48,7 +48,7 @@
 struct __packed gw_info {
     uint8_t fw_major;
     uint8_t fw_minor;
-    uint8_t max_rev;
+    uint8_t max_index;
     uint8_t max_cmd;
     uint32_t sample_freq;
 };
