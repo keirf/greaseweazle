@@ -147,18 +147,31 @@ def read_to_scp(args):
 # write_from_scp:
 # Writes the specified Supercard Pro image file to floppy disk.
 def write_from_scp(args):
-    factor = usb.sample_freq / scp_freq
+
+    if args.adjust_speed:
+        # @drive_ticks is the time in Gresaeweazle ticks between index pulses.
+        # We will adjust the flux intervals per track to allow for this.
+        usb.read_track(3)
+        index_times = usb.get_index_times(3)
+        drive_ticks = (index_times[1] + index_times[2]) / 2
+    else:
+        # Simple ratio between the Greaseweazle and SCP sample frequencies.
+        factor = usb.sample_freq / scp_freq
+
+    # Parse the SCP image header.
     with open(args.file, "rb") as f:
         dat = f.read()
     header = struct.unpack("<3s9BI", dat[0:16])
     assert header[0] == b"SCP"
     trk_offs = struct.unpack("<168I", dat[16:0x2b0])
+
     if args.single_sided:
         track_range = range(args.scyl, args.ecyl+1)
         nr_sides = 1
     else:
         track_range = range(args.scyl*2, (args.ecyl+1)*2)
         nr_sides = 2
+
     for i in track_range:
         cyl = i >> (nr_sides - 1)
         side = i & (nr_sides - 1)
@@ -166,12 +179,20 @@ def write_from_scp(args):
         if trk_offs[i] == 0:
             continue
         usb.seek(cyl, side)
+
+        # Parse the SCP track header and extract the flux data.
         thdr = struct.unpack("<3sBIII", dat[trk_offs[i]:trk_offs[i]+16])
-        (sig,_,_,samples,off) = thdr
+        (sig,_,track_ticks,samples,off) = thdr
         assert sig == b"TRK"
         tdat = dat[trk_offs[i]+off:trk_offs[i]+off+samples*2]
+
+        # Decode the SCP flux data into a simple list of flux times.
         flux = []
         rem = 0.0
+        if args.adjust_speed:
+            # @factor adjusts flux times for speed variations between the
+            # read-in and write-out drives.
+            factor = drive_ticks / track_ticks
         for i in range(0,len(tdat),2):
             x = tdat[i]*256 + tdat[i+1]
             if x == 0:
@@ -181,15 +202,18 @@ def write_from_scp(args):
             val = int(round(y))
             rem = y - val
             flux.append(val)
+
+        # Encode the flux times for Greaseweazle, and write them out.
         enc_flux = usb.encode_flux(flux)
         for retry in range(1, 5):
             ack = usb.write_track(enc_flux)
             if ack == USB.Ack.Okay:
                 break
-            elif ack == USB.Ack.FluxUnderflow and retry < 5:
+            elif ack == usb.Ack.FLUX_UNDERFLOW and retry < 5:
                 print("Retry #%u..." % (retry))
             else:
                 raise CmdError(ack)
+
     print()
 
 
@@ -254,7 +278,10 @@ def _main(argv):
                         help="first cylinder to read/write")
     parser.add_argument("--ecyl", type=int, default=81,
                         help="last cylinder to read/write")
-    parser.add_argument("--single-sided", action="store_true")
+    parser.add_argument("--single-sided", action="store_true",
+                        help="read/write a single-sided image")
+    parser.add_argument("--adjust-speed", action="store_true",
+                        help="adjust write-flux times for drive speed")
     parser.add_argument("file", help="in/out filename")
     parser.add_argument("device", help="serial device")
     args = parser.parse_args(argv[1:])
