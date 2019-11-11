@@ -895,6 +895,8 @@ bad_command:
 
 static void floppy_configure(void)
 {
+    auto_off_arm();
+    floppy_flux_end();
     floppy_state = ST_command_wait;
     u_cons = u_prod = 0;
 }
