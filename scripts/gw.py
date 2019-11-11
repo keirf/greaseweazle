@@ -209,7 +209,7 @@ def write_from_scp(args):
             ack = usb.write_track(enc_flux)
             if ack == USB.Ack.Okay:
                 break
-            elif ack == usb.Ack.FLUX_UNDERFLOW and retry < 5:
+            elif ack == USB.Ack.FluxUnderflow and retry < 5:
                 print("Retry #%u..." % (retry))
             else:
                 raise CmdError(ack)
