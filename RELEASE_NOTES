@@ -3,6 +3,14 @@
 ** Keir Fraser <keir.xen@gmail.com>
 ************************************
 
+** v0.5 - 11 November 2019
+ - USB: Overhaul the protocol and allow writes to be terminated at index
+   - Terminate-at-index is always used by current Python control script
+   - Terminate-at-index prevents an over-long write from overwriting itself
+   - Fix interruption of track writes (eg. KeyboardInterrupt)
+ - gw.py: New option --adjust-speed to normalise flux times for target drive
+   - Measures RPM of the target drive and calculates an adjustment factor
+
 ** v0.4 - 5 November 2019
  - Blinky: Diagnostic test firmware to detect fake STM32 chips
    - https://github.com/keirf/Greaseweazle/wiki/STM32-Fakes

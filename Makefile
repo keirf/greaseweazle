@@ -1,6 +1,6 @@
 
 export FW_MAJOR := 0
-export FW_MINOR := 4
+export FW_MINOR := 5
 
 PROJ = Greaseweazle
 VER := v$(FW_MAJOR).$(FW_MINOR)
@@ -17,6 +17,7 @@ all:
 
 clean:
 	rm -f *.hex *.upd scripts/greaseweazle/*.pyc
+	rm -f scripts/greaseweazle/version.py
 	find . -name __pycache__ | xargs rm -rf
 	$(MAKE) -f $(ROOT)/Rules.mk $@
 
