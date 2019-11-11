@@ -6,9 +6,9 @@
 #  2 bytes: major, minor
 #  2 bytes: 0, 0
 #  2 bytes: CRC16-CCITT, seed 0xFFFF, stored big endian
-# 
+#
 # Written & released by Keir Fraser <keir.xen@gmail.com>
-# 
+#
 # This is free and unencumbered software released into the public domain.
 # See the file COPYING for more details, or visit <http://unlicense.org>.
 
@@ -34,3 +34,7 @@ def main(argv):
 
 if __name__ == "__main__":
     main(sys.argv)
+
+# Local variables:
+# python-indent: 4
+# End:
