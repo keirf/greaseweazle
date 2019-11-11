@@ -30,7 +30,6 @@ dist:
 	cp -a $(PROJ)-$(VER).hex $(PROJ)-$(VER)/
 	cp -a $(PROJ)-$(VER).upd $(PROJ)-$(VER)/
 	cp -a blinky_test/Blinky.hex $(PROJ)-$(VER)/alt/Blinky_Test-$(VER).hex
-	$(MAKE) clean
 	cp -a COPYING $(PROJ)-$(VER)/
 	cp -a README.md $(PROJ)-$(VER)/
 	cp -a gw.py $(PROJ)-$(VER)/
@@ -38,6 +37,7 @@ dist:
 	cp -a scripts/gw.py $(PROJ)-$(VER)/scripts/
 	cp -a scripts/greaseweazle/*.py $(PROJ)-$(VER)/scripts/greaseweazle/
 	cp -a RELEASE_NOTES $(PROJ)-$(VER)/
+	$(MAKE) clean
 	zip -r $(PROJ)-$(VER).zip $(PROJ)-$(VER)
 
 mrproper: clean
