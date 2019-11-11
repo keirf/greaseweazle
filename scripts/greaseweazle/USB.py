@@ -6,7 +6,7 @@
 # See the file COPYING for more details, or visit <http://unlicense.org>.
 
 import struct, collections
-
+from . import version
 
 ## Control-Path command set
 class ControlCmd:
@@ -77,15 +77,29 @@ class Unit:
   def __init__(self, ser):
     self.ser = ser
     self.reset()
+    # Copy firmware info to instance variables (see above for definitions).
+    self.send_cmd(struct.pack("3B", Cmd.GetInfo, 3, 0))
+    x = struct.unpack("<4BI24x", self.ser.read(32))
+    (self.major, self.minor, self.max_index,
+     self.max_cmd, self.sample_freq) = x
+    # Check whether firmware is in update mode: limited command set if so.
+    self.update_mode = (self.max_index == 0)
+    if self.update_mode:
+      self.update_jumpered = (self.sample_freq & 1)
+      del self.max_index
+      del self.sample_freq
+      return
+    # We are running main firmware: Check whether an update is needed.
+    # We can use only the GetInfo command if the firmware is out of date.
+    self.update_needed = (version.major != self.major
+                          or version.minor != self.minor)
+    if self.update_needed:
+      return
     # Initialise the delay properties with current firmware values.
     self.send_cmd(struct.pack("4B", Cmd.GetParams, 4, Params.Delays, 10))
     (self._select_delay, self._step_delay,
-     self._seek_settle_delay, self._motor_delay,
-     self._auto_off_delay) = struct.unpack("<5H", self.ser.read(10))
-    # Copy firmware info to instance variables (see above for definitions).
-    self.send_cmd(struct.pack("4B", Cmd.GetInfo, 4, 0, 8))
-    (self.major, self.minor, self.max_index,
-     self.max_cmd, self.sample_freq) = struct.unpack("<4BI", self.ser.read(8))
+    self._seek_settle_delay, self._motor_delay,
+       self._auto_off_delay) = struct.unpack("<5H", self.ser.read(10))
     
 
   ## reset:

@@ -14,7 +14,7 @@
  * GREASEWEAZLE COMMAND SET
  */
 
-/* CMD_GET_INFO, length=4, 0, nr_bytes. Returns nr_bytes after ACK. */
+/* CMD_GET_INFO, length=3, 0. Returns 32 bytes after ACK. */
 #define CMD_GET_INFO        0
 /* CMD_SEEK, length=3, cyl# */
 #define CMD_SEEK            1

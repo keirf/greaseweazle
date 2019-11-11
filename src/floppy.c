@@ -792,14 +792,13 @@ static void process_command(void)
     switch (cmd) {
     case CMD_GET_INFO: {
         uint8_t idx = u_buf[2];
-        uint8_t nr = u_buf[3];
-        if ((len != 4) || (idx != 0) || (nr > 32))
+        if ((len != 3) || (idx != 0))
             goto bad_command;
-        memset(&u_buf[2], 0, nr);
+        memset(&u_buf[2], 0, 32);
         gw_info.fw_major = fw_major;
         gw_info.fw_minor = fw_minor;
         memcpy(&u_buf[2], &gw_info, sizeof(gw_info));
-        resp_sz += nr;
+        resp_sz += 32;
         break;
     }
     case CMD_SEEK: {

@@ -196,6 +196,24 @@ def write_from_scp(args):
 # update_firmware:
 # Updates the Greaseweazle firmware using the specified Update File.
 def update_firmware(args):
+
+  # Check that an update operation was actually requested.
+  if args.action != "update":
+    print("Greaseweazle is in Firmware Update Mode:")
+    print(" The only available action is \"update <update_file>\"")
+    if usb.update_jumpered:
+      print(" Remove the Update Jumper for normal operation")
+    else:
+      print(" Main firmware is erased: You *must* perform an update!")
+    return
+
+  # Check that the firmware is actually in update mode.
+  if not usb.update_mode:
+    print("Greaseweazle is in Normal Mode:")
+    print(" To \"update\" you must install the Update Jumper")
+    return
+
+  # Read and check the update file.
   with open(args.file, "rb") as f:
     dat = f.read()
   (sig, maj, min, pad1, pad2, crc) = struct.unpack(">2s4BH", dat[-8:])
@@ -206,6 +224,8 @@ def update_firmware(args):
   crc16.update(dat)
   if crc16.crcValue != 0:
     print("%s: Bad CRC" % (args.file))
+
+  # Perform the update.
   print("Updating to v%u.%u..." % (maj, min))
   ack = usb.update_firmware(dat)
   if ack != 0:
@@ -248,46 +268,30 @@ def _main(argv):
   global usb
   usb = USB.Unit(serial.Serial(args.device))
 
-  update_mode = (usb.max_index == 0)
-
   print("** %s v%u.%u, Host Tools v%u.%u"
-        % (("Greaseweazle","Bootloader")[update_mode],
+        % (("Greaseweazle","Bootloader")[usb.update_mode],
            usb.major, usb.minor,
            version.major, version.minor))
+
+  if args.action == "update" or usb.update_mode:
+    return actions[args.action](args)
   
-  if (not update_mode
-      and (version.major > usb.major
-           or (version.major == usb.major and version.minor > usb.minor))):
-    print("Firmware is out of date: Require >= v%u.%u"
+  elif usb.update_needed:
+    print("Firmware is out of date: Require v%u.%u"
           % (version.major, version.minor))
     print("Install the Update Jumper and \"update <update_file>\"")
     return
   
-  if update_mode and args.action != "update":
-    print("Greaseweazle is in Firmware Update Mode:")
-    print(" The only available action is \"update <update_file>\"")
-    if usb.sample_freq & 1:
-      print(" Remove the Update Jumper for normal operation")
-    else:
-      print(" Main firmware is erased: You *must* perform an update!")
-    return
-
-  if not update_mode and args.action == "update":
-    print("Greaseweazle is in Normal Mode:")
-    print(" To \"update\" you must install the Update Jumper")
-    return
-
-  usb.step_delay = 5000
-  print("Select Delay: %uus" % usb.select_delay)
-  print("Step Delay: %uus" % usb.step_delay)
-  print("Settle Time: %ums" % usb.seek_settle_delay)
-  print("Motor Delay: %ums" % usb.motor_delay)
-  print("Auto Off: %ums" % usb.auto_off_delay)
+  #usb.step_delay = 5000
+  #print("Select Delay: %uus" % usb.select_delay)
+  #print("Step Delay: %uus" % usb.step_delay)
+  #print("Settle Time: %ums" % usb.seek_settle_delay)
+  #print("Motor Delay: %ums" % usb.motor_delay)
+  #print("Auto Off: %ums" % usb.auto_off_delay)
 
   try:
-    if not update_mode:
-      usb.drive_select(True)
-      usb.drive_motor(True)
+    usb.drive_select(True)
+    usb.drive_motor(True)
     actions[args.action](args)
   except KeyboardInterrupt:
     print()
@@ -295,9 +299,8 @@ def _main(argv):
     usb.ser.close()
     usb.ser.open()
   finally:
-    if not update_mode:
-      usb.drive_motor(False)
-      usb.drive_select(False)
+    usb.drive_motor(False)
+    usb.drive_select(False)
 
 
 def main(argv):

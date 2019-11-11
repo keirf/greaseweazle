@@ -116,8 +116,8 @@ static void process_command(void)
     switch (cmd) {
     case CMD_GET_INFO: {
         uint8_t idx = u_buf[2];
-        if (len != 3) goto bad_command;
-        if (idx != 0) goto bad_command;
+        if ((len != 3) || (idx != 0))
+            goto bad_command;
         memset(&u_buf[2], 0, 32);
         gw_info.fw_major = fw_major;
         gw_info.fw_minor = fw_minor;
