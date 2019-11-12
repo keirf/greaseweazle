@@ -7,9 +7,9 @@
 # This is free and unencumbered software released into the public domain.
 # See the file COPYING for more details, or visit <http://unlicense.org>.
 
-import crcmod.predefined
+#from timeit import default_timer as timer
 import sys, struct, argparse, serial
-from timeit import default_timer as timer
+import crcmod.predefined
 
 from greaseweazle import version
 from greaseweazle import USB
@@ -178,19 +178,20 @@ def write_from_scp(usb, args):
         track_range = range(args.scyl*2, (args.ecyl+1)*2)
         nr_sides = 2
 
-    for i in track_range:
-        cyl = i >> (nr_sides - 1)
-        side = i & (nr_sides - 1)
+    for track in track_range:
+        cyl = track >> (nr_sides - 1)
+        side = track & (nr_sides - 1)
         print("\rWriting Track %u.%u..." % (cyl, side), end="")
-        if trk_offs[i] == 0:
+        trk_off = trk_offs[track]
+        if trk_off == 0:
             continue
         usb.seek(cyl, side)
 
         # Parse the SCP track header and extract the flux data.
-        thdr = struct.unpack("<3sBIII", dat[trk_offs[i]:trk_offs[i]+16])
-        sig, _, track_ticks, samples,off = thdr
+        thdr = struct.unpack("<3sBIII", dat[trk_off:trk_off+16])
+        sig, _, track_ticks, samples, off = thdr
         assert sig == b"TRK"
-        tdat = dat[trk_offs[i]+off:trk_offs[i]+off+samples*2]
+        tdat = dat[trk_off+off:trk_off+off+samples*2]
 
         # Decode the SCP flux data into a simple list of flux times.
         flux = []
@@ -199,7 +200,7 @@ def write_from_scp(usb, args):
             # @factor adjusts flux times for speed variations between the
             # read-in and write-out drives.
             factor = drive_ticks / track_ticks
-        for i in range(0,len(tdat),2):
+        for i in range(0, len(tdat), 2):
             x = tdat[i]*256 + tdat[i+1]
             if x == 0:
                 rem += 65536.0
@@ -270,13 +271,13 @@ def update_firmware(usb, args):
 def _main(argv):
 
     actions = {
-      "read" : read_to_scp,
-      "write" : write_from_scp,
-      "update" : update_firmware
+        "read" : read_to_scp,
+        "write" : write_from_scp,
+        "update" : update_firmware
     }
 
     parser = argparse.ArgumentParser(
-      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument("action")
     parser.add_argument("--revs", type=int, default=3,
                         help="number of revolutions to read per track")
@@ -301,12 +302,13 @@ def _main(argv):
     usb = USB.Unit(serial.Serial(args.device))
 
     print("** %s v%u.%u, Host Tools v%u.%u"
-          % (("Greaseweazle","Bootloader")[usb.update_mode],
+          % (("Greaseweazle", "Bootloader")[usb.update_mode],
              usb.major, usb.minor,
              version.major, version.minor))
 
     if args.action == "update" or usb.update_mode:
-        return actions[args.action](usb, args)
+        actions[args.action](usb, args)
+        return
 
     elif usb.update_needed:
         print("Firmware is out of date: Require v%u.%u"

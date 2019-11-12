@@ -119,7 +119,7 @@ class Unit:
         (c,r) = struct.unpack("2B", self.ser.read(2))
         assert c == cmd[0]
         if r != 0:
-            raise CmdError(c,r)
+            raise CmdError(c, r)
 
 
     ## seek:

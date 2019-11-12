@@ -5,8 +5,8 @@
 # This is free and unencumbered software released into the public domain.
 # See the file COPYING for more details, or visit <http://unlicense.org>.
 
-from bitarray import bitarray
 import binascii
+from bitarray import bitarray
 
 class Bitcell:
 
@@ -19,7 +19,7 @@ class Bitcell:
     def __str__(self):
         s = ""
         rev = 0
-        for b, t in self.revolution_list:
+        for b, _ in self.revolution_list:
             s += "Revolution %u: " % rev
             s += str(binascii.hexlify(b.tobytes())) + "\n"
             rev += 1
@@ -36,7 +36,7 @@ class Bitcell:
 
         # Per-revolution list of bitcells and bitcell times.
         self.revolution_list = []
-        
+
         # Initialise bitcell lists for the first revolution.
         bits, times = bitarray(), []
         to_index = index_list[0] / freq
@@ -56,7 +56,7 @@ class Bitcell:
                 # Check if we cross the index mark.
                 to_index -= clock
                 if to_index < 0:
-                    self.revolution_list.append((bits,times))
+                    self.revolution_list.append((bits, times))
                     if not index_list:
                         return
                     bits, times = bitarray(), []
@@ -85,7 +85,7 @@ class Bitcell:
             new_ticks = ticks * (1 - self.pll_phase_adj)
             times[-1] += ticks - new_ticks
             ticks = new_ticks
-            
+
         self.revolution_list.append((bits, times))
 
 # Local variables:
