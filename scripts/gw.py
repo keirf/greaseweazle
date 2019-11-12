@@ -15,135 +15,30 @@ from greaseweazle import version
 from greaseweazle import USB
 from greaseweazle.bitcell import Bitcell
 from greaseweazle.flux import Flux
-
-# 40MHz
-scp_freq = 40000000
-
-# flux_to_scp:
-# Converts Greaseweazle flux samples into a Supercard Pro Track.
-# Returns the Track Data Header (TDH) and the SCP "bitcell" array.
-def flux_to_scp(flux, track, nr_revs):
-
-    factor = scp_freq / flux.sample_freq
-
-    tdh = struct.pack("<3sB", b"TRK", track)
-    dat = bytearray()
-
-    len_at_index = rev = 0
-    to_index = flux.index_list[0]
-    rem = 0.0
-
-    for x in flux.list:
-
-        # Are we processing initial samples before the first revolution?
-        if rev == 0:
-            if to_index >= x:
-                # Discard initial samples
-                to_index -= x
-                continue
-            # Now starting the first full revolution
-            rev = 1
-            to_index += flux.index_list[rev]
-
-        # Does the next flux interval cross the index mark?
-        while to_index < x:
-            # Append to the Track Data Header for the previous full revolution
-            tdh += struct.pack("<III",
-                               int(round(flux.index_list[rev]*factor)),
-                               (len(dat) - len_at_index) // 2,
-                               4 + nr_revs*12 + len_at_index)
-            # Set up for the next revolution
-            len_at_index = len(dat)
-            rev += 1
-            if rev > nr_revs:
-                # We're done: We simply discard any surplus flux samples
-                return tdh, dat
-            to_index += flux.index_list[rev]
-
-        # Process the current flux sample into SCP "bitcell" format
-        to_index -= x
-        y = x * factor + rem
-        val = int(round(y))
-        if (val & 65535) == 0:
-            val += 1
-        rem = y - val
-        while val >= 65536:
-            dat.append(0)
-            dat.append(0)
-            val -= 65536
-        dat.append(val>>8)
-        dat.append(val&255)
-
-    # Header for last track(s) in case we ran out of flux timings.
-    while rev <= nr_revs:
-        tdh += struct.pack("<III",
-                           int(round(flux.index_list[rev]*factor)),
-                           (len(dat) - len_at_index) // 2,
-                           4 + nr_revs*12 + len_at_index)
-        len_at_index = len(dat)
-        rev += 1
-
-    return tdh, dat
-
+from greaseweazle.scp import SCP
 
 # read_to_scp:
 # Reads a floppy disk and dumps it into a new Supercard Pro image file.
 def read_to_scp(usb, args):
-    trk_dat = bytearray()
-    trk_offs = []
-    if args.single_sided:
-        track_range = range(args.scyl, args.ecyl+1)
-        nr_sides = 1
-    else:
-        track_range = range(args.scyl*2, (args.ecyl+1)*2)
-        nr_sides = 2
-    for track in track_range:
-        cyl = track >> (nr_sides - 1)
-        side = track & (nr_sides - 1)
-        print("\rReading Track %u.%u..." % (cyl, side), end="")
-        trk_offs.append(len(trk_dat))
-        usb.seek(cyl, side)
-        for retry in range(1, 5):
-            ack, index_list, enc_flux = usb.read_track(args.revs+1)
-            if ack == USB.Ack.Okay:
-                break
-            elif ack == USB.Ack.FluxOverflow and retry < 5:
-                print("Retry #%u..." % (retry))
-            else:
-                raise CmdError(ack)
-        flux = Flux(index_list, usb.decode_flux(enc_flux), usb.sample_freq)
-        tdh, dat = flux_to_scp(flux, track, args.revs)
-        trk_dat += tdh
-        trk_dat += dat
+    nr_sides = 1 if args.single_sided else 2
+    scp = SCP(args.scyl, nr_sides)
+    for cyl in range(args.scyl, args.ecyl+1):
+        for side in range(0, nr_sides):
+            print("\rReading Track %u.%u..." % (cyl, side), end="")
+            usb.seek(cyl, side)
+            for retry in range(1, 5):
+                ack, index_list, enc_flux = usb.read_track(args.revs+1)
+                if ack == USB.Ack.Okay:
+                    break
+                elif ack == USB.Ack.FluxOverflow and retry < 5:
+                    print("Retry #%u..." % (retry))
+                else:
+                    raise CmdError(ack)
+            flux = Flux(index_list, usb.decode_flux(enc_flux), usb.sample_freq)
+            scp.append_track(flux)
     print()
-    csum = 0
-    for x in trk_dat:
-        csum += x
-    trk_offs_dat = bytearray()
-    for x in trk_offs:
-        trk_offs_dat += struct.pack("<I", 0x2b0 + x)
-    trk_offs_dat += bytes(0x2a0 - len(trk_offs_dat))
-    for x in trk_offs_dat:
-        csum += x
-    ds_flag = 0
-    if args.single_sided:
-        ds_flag = 1
-    header_dat = struct.pack("<3s9BI",
-                             b"SCP",    # Signature
-                             0,         # Version
-                             0x80,      # DiskType = Other
-                             args.revs, # Nr Revolutions
-                             track_range.start, # Start track
-                             track_range.stop-1, # End track
-                             0x01,      # Flags = Index
-                             0,         # 16-bit cell width
-                             ds_flag,   # Double Sided
-                             0,         # 25ns capture
-                             csum & 0xffffffff)
     with open(args.file, "wb") as f:
-        f.write(header_dat)
-        f.write(trk_offs_dat)
-        f.write(trk_dat)
+        f.write(scp.get_image())
 
 
 # write_from_scp:
@@ -162,7 +57,7 @@ def write_from_scp(usb, args):
         drive_ticks = (index_list[1] + index_list[2]) / 2
     else:
         # Simple ratio between the Greaseweazle and SCP sample frequencies.
-        factor = usb.sample_freq / scp_freq
+        factor = usb.sample_freq / SCP.sample_freq
 
     # Parse the SCP image header.
     with open(args.file, "rb") as f:
