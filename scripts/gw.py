@@ -11,7 +11,10 @@ import crcmod.predefined
 import sys, struct, argparse, serial
 from timeit import default_timer as timer
 
-from greaseweazle import version, USB
+from greaseweazle import version
+from greaseweazle import USB
+from greaseweazle.bitcell import Bitcell
+from greaseweazle.flux import Flux
 
 # 40MHz
 scp_freq = 40000000
@@ -19,18 +22,18 @@ scp_freq = 40000000
 # flux_to_scp:
 # Converts Greaseweazle flux samples into a Supercard Pro Track.
 # Returns the Track Data Header (TDH) and the SCP "bitcell" array.
-def flux_to_scp(usb, flux, index_times, track, nr_revs):
+def flux_to_scp(flux, track, nr_revs):
 
-    factor = scp_freq / usb.sample_freq
+    factor = scp_freq / flux.sample_freq
 
     tdh = struct.pack("<3sB", b"TRK", track)
     dat = bytearray()
 
     len_at_index = rev = 0
-    to_index = index_times[0]
+    to_index = flux.index_list[0]
     rem = 0.0
 
-    for x in flux:
+    for x in flux.list:
 
         # Are we processing initial samples before the first revolution?
         if rev == 0:
@@ -40,13 +43,13 @@ def flux_to_scp(usb, flux, index_times, track, nr_revs):
                 continue
             # Now starting the first full revolution
             rev = 1
-            to_index += index_times[rev]
+            to_index += flux.index_list[rev]
 
         # Does the next flux interval cross the index mark?
         while to_index < x:
             # Append to the Track Data Header for the previous full revolution
             tdh += struct.pack("<III",
-                               int(round(index_times[rev]*factor)),
+                               int(round(flux.index_list[rev]*factor)),
                                (len(dat) - len_at_index) // 2,
                                4 + nr_revs*12 + len_at_index)
             # Set up for the next revolution
@@ -55,7 +58,7 @@ def flux_to_scp(usb, flux, index_times, track, nr_revs):
             if rev > nr_revs:
                 # We're done: We simply discard any surplus flux samples
                 return tdh, dat
-            to_index += index_times[rev]
+            to_index += flux.index_list[rev]
 
         # Process the current flux sample into SCP "bitcell" format
         to_index -= x
@@ -74,7 +77,7 @@ def flux_to_scp(usb, flux, index_times, track, nr_revs):
     # Header for last track(s) in case we ran out of flux timings.
     while rev <= nr_revs:
         tdh += struct.pack("<III",
-                           int(round(index_times[rev]*factor)),
+                           int(round(flux.index_list[rev]*factor)),
                            (len(dat) - len_at_index) // 2,
                            4 + nr_revs*12 + len_at_index)
         len_at_index = len(dat)
@@ -101,15 +104,15 @@ def read_to_scp(usb, args):
         trk_offs.append(len(trk_dat))
         usb.seek(cyl, side)
         for retry in range(1, 5):
-            ack, index_times, enc_flux = usb.read_track(args.revs+1)
+            ack, index_list, enc_flux = usb.read_track(args.revs+1)
             if ack == USB.Ack.Okay:
                 break
             elif ack == USB.Ack.FluxOverflow and retry < 5:
                 print("Retry #%u..." % (retry))
             else:
                 raise CmdError(ack)
-        flux = usb.decode_flux(enc_flux)
-        tdh, dat = flux_to_scp(usb, flux, index_times, track, args.revs)
+        flux = Flux(index_list, usb.decode_flux(enc_flux), usb.sample_freq)
+        tdh, dat = flux_to_scp(flux, track, args.revs)
         trk_dat += tdh
         trk_dat += dat
     print()
@@ -151,12 +154,12 @@ def write_from_scp(usb, args):
         # @drive_ticks is the time in Gresaeweazle ticks between index pulses.
         # We will adjust the flux intervals per track to allow for this.
         for retry in range(1, 5):
-            ack, index_times, _ = usb.read_track(3)
+            ack, index_list, _ = usb.read_track(3)
             if ack == USB.Ack.Okay:
                 break
             elif ack != USB.Ack.FluxOverflow or retry >= 5:
                 raise CmdError(ack)
-        drive_ticks = (index_times[1] + index_times[2]) / 2
+        drive_ticks = (index_list[1] + index_list[2]) / 2
     else:
         # Simple ratio between the Greaseweazle and SCP sample frequencies.
         factor = usb.sample_freq / scp_freq

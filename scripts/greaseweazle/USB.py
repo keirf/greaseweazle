@@ -6,7 +6,7 @@
 # See the file COPYING for more details, or visit <http://unlicense.org>.
 
 import struct, collections
-from . import version
+from greaseweazle import version
 
 ## Control-Path command set
 class ControlCmd:
