@@ -20,10 +20,9 @@ from greaseweazle.scp import SCP
 # read_to_scp:
 # Reads a floppy disk and dumps it into a new Supercard Pro image file.
 def read_to_scp(usb, args):
-    nr_sides = 1 if args.single_sided else 2
-    scp = SCP(args.scyl, nr_sides)
+    scp = SCP(args.scyl, args.nr_sides)
     for cyl in range(args.scyl, args.ecyl+1):
-        for side in range(0, nr_sides):
+        for side in range(0, args.nr_sides):
             print("\rReading Track %u.%u..." % (cyl, side), end="")
             usb.seek(cyl, side)
             for retry in range(1, 5):
@@ -55,66 +54,48 @@ def write_from_scp(usb, args):
             elif ack != USB.Ack.FluxOverflow or retry >= 5:
                 raise CmdError(ack)
         drive_ticks = (index_list[1] + index_list[2]) / 2
-    else:
-        # Simple ratio between the Greaseweazle and SCP sample frequencies.
-        factor = usb.sample_freq / SCP.sample_freq
 
     # Parse the SCP image header.
     with open(args.file, "rb") as f:
-        dat = f.read()
-    header = struct.unpack("<3s9BI", dat[0:16])
-    assert header[0] == b"SCP"
-    trk_offs = struct.unpack("<168I", dat[16:0x2b0])
+        scp = SCP.from_file(f.read())
 
-    if args.single_sided:
-        track_range = range(args.scyl, args.ecyl+1)
-        nr_sides = 1
-    else:
-        track_range = range(args.scyl*2, (args.ecyl+1)*2)
-        nr_sides = 2
+    for cyl in range(args.scyl, args.ecyl+1):
+        for side in range(0, args.nr_sides):
 
-    for track in track_range:
-        cyl = track >> (nr_sides - 1)
-        side = track & (nr_sides - 1)
-        print("\rWriting Track %u.%u..." % (cyl, side), end="")
-        trk_off = trk_offs[track]
-        if trk_off == 0:
-            continue
-        usb.seek(cyl, side)
-
-        # Parse the SCP track header and extract the flux data.
-        thdr = struct.unpack("<3sBIII", dat[trk_off:trk_off+16])
-        sig, _, track_ticks, samples, off = thdr
-        assert sig == b"TRK"
-        tdat = dat[trk_off+off:trk_off+off+samples*2]
-
-        # Decode the SCP flux data into a simple list of flux times.
-        flux = []
-        rem = 0.0
-        if args.adjust_speed:
-            # @factor adjusts flux times for speed variations between the
-            # read-in and write-out drives.
-            factor = drive_ticks / track_ticks
-        for i in range(0, len(tdat), 2):
-            x = tdat[i]*256 + tdat[i+1]
-            if x == 0:
-                rem += 65536.0
+            flux = scp.get_track(cyl, side, writeout=True)
+            if not flux:
                 continue
-            y = x * factor + rem
-            val = int(round(y))
-            rem = y - val
-            flux.append(val)
 
-        # Encode the flux times for Greaseweazle, and write them out.
-        enc_flux = usb.encode_flux(flux)
-        for retry in range(1, 5):
-            ack = usb.write_track(enc_flux)
-            if ack == USB.Ack.Okay:
-                break
-            elif ack == USB.Ack.FluxUnderflow and retry < 5:
-                print("Retry #%u..." % (retry))
+            print("\rWriting Track %u.%u..." % (cyl, side), end="")
+            usb.seek(cyl, side)
+
+            if args.adjust_speed:
+                # @factor adjusts flux times for speed variations between the
+                # read-in and write-out drives.
+                factor = drive_ticks / flux.index_list[0]
             else:
-                raise CmdError(ack)
+                # Simple ratio between the GW and SCP sample frequencies.
+                factor = usb.sample_freq / flux.sample_freq
+
+            # Convert the flux samples to Greaseweazle sample frequency.
+            rem = 0.0
+            flux_list = []
+            for x in flux.list:
+                y = x * factor + rem
+                val = int(round(y))
+                rem = y - val
+                flux_list.append(val)
+
+            # Encode the flux times for Greaseweazle, and write them out.
+            enc_flux = usb.encode_flux(flux_list)
+            for retry in range(1, 5):
+                ack = usb.write_track(enc_flux)
+                if ack == USB.Ack.Okay:
+                    break
+                elif ack == USB.Ack.FluxUnderflow and retry < 5:
+                    print("Retry #%u..." % (retry))
+                else:
+                    raise CmdError(ack)
 
     print()
 
@@ -187,6 +168,7 @@ def _main(argv):
     parser.add_argument("file", help="in/out filename")
     parser.add_argument("device", help="serial device")
     args = parser.parse_args(argv[1:])
+    args.nr_sides = 1 if args.single_sided else 2
 
     if not args.action in actions:
         print("** Action \"%s\" is not recognised" % args.action)

@@ -7,6 +7,8 @@
 
 import struct
 
+from greaseweazle.flux import Flux
+
 class SCP:
 
     # 40MHz
@@ -18,6 +20,77 @@ class SCP:
         self.nr_revs = None
         self.track_list = []
 
+
+    @classmethod
+    def from_file(cls, dat):
+
+        header = struct.unpack("<3s9BI", dat[0:16])
+        (sig, _, _, nr_revs, s_trk, e_trk, flags, _, ss, _, _) = header
+        assert sig == b"SCP"
+        nr_sides = 1 if ss else 2
+        
+        trk_offs = struct.unpack("<168I", dat[16:0x2b0])
+
+        scp = cls(s_trk // nr_sides, nr_sides)
+        scp.nr_revs = nr_revs
+
+        for trknr in range(s_trk, e_trk+1):
+            trk_off = trk_offs[trknr]
+            if trk_off == 0:
+                scp.track_list.append((None, None))
+
+            # Parse the SCP track header and extract the flux data.
+            thdr = dat[trk_off:trk_off+4+12*nr_revs]
+            sig, tnr, _, _, s_off = struct.unpack("<3sB3I", thdr[:16])
+            assert sig == b"TRK"
+            assert tnr == trknr
+            _, e_nr, e_off = struct.unpack("<3I", thdr[-12:])
+            tdat = dat[trk_off+s_off:trk_off+e_off+e_nr*2]
+
+            scp.track_list.append((thdr, tdat))
+
+        return scp
+
+
+    def get_track(self, cyl, side, writeout=False):
+        if side >= self.nr_sides:
+            return None
+        if cyl < self.start_cyl:
+            return None
+        off = (cyl - self.start_cyl) * self.nr_sides + side
+        if off >= len(self.track_list):
+            return None
+        tdh, dat = self.track_list[off]
+        if not dat:
+            return None
+        tdh = tdh[4:]
+
+        # Writeout requires only a single revolution
+        if writeout:
+            tdh = tdh[:12]
+            _, nr, _ = struct.unpack("<3I", tdh)
+            dat = dat[:nr*2]
+        
+        index_list = []
+        while tdh:
+            ticks, _, _ = struct.unpack("<3I", tdh[:12])
+            index_list.append(ticks)
+            tdh = tdh[12:]
+        
+        # Decode the SCP flux data into a simple list of flux times.
+        flux_list = []
+        val = 0
+        for i in range(0, len(dat), 2):
+            x = dat[i]*256 + dat[i+1]
+            if x == 0:
+                val += 65536
+                continue
+            flux_list.append(val + x)
+            val = 0
+
+        return Flux(index_list, flux_list, SCP.sample_freq)
+    
+        
     # append_track:
     # Converts a Flux object into a Supercard Pro Track and appends it to
     # the current image-in-progress.
