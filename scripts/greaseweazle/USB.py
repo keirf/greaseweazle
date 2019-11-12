@@ -51,7 +51,7 @@ class Params:
 ## CmdError: Encapsulates a command acknowledgement.
 class CmdError(Exception):
 
-    str = [ "Okay", "Bad Command", "No Index (No disk?)", "Track 0 not found",
+    str = [ "Okay", "Bad Command", "No Index", "Track 0 not found",
             "Flux Overflow", "Flux Underflow", "Disk is Write Protected" ]
 
     def __init__(self, cmd, code):
@@ -98,8 +98,8 @@ class Unit:
         # Initialise the delay properties with current firmware values.
         self.send_cmd(struct.pack("4B", Cmd.GetParams, 4, Params.Delays, 10))
         (self._select_delay, self._step_delay,
-        self._seek_settle_delay, self._motor_delay,
-           self._auto_off_delay) = struct.unpack("<5H", self.ser.read(10))
+         self._seek_settle_delay, self._motor_delay,
+         self._auto_off_delay) = struct.unpack("<5H", self.ser.read(10))
 
 
     ## reset:
@@ -218,8 +218,8 @@ class Unit:
             self.send_cmd(struct.pack("2B", Cmd.GetFluxStatus, 2))
         except CmdError as error:
             del dat
-            return (error.code, None)
-        return (Ack.Okay, dat)
+            return error.code, None, None
+        return Ack.Okay, self.get_index_times(nr_idx), dat
 
 
     ## write_track:

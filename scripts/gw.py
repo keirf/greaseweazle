@@ -19,11 +19,10 @@ scp_freq = 40000000
 # flux_to_scp:
 # Converts Greaseweazle flux samples into a Supercard Pro Track.
 # Returns the Track Data Header (TDH) and the SCP "bitcell" array.
-def flux_to_scp(flux, track, nr_revs):
+def flux_to_scp(flux, index_times, track, nr_revs):
 
     factor = scp_freq / usb.sample_freq
 
-    index_times = usb.get_index_times(nr_revs+1)
     tdh = struct.pack("<3sB", b"TRK", track)
     dat = bytearray()
 
@@ -55,7 +54,7 @@ def flux_to_scp(flux, track, nr_revs):
             rev += 1
             if rev > nr_revs:
                 # We're done: We simply discard any surplus flux samples
-                return (tdh, dat)
+                return tdh, dat
             to_index += index_times[rev]
 
         # Process the current flux sample into SCP "bitcell" format
@@ -81,7 +80,7 @@ def flux_to_scp(flux, track, nr_revs):
         len_at_index = len(dat)
         rev += 1
 
-    return (tdh, dat)
+    return tdh, dat
 
 
 # read_to_scp:
@@ -102,7 +101,7 @@ def read_to_scp(args):
         trk_offs.append(len(trk_dat))
         usb.seek(cyl, side)
         for retry in range(1, 5):
-            (ack, enc_flux) = usb.read_track(args.revs+1)
+            ack, index_times, enc_flux = usb.read_track(args.revs+1)
             if ack == USB.Ack.Okay:
                 break
             elif ack == USB.Ack.FluxOverflow and retry < 5:
@@ -110,7 +109,7 @@ def read_to_scp(args):
             else:
                 raise CmdError(ack)
         flux = usb.decode_flux(enc_flux)
-        (tdh, dat) = flux_to_scp(flux, track, args.revs)
+        tdh, dat = flux_to_scp(flux, index_times, track, args.revs)
         trk_dat += tdh
         trk_dat += dat
     print()
@@ -151,8 +150,12 @@ def write_from_scp(args):
     if args.adjust_speed:
         # @drive_ticks is the time in Gresaeweazle ticks between index pulses.
         # We will adjust the flux intervals per track to allow for this.
-        usb.read_track(3)
-        index_times = usb.get_index_times(3)
+        for retry in range(1, 5):
+            ack, index_times, _ = usb.read_track(3)
+            if ack == USB.Ack.Okay:
+                break
+            elif ack != USB.Ack.FluxOverflow or retry >= 5:
+                raise CmdError(ack)
         drive_ticks = (index_times[1] + index_times[2]) / 2
     else:
         # Simple ratio between the Greaseweazle and SCP sample frequencies.
@@ -182,7 +185,7 @@ def write_from_scp(args):
 
         # Parse the SCP track header and extract the flux data.
         thdr = struct.unpack("<3sBIII", dat[trk_offs[i]:trk_offs[i]+16])
-        (sig,_,track_ticks,samples,off) = thdr
+        sig, _, track_ticks, samples,off = thdr
         assert sig == b"TRK"
         tdat = dat[trk_offs[i]+off:trk_offs[i]+off+samples*2]
 
@@ -240,7 +243,7 @@ def update_firmware(args):
     # Read and check the update file.
     with open(args.file, "rb") as f:
         dat = f.read()
-    (sig, maj, min, pad1, pad2, crc) = struct.unpack(">2s4BH", dat[-8:])
+    sig, maj, min, pad1, pad2, crc = struct.unpack(">2s4BH", dat[-8:])
     if len(dat) & 3 != 0 or sig != b'GW' or pad1 != 0 or pad2 != 0:
         print("%s: Bad update file" % (args.file))
         return
