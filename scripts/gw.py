@@ -19,7 +19,7 @@ scp_freq = 40000000
 # flux_to_scp:
 # Converts Greaseweazle flux samples into a Supercard Pro Track.
 # Returns the Track Data Header (TDH) and the SCP "bitcell" array.
-def flux_to_scp(flux, index_times, track, nr_revs):
+def flux_to_scp(usb, flux, index_times, track, nr_revs):
 
     factor = scp_freq / usb.sample_freq
 
@@ -85,7 +85,7 @@ def flux_to_scp(flux, index_times, track, nr_revs):
 
 # read_to_scp:
 # Reads a floppy disk and dumps it into a new Supercard Pro image file.
-def read_to_scp(args):
+def read_to_scp(usb, args):
     trk_dat = bytearray()
     trk_offs = []
     if args.single_sided:
@@ -109,7 +109,7 @@ def read_to_scp(args):
             else:
                 raise CmdError(ack)
         flux = usb.decode_flux(enc_flux)
-        tdh, dat = flux_to_scp(flux, index_times, track, args.revs)
+        tdh, dat = flux_to_scp(usb, flux, index_times, track, args.revs)
         trk_dat += tdh
         trk_dat += dat
     print()
@@ -145,7 +145,7 @@ def read_to_scp(args):
 
 # write_from_scp:
 # Writes the specified Supercard Pro image file to floppy disk.
-def write_from_scp(args):
+def write_from_scp(usb, args):
 
     if args.adjust_speed:
         # @drive_ticks is the time in Gresaeweazle ticks between index pulses.
@@ -222,7 +222,7 @@ def write_from_scp(args):
 
 # update_firmware:
 # Updates the Greaseweazle firmware using the specified Update File.
-def update_firmware(args):
+def update_firmware(usb, args):
 
     # Check that an update operation was actually requested.
     if args.action != "update":
@@ -295,7 +295,6 @@ def _main(argv):
         print(", ".join(str(key) for key in actions.keys()))
         return
 
-    global usb
     usb = USB.Unit(serial.Serial(args.device))
 
     print("** %s v%u.%u, Host Tools v%u.%u"
@@ -304,7 +303,7 @@ def _main(argv):
              version.major, version.minor))
 
     if args.action == "update" or usb.update_mode:
-        return actions[args.action](args)
+        return actions[args.action](usb, args)
 
     elif usb.update_needed:
         print("Firmware is out of date: Require v%u.%u"
@@ -322,7 +321,7 @@ def _main(argv):
     try:
         usb.drive_select(True)
         usb.drive_motor(True)
-        actions[args.action](args)
+        actions[args.action](usb, args)
     except KeyboardInterrupt:
         print()
         usb.reset()
