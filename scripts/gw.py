@@ -20,11 +20,16 @@ from greaseweazle.scp import SCP
 # read_to_scp:
 # Reads a floppy disk and dumps it into a new Supercard Pro image file.
 def read_to_scp(usb, args):
+
     scp = SCP(args.scyl, args.nr_sides)
+
     for cyl in range(args.scyl, args.ecyl+1):
         for side in range(0, args.nr_sides):
+
             print("\rReading Track %u.%u..." % (cyl, side), end="")
             usb.seek(cyl, side)
+
+            # Physically read the track.
             for retry in range(1, 5):
                 ack, index_list, enc_flux = usb.read_track(args.revs+1)
                 if ack == USB.Ack.Okay:
@@ -33,9 +38,25 @@ def read_to_scp(usb, args):
                     print("Retry #%u..." % (retry))
                 else:
                     raise CmdError(ack)
-            flux = Flux(index_list, usb.decode_flux(enc_flux), usb.sample_freq)
-            scp.append_track(flux)
+
+            # Decode the flux and clip the initial partial revolution.
+            flux_list = usb.decode_flux(enc_flux)
+            del enc_flux
+            to_index = index_list[0]
+            for i in range(len(flux_list)):
+                to_index -= flux_list[i]
+                if to_index < 0:
+                    flux_list[i] = -to_index
+                    flux_list = flux_list[i:]
+                    index_list = index_list[1:]
+                    break
+                
+            # Stash the data for later writeout to the image file.
+            scp.append_track(Flux(index_list, flux_list, usb.sample_freq))
+
     print()
+
+    # Write the image file.
     with open(args.file, "wb") as f:
         f.write(scp.get_image())
 

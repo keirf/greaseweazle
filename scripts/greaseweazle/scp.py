@@ -96,7 +96,7 @@ class SCP:
     # the current image-in-progress.
     def append_track(self, flux):
 
-        nr_revs = len(flux.index_list) - 1
+        nr_revs = len(flux.index_list)
         if not self.nr_revs:
             self.nr_revs = nr_revs
         else:
@@ -114,16 +114,6 @@ class SCP:
 
         for x in flux.list:
 
-            # Are we processing initial samples before the first revolution?
-            if rev == 0:
-                if to_index >= x:
-                    # Discard initial samples
-                    to_index -= x
-                    continue
-                # Now starting the first full revolution
-                rev = 1
-                to_index += flux.index_list[rev]
-
             # Does the next flux interval cross the index mark?
             while to_index < x:
                 # Append to the TDH for the previous full revolution
@@ -134,7 +124,7 @@ class SCP:
                 # Set up for the next revolution
                 len_at_index = len(dat)
                 rev += 1
-                if rev > nr_revs:
+                if rev >= nr_revs:
                     # We're done: We simply discard any surplus flux samples
                     self.track_list.append((tdh, dat))
                     return
@@ -155,7 +145,7 @@ class SCP:
             dat.append(val&255)
 
         # Header for last track(s) in case we ran out of flux timings.
-        while rev <= nr_revs:
+        while rev < nr_revs:
             tdh += struct.pack("<III",
                                int(round(flux.index_list[rev]*factor)),
                                (len(dat) - len_at_index) // 2,
