@@ -5,8 +5,9 @@
 # This is free and unencumbered software released into the public domain.
 # See the file COPYING for more details, or visit <http://unlicense.org>.
 
-import struct, collections
+import struct
 from greaseweazle import version
+from greaseweazle.flux import Flux
 
 ## Control-Path command set
 class ControlCmd:
@@ -78,7 +79,7 @@ class Unit:
         self.ser = ser
         self.reset()
         # Copy firmware info to instance variables (see above for definitions).
-        self.send_cmd(struct.pack("3B", Cmd.GetInfo, 3, 0))
+        self._send_cmd(struct.pack("3B", Cmd.GetInfo, 3, 0))
         x = struct.unpack("<4BI24x", self.ser.read(32))
         (self.major, self.minor, self.max_index,
          self.max_cmd, self.sample_freq) = x
@@ -96,7 +97,7 @@ class Unit:
         if self.update_needed:
             return
         # Initialise the delay properties with current firmware values.
-        self.send_cmd(struct.pack("4B", Cmd.GetParams, 4, Params.Delays, 10))
+        self._send_cmd(struct.pack("4B", Cmd.GetParams, 4, Params.Delays, 10))
         (self._select_delay, self._step_delay,
          self._seek_settle_delay, self._motor_delay,
          self._auto_off_delay) = struct.unpack("<5H", self.ser.read(10))
@@ -111,10 +112,10 @@ class Unit:
         self.ser.reset_input_buffer()
 
 
-    ## send_cmd:
+    ## _send_cmd:
     ## Send given command byte sequence to Greaseweazle.
     ## Raise a CmdError if command fails.
-    def send_cmd(self, cmd):
+    def _send_cmd(self, cmd):
         self.ser.write(cmd)
         (c,r) = struct.unpack("2B", self.ser.read(2))
         assert c == cmd[0]
@@ -125,26 +126,26 @@ class Unit:
     ## seek:
     ## Seek the selected drive's heads to the specified track (cyl, side).
     def seek(self, cyl, side):
-        self.send_cmd(struct.pack("3B", Cmd.Seek, 3, cyl))
-        self.send_cmd(struct.pack("3B", Cmd.Side, 3, side))
+        self._send_cmd(struct.pack("3B", Cmd.Seek, 3, cyl))
+        self._send_cmd(struct.pack("3B", Cmd.Side, 3, side))
 
 
     ## drive_select:
     ## Select/deselect the drive.
     def drive_select(self, state):
-        self.send_cmd(struct.pack("3B", Cmd.Select, 3, int(state)))
+        self._send_cmd(struct.pack("3B", Cmd.Select, 3, int(state)))
 
 
     ## drive_motor:
     ## Turn the selected drive's motor on/off.
     def drive_motor(self, state):
-        self.send_cmd(struct.pack("3B", Cmd.Motor, 3, int(state)))
+        self._send_cmd(struct.pack("3B", Cmd.Motor, 3, int(state)))
 
 
-    ## get_index_times:
+    ## _get_index_times:
     ## Get index timing values for the last .read_track() command.
-    def get_index_times(self, nr):
-        self.send_cmd(struct.pack("4B", Cmd.GetIndexTimes, 4, 0, nr))
+    def _get_index_times(self, nr):
+        self._send_cmd(struct.pack("4B", Cmd.GetIndexTimes, 4, 0, nr))
         x = struct.unpack("<%dI" % nr, self.ser.read(4*nr))
         return x
 
@@ -152,30 +153,34 @@ class Unit:
     ## update_firmware:
     ## Update Greaseweazle to the given new firmware.
     def update_firmware(self, dat):
-        self.send_cmd(struct.pack("<2BI", Cmd.Update, 6, len(dat)))
+        self._send_cmd(struct.pack("<2BI", Cmd.Update, 6, len(dat)))
         self.ser.write(dat)
         (ack,) = struct.unpack("B", self.ser.read(1))
         return ack
 
 
-    ## decode_flux:
+    ## _decode_flux:
     ## Decode the Greaseweazle data stream into a list of flux samples.
-    def decode_flux(self, dat):
+    def _decode_flux(self, dat):
         flux = []
-        while dat:
-            i = dat.popleft()
-            if i < 250:
-                flux.append(i)
-            elif i == 255:
-                val =  (dat.popleft() & 254) >>  1
-                val += (dat.popleft() & 254) <<  6
-                val += (dat.popleft() & 254) << 13
-                val += (dat.popleft() & 254) << 20
-                flux.append(val)
-            else:
-                val = (i - 249) * 250
-                val += dat.popleft() - 1
-                flux.append(val)
+        dat_i = iter(dat)
+        try:
+            while True:
+                i = next(dat_i)
+                if i < 250:
+                    flux.append(i)
+                elif i == 255:
+                    val =  (next(dat_i) & 254) >>  1
+                    val += (next(dat_i) & 254) <<  6
+                    val += (next(dat_i) & 254) << 13
+                    val += (next(dat_i) & 254) << 20
+                    flux.append(val)
+                else:
+                    val = (i - 249) * 250
+                    val += next(dat_i) - 1
+                    flux.append(val)
+        except StopIteration:
+            pass
         assert flux[-1] == 0
         return flux[:-1]
 
@@ -205,31 +210,54 @@ class Unit:
 
 
     ## read_track:
-    ## Read flux timings as encoded data stream for the current track.
-    def read_track(self, nr_idx):
-        dat = collections.deque()
-        self.send_cmd(struct.pack("3B", Cmd.ReadFlux, 3, nr_idx))
+    ## Read and decode flux and index timings for the current track.
+    def read_track(self, nr_revs):
+
+        # Request and read all flux timings for this track.
+        dat = bytearray()
+        self._send_cmd(struct.pack("3B", Cmd.ReadFlux, 3, nr_revs+1))
         while True:
             dat += self.ser.read(1)
             dat += self.ser.read(self.ser.in_waiting)
             if dat[-1] == 0:
                 break
+
+        # Check flux status. We bail if there was an error.
         try:
-            self.send_cmd(struct.pack("2B", Cmd.GetFluxStatus, 2))
+            self._send_cmd(struct.pack("2B", Cmd.GetFluxStatus, 2))
         except CmdError as error:
             del dat
-            return error.code, None, None
-        return Ack.Okay, self.get_index_times(nr_idx), dat
+            return error.code, None
+
+        # Decode the flux list and read the index-times list.
+        flux_list = self._decode_flux(dat)
+        index_list = self._get_index_times(nr_revs+1)
+
+        # Clip the initial partial revolution.
+        to_index = index_list[0]
+        for i in range(len(flux_list)):
+            to_index -= flux_list[i]
+            if to_index < 0:
+                flux_list[i] = -to_index
+                flux_list = flux_list[i:]
+                break
+        if to_index >= 0:
+            # We ran out of flux.
+            flux_list = []
+        index_list = index_list[1:]
+
+        # Success: Return the requested full index-to-index revolutions.
+        return Ack.Okay, Flux(index_list, flux_list, self.sample_freq)
 
 
     ## write_track:
     ## Write the given data stream to the current track via Greaseweazle.
     def write_track(self, dat):
-        self.send_cmd(struct.pack("<2BIB", Cmd.WriteFlux, 7, 0, 1))
+        self._send_cmd(struct.pack("<2BIB", Cmd.WriteFlux, 7, 0, 1))
         self.ser.write(dat)
         self.ser.read(1) # Sync with Greaseweazle
         try:
-            self.send_cmd(struct.pack("2B", Cmd.GetFluxStatus, 2))
+            self._send_cmd(struct.pack("2B", Cmd.GetFluxStatus, 2))
         except CmdError as error:
             return error.code
         return Ack.Okay
@@ -246,11 +274,11 @@ class Unit:
     ##
 
     def _set_delays(self):
-        self.send_cmd(struct.pack("<3B5H", Cmd.SetParams,
-                                  3+5*2, Params.Delays,
-                                  self._select_delay, self._step_delay,
-                                  self._seek_settle_delay,
-                                  self._motor_delay, self._auto_off_delay))
+        self._send_cmd(struct.pack("<3B5H", Cmd.SetParams,
+                                   3+5*2, Params.Delays,
+                                   self._select_delay, self._step_delay,
+                                   self._seek_settle_delay,
+                                   self._motor_delay, self._auto_off_delay))
 
     @property
     def select_delay(self):

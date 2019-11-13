@@ -13,8 +13,6 @@ import crcmod.predefined
 
 from greaseweazle import version
 from greaseweazle import usb as USB
-from greaseweazle.bitcell import Bitcell
-from greaseweazle.flux import Flux
 from greaseweazle.scp import SCP
 from greaseweazle.hfe import HFE
 
@@ -43,28 +41,16 @@ def read_to_image(usb, args):
 
             # Physically read the track.
             for retry in range(1, 5):
-                ack, index_list, enc_flux = usb.read_track(args.revs+1)
+                ack, flux = usb.read_track(args.revs)
                 if ack == USB.Ack.Okay:
                     break
                 elif ack == USB.Ack.FluxOverflow and retry < 5:
                     print("Retry #%u..." % (retry))
                 else:
                     raise CmdError(ack)
-
-            # Decode the flux and clip the initial partial revolution.
-            flux_list = usb.decode_flux(enc_flux)
-            del enc_flux
-            to_index = index_list[0]
-            for i in range(len(flux_list)):
-                to_index -= flux_list[i]
-                if to_index < 0:
-                    flux_list[i] = -to_index
-                    flux_list = flux_list[i:]
-                    index_list = index_list[1:]
-                    break
                 
             # Stash the data for later writeout to the image file.
-            image.append_track(Flux(index_list, flux_list, usb.sample_freq))
+            image.append_track(flux)
 
     print()
 
@@ -81,12 +67,13 @@ def write_from_image(usb, args):
         # @drive_ticks is the time in Gresaeweazle ticks between index pulses.
         # We will adjust the flux intervals per track to allow for this.
         for retry in range(1, 5):
-            ack, index_list, _ = usb.read_track(3)
+            ack, flux = usb.read_track(2)
             if ack == USB.Ack.Okay:
                 break
             elif ack != USB.Ack.FluxOverflow or retry >= 5:
                 raise CmdError(ack)
-        drive_ticks = (index_list[1] + index_list[2]) / 2
+        drive_ticks = (flux.index_list[0] + flux.index_list[1]) / 2
+        del flux
 
     # Read and parse the image file.
     image_class = get_image_class(args.file)
