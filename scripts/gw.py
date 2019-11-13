@@ -8,7 +8,7 @@
 # See the file COPYING for more details, or visit <http://unlicense.org>.
 
 #from timeit import default_timer as timer
-import sys, struct, argparse, serial
+import os, sys, struct, argparse, serial
 import crcmod.predefined
 
 from greaseweazle import version
@@ -16,12 +16,24 @@ from greaseweazle import usb as USB
 from greaseweazle.bitcell import Bitcell
 from greaseweazle.flux import Flux
 from greaseweazle.scp import SCP
+from greaseweazle.hfe import HFE
 
-# read_to_scp:
-# Reads a floppy disk and dumps it into a new Supercard Pro image file.
-def read_to_scp(usb, args):
+def get_image_class(name):
+    image_types = { '.scp': SCP, '.hfe': HFE }
+    _, ext = os.path.splitext(name)
+    if not ext.lower() in image_types:
+        print("**Error: Unrecognised file suffix '%s'" % ext)
+        return None
+    return image_types[ext.lower()]
 
-    scp = SCP(args.scyl, args.nr_sides)
+# read_to_image:
+# Reads a floppy disk and dumps it into a new image file.
+def read_to_image(usb, args):
+
+    image_class = get_image_class(args.file)
+    if not image_class:
+        return
+    image = image_class(args.scyl, args.nr_sides)
 
     for cyl in range(args.scyl, args.ecyl+1):
         for side in range(0, args.nr_sides):
@@ -52,18 +64,18 @@ def read_to_scp(usb, args):
                     break
                 
             # Stash the data for later writeout to the image file.
-            scp.append_track(Flux(index_list, flux_list, usb.sample_freq))
+            image.append_track(Flux(index_list, flux_list, usb.sample_freq))
 
     print()
 
     # Write the image file.
     with open(args.file, "wb") as f:
-        f.write(scp.get_image())
+        f.write(image.get_image())
 
 
-# write_from_scp:
-# Writes the specified Supercard Pro image file to floppy disk.
-def write_from_scp(usb, args):
+# write_from_image:
+# Writes the specified image file to floppy disk.
+def write_from_image(usb, args):
 
     if args.adjust_speed:
         # @drive_ticks is the time in Gresaeweazle ticks between index pulses.
@@ -76,14 +88,17 @@ def write_from_scp(usb, args):
                 raise CmdError(ack)
         drive_ticks = (index_list[1] + index_list[2]) / 2
 
-    # Parse the SCP image header.
+    # Read and parse the image file.
+    image_class = get_image_class(args.file)
+    if not image_class:
+        return
     with open(args.file, "rb") as f:
-        scp = SCP.from_file(f.read())
+        image = image_class.from_file(f.read())
 
     for cyl in range(args.scyl, args.ecyl+1):
         for side in range(0, args.nr_sides):
 
-            flux = scp.get_track(cyl, side, writeout=True)
+            flux = image.get_track(cyl, side, writeout=True)
             if not flux:
                 continue
 
@@ -95,7 +110,7 @@ def write_from_scp(usb, args):
                 # read-in and write-out drives.
                 factor = drive_ticks / flux.index_list[0]
             else:
-                # Simple ratio between the GW and SCP sample frequencies.
+                # Simple ratio between the GW and image sample frequencies.
                 factor = usb.sample_freq / flux.sample_freq
 
             # Convert the flux samples to Greaseweazle sample frequency.
@@ -168,8 +183,8 @@ def update_firmware(usb, args):
 def _main(argv):
 
     actions = {
-        "read" : read_to_scp,
-        "write" : write_from_scp,
+        "read" : read_to_image,
+        "write" : write_from_image,
         "update" : update_firmware
     }
 

@@ -10,6 +10,7 @@
 *.rld
 *.upd
 *.adf
+*.hfe
 *.scp
 *.pyc
 scripts/greaseweazle/version.py
