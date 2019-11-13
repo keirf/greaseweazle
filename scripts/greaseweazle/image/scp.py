@@ -53,9 +53,7 @@ class SCP:
 
 
     def get_track(self, cyl, side, writeout=False):
-        if side >= self.nr_sides:
-            return None
-        if cyl < self.start_cyl:
+        if side >= self.nr_sides or cyl < self.start_cyl:
             return None
         off = (cyl - self.start_cyl) * self.nr_sides + side
         if off >= len(self.track_list):

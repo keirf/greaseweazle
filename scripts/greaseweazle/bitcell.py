@@ -25,7 +25,7 @@ class Bitcell:
             rev += 1
         return s[:-1]
 
-    def read_flux(self, flux):
+    def from_flux(self, flux):
 
         index_list, freq = flux.index_list, flux.sample_freq
 
@@ -38,7 +38,7 @@ class Bitcell:
         self.revolution_list = []
 
         # Initialise bitcell lists for the first revolution.
-        bits, times = bitarray(), []
+        bits, times = bitarray(endian='big'), []
         to_index = index_list[0] / freq
         index_list = index_list[1:]
 
@@ -59,7 +59,7 @@ class Bitcell:
                     self.revolution_list.append((bits, times))
                     if not index_list:
                         return
-                    bits, times = bitarray(), []
+                    bits, times = bitarray(endian='big'), []
                     to_index = index_list[0] / freq
                     index_list = index_list[1:]
 
