@@ -1,4 +1,4 @@
-# greaseweazle/USB.py
+# greaseweazle/usb.py
 #
 # Written & released by Keir Fraser <keir.xen@gmail.com>
 #

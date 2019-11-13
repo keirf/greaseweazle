@@ -12,7 +12,7 @@ import sys, struct, argparse, serial
 import crcmod.predefined
 
 from greaseweazle import version
-from greaseweazle import USB
+from greaseweazle import usb as USB
 from greaseweazle.bitcell import Bitcell
 from greaseweazle.flux import Flux
 from greaseweazle.scp import SCP
