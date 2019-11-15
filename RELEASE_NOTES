@@ -3,6 +3,13 @@
 ** Keir Fraser <keir.xen@gmail.com>
 ************************************
 
+** v0.6 - 15 November 2019
+ - gw.py: Big overhaul of underlying Python package
+   - Action (read, write, update) must come first on the command line
+   - eg. "python3 gw.py read --ecyl=39 foo.scp COM3"
+ - gw.py: New action "delays" to print/set delay parameters
+   - eg. "python3 gw.py delays --step=10000" to increase step time to 10ms
+
 ** v0.5 - 11 November 2019
  - USB: Overhaul the protocol and allow writes to be terminated at index
    - Terminate-at-index is always used by current Python control script
