@@ -1,4 +1,4 @@
-# greaseweazle/scp.py
+# greaseweazle/image/scp.py
 #
 # Written & released by Keir Fraser <keir.xen@gmail.com>
 #

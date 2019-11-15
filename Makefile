@@ -23,6 +23,7 @@ clean:
 
 dist:
 	rm -rf $(PROJ)-*
+	mkdir -p $(PROJ)-$(VER)/scripts/greaseweazle/image
 	mkdir -p $(PROJ)-$(VER)/scripts/greaseweazle/tools
 	mkdir -p $(PROJ)-$(VER)/alt
 	$(MAKE) clean
@@ -36,6 +37,8 @@ dist:
 	cp -a scripts/49-greaseweazle.rules $(PROJ)-$(VER)/scripts/
 	cp -a scripts/gw.py $(PROJ)-$(VER)/scripts/
 	cp -a scripts/greaseweazle/*.py $(PROJ)-$(VER)/scripts/greaseweazle/
+	cp -a scripts/greaseweazle/image/*.py \
+		$(PROJ)-$(VER)/scripts/greaseweazle/image/
 	cp -a scripts/greaseweazle/tools/*.py \
 		$(PROJ)-$(VER)/scripts/greaseweazle/tools/
 	cp -a RELEASE_NOTES $(PROJ)-$(VER)/

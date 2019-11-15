@@ -11,8 +11,8 @@ import os, sys, serial
 
 from greaseweazle import version
 from greaseweazle import usb as USB
-from greaseweazle.scp import SCP
-from greaseweazle.hfe import HFE
+from greaseweazle.image.scp import SCP
+from greaseweazle.image.hfe import HFE
 
 
 def get_image_class(name):

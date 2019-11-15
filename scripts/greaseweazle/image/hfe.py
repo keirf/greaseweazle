@@ -1,4 +1,4 @@
-# greaseweazle/hfe.py
+# greaseweazle/image/hfe.py
 #
 # Written & released by Keir Fraser <keir.xen@gmail.com>
 #
