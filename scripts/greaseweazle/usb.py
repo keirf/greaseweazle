@@ -185,9 +185,9 @@ class Unit:
         return flux[:-1]
 
 
-    ## encode_flux:
+    ## _encode_flux:
     ## Convert the given flux timings into an encoded data stream.
-    def encode_flux(self, flux):
+    def _encode_flux(self, flux):
         dat = bytearray()
         for val in flux:
             if val == 0:
@@ -209,9 +209,9 @@ class Unit:
         return dat
 
 
-    ## read_track:
-    ## Read and decode flux and index timings for the current track.
-    def read_track(self, nr_revs):
+    ## _read_track:
+    ## Private helper which issues command requests to Greaseweazle.
+    def _read_track(self, nr_revs):
 
         # Request and read all flux timings for this track.
         dat = bytearray()
@@ -222,12 +222,29 @@ class Unit:
             if dat[-1] == 0:
                 break
 
-        # Check flux status. We bail if there was an error.
-        try:
-            self._send_cmd(struct.pack("2B", Cmd.GetFluxStatus, 2))
-        except CmdError as error:
-            del dat
-            return error.code, None
+        # Check flux status. An exception is raised if there was an error.
+        self._send_cmd(struct.pack("2B", Cmd.GetFluxStatus, 2))
+
+        return dat
+
+
+    ## read_track:
+    ## Read and decode flux and index timings for the current track.
+    def read_track(self, nr_revs, nr_retries=5):
+
+        retry = 0
+        while True:
+            try:
+                dat = self._read_track(nr_revs)
+            except CmdError as error:
+                # An error occurred. We may retry on transient overflows.
+                if error.code == Ack.FluxOverflow and retry < nr_retries:
+                    retry += 1
+                else:
+                    raise error
+            else:
+                # Success!
+                break
 
         # Decode the flux list and read the index-times list.
         flux_list = self._decode_flux(dat)
@@ -247,20 +264,33 @@ class Unit:
         index_list = index_list[1:]
 
         # Success: Return the requested full index-to-index revolutions.
-        return Ack.Okay, Flux(index_list, flux_list, self.sample_freq)
+        return Flux(index_list, flux_list, self.sample_freq)
 
 
     ## write_track:
-    ## Write the given data stream to the current track via Greaseweazle.
-    def write_track(self, dat):
-        self._send_cmd(struct.pack("<2BIB", Cmd.WriteFlux, 7, 0, 1))
-        self.ser.write(dat)
-        self.ser.read(1) # Sync with Greaseweazle
-        try:
-            self._send_cmd(struct.pack("2B", Cmd.GetFluxStatus, 2))
-        except CmdError as error:
-            return error.code
-        return Ack.Okay
+    ## Write the given flux stream to the current track via Greaseweazle.
+    def write_track(self, flux_list, nr_retries=5):
+
+        # Create encoded data stream.
+        dat = self._encode_flux(flux_list)
+        
+        retry = 0
+        while True:
+            try:
+                # Write the flux stream to the track via Greaseweazle.
+                self._send_cmd(struct.pack("<2BIB", Cmd.WriteFlux, 7, 0, 1))
+                self.ser.write(dat)
+                self.ser.read(1) # Sync with Greaseweazle
+                self._send_cmd(struct.pack("2B", Cmd.GetFluxStatus, 2))
+            except CmdError as error:
+                # An error occurred. We may retry on transient underflows.
+                if error.code == Ack.FluxUnderflow and retry < nr_retries:
+                    retry += 1
+                else:
+                    raise error
+            else:
+                # Success!
+                break
 
 
     ##

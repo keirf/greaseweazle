@@ -35,22 +35,9 @@ def read_to_image(usb, args):
 
     for cyl in range(args.scyl, args.ecyl+1):
         for side in range(0, args.nr_sides):
-
             print("\rReading Track %u.%u..." % (cyl, side), end="")
             usb.seek(cyl, side)
-
-            # Physically read the track.
-            for retry in range(1, 5):
-                ack, flux = usb.read_track(args.revs)
-                if ack == USB.Ack.Okay:
-                    break
-                elif ack == USB.Ack.FluxOverflow and retry < 5:
-                    print("Retry #%u..." % (retry))
-                else:
-                    raise CmdError(ack)
-                
-            # Stash the data for later writeout to the image file.
-            image.append_track(flux)
+            image.append_track(usb.read_track(args.revs))
 
     print()
 
@@ -66,12 +53,7 @@ def write_from_image(usb, args):
     if args.adjust_speed:
         # @drive_ticks is the time in Gresaeweazle ticks between index pulses.
         # We will adjust the flux intervals per track to allow for this.
-        for retry in range(1, 5):
-            ack, flux = usb.read_track(2)
-            if ack == USB.Ack.Okay:
-                break
-            elif ack != USB.Ack.FluxOverflow or retry >= 5:
-                raise CmdError(ack)
+        flux = usb.read_track(2)
         drive_ticks = (flux.index_list[0] + flux.index_list[1]) / 2
         del flux
 
@@ -110,15 +92,7 @@ def write_from_image(usb, args):
                 flux_list.append(val)
 
             # Encode the flux times for Greaseweazle, and write them out.
-            enc_flux = usb.encode_flux(flux_list)
-            for retry in range(1, 5):
-                ack = usb.write_track(enc_flux)
-                if ack == USB.Ack.Okay:
-                    break
-                elif ack == USB.Ack.FluxUnderflow and retry < 5:
-                    print("Retry #%u..." % (retry))
-                else:
-                    raise CmdError(ack)
+            usb.write_track(flux_list)
 
     print()
 
