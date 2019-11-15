@@ -11,6 +11,7 @@
 *.upd
 *.adf
 *.hfe
+*.ipf
 *.scp
 *.pyc
 scripts/greaseweazle/version.py
