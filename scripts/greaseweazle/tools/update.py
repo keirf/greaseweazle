@@ -7,7 +7,7 @@
 # This is free and unencumbered software released into the public domain.
 # See the file COPYING for more details, or visit <http://unlicense.org>.
 
-import sys, argparse
+import sys, argparse, struct
 import crcmod.predefined
 
 from greaseweazle.tools import util
