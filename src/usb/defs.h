@@ -35,7 +35,7 @@
 
 #define USB_CLASS_CDC_DATA 0x0a
 
-struct __packed usb_device_request {
+struct packed usb_device_request {
     uint8_t bmRequestType;
     uint8_t bRequest;
     uint16_t wValue;
