@@ -338,6 +338,7 @@ static struct {
     bool_t packet_ready;
     bool_t write_finished;
     bool_t terminate_at_index;
+    bool_t no_flux_area;
     unsigned int packet_len;
     int ticks_since_index;
     uint32_t ticks_since_flux;
@@ -540,6 +541,17 @@ static unsigned int _wdata_decode_flux(uint16_t *tbuf, unsigned int nr)
     if (todo == 0)
         return 0;
 
+    if (rw.no_flux_area) {
+        unsigned int nfa_pulse = sysclk_ns(1250);
+        while (ticks >= nfa_pulse) {
+            *tbuf++ = nfa_pulse - 1;
+            ticks -= nfa_pulse;
+            if (!--todo)
+                goto out;
+        }
+        rw.no_flux_area = FALSE;
+    }
+
     while (u_cons != u_prod) {
         x = u_buf[U_MASK(u_cons)];
         if (x == 0) {
@@ -571,6 +583,11 @@ static unsigned int _wdata_decode_flux(uint16_t *tbuf, unsigned int nr)
         ticks += x;
         if (ticks < sysclk_ns(800))
             continue;
+
+        if (ticks > sysclk_us(150)) {
+            rw.no_flux_area = TRUE;
+            goto out;
+        }
 
         *tbuf++ = ticks - 1;
         ticks = 0;
