@@ -17,7 +17,7 @@
 #define CDC_SET_CONTROL_LINE_STATE 0x22
 #define CDC_SEND_BREAK 0x23
 
-static struct __packed line_coding {
+static struct packed line_coding {
     uint32_t baud;
     uint8_t nr_stop;
     uint8_t parity;

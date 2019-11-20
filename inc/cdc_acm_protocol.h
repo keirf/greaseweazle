@@ -72,7 +72,7 @@
  */
 
 /* CMD_GET_INFO, index 0 */
-struct __packed gw_info {
+struct packed gw_info {
     uint8_t fw_major;
     uint8_t fw_minor;
     uint8_t max_index;
@@ -81,19 +81,19 @@ struct __packed gw_info {
 };
 
 /* CMD_READ_FLUX */
-struct __packed gw_read_flux {
+struct packed gw_read_flux {
     uint8_t nr_idx; /* default: 2 */
 };
 
 /* CMD_WRITE_FLUX */
-struct __packed gw_write_flux {
+struct packed gw_write_flux {
     uint32_t index_delay_ticks; /* default: 0 */
     uint8_t terminate_at_index; /* default: 0 */
 };
 
 /* CMD_{GET,SET}_PARAMS, index 0 */
 #define PARAMS_DELAYS 0
-struct __packed gw_delay {
+struct packed gw_delay {
     uint16_t select_delay; /* usec */
     uint16_t step_delay;   /* usec */
     uint16_t seek_settle;  /* msec */

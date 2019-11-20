@@ -9,7 +9,7 @@
  * See the file COPYING for more details, or visit <http://unlicense.org>.
  */
 
-const uint8_t device_descriptor[] __aligned(2) = {
+const uint8_t device_descriptor[] aligned(2) = {
     18,        /* Length */
     DESC_DEVICE, /* Descriptor Type */
     0x10,0x01, /* USB 1.1 */
@@ -22,7 +22,7 @@ const uint8_t device_descriptor[] __aligned(2) = {
     1          /* Number of configurations */
 };
 
-const uint8_t config_descriptor[] __aligned(2) = {
+const uint8_t config_descriptor[] aligned(2) = {
     0x09, /* 0 bLength */
     DESC_CONFIGURATION, /* 1 bDescriptortype - Configuration*/
     0x43, 0x00, /* 2 wTotalLength */
