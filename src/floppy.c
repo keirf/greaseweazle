@@ -651,13 +651,21 @@ static uint8_t floppy_write_prep(struct gw_write_flux *wf)
 
 static void floppy_write_wait_data(void)
 {
+    bool_t write_finished;
+
     floppy_process_write_packet();
     wdata_decode_flux();
 
-    /* Wait for DMA and input buffers to fill, or write stream to end. */
+    /* Wait for DMA and input buffers to fill, or write stream to end. We must
+     * take care because, since we are not yet draining the DMA buffer, the
+     * write stream may end without us noticing and setting rw.write_finished. 
+     * Hence we peek for a NUL byte in the input buffer if it's non-empty. */
+    write_finished = ((u_prod == u_cons)
+                      ? rw.write_finished
+                      : (u_buf[U_MASK(u_prod-1)] == 0));
     if (((dma.prod != (ARRAY_SIZE(dma.buf)-1)) 
          || ((uint32_t)(u_prod - u_cons) < (ARRAY_SIZE(u_buf) - 512)))
-        && !rw.write_finished)
+        && !write_finished)
         return;
 
     floppy_state = ST_write_flux_wait_index;
