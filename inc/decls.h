@@ -16,8 +16,9 @@
 #include <limits.h>
 
 #include "util.h"
-#include "stm32f10x_regs.h"
-#include "stm32f10x.h"
+#include "stm32/common_regs.h"
+#include "stm32/f1_regs.h"
+#include "stm32/common.h"
 #include "intrinsics.h"
 
 #include "time.h"

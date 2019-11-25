@@ -71,7 +71,6 @@ static USART usart3 = (struct usart *)USART3_BASE;
 static USB usb = (struct usb *)USB_BASE;
 static USB_BUFD usb_bufd = (struct usb_bufd *)USB_BUF_BASE;
 static USB_BUF usb_buf = (uint32_t *)USB_BUF_BASE;
-static USB_OTG usb_otg = (struct usb_otg *)USB_OTG_BASE;
 
 /* NVIC table */
 extern uint32_t vector_table[];
