@@ -159,6 +159,9 @@ static always_inline unsigned long __cmpxchg(
                                    (unsigned long)(n),  \
                                    sizeof(*(ptr))))
 
+/* Cortex initialisation */
+void cortex_init(void);
+
 /*
  * Local variables:
  * mode: C

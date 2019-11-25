@@ -13,8 +13,16 @@ FLAGS  = -g -Os -nostdlib -std=gnu99 -iquote $(ROOT)/inc
 FLAGS += -Wall -Werror -Wno-format -Wdeclaration-after-statement
 FLAGS += -Wstrict-prototypes -Wredundant-decls -Wnested-externs
 FLAGS += -fno-common -fno-exceptions -fno-strict-aliasing
-FLAGS += -mlittle-endian -mthumb -mcpu=cortex-m3 -mfloat-abi=soft
+FLAGS += -mlittle-endian -mthumb -mfloat-abi=soft
 FLAGS += -Wno-unused-value
+
+ifeq ($(stm32),f1)
+FLAGS += -mcpu=cortex-m3 -DSTM32F=1
+stm32f1=y
+else ifeq ($(stm32),f7)
+FLAGS += -mcpu=cortex-m7 -DSTM32F=7
+stm32f7=y
+endif
 
 ifneq ($(debug),y)
 FLAGS += -DNDEBUG

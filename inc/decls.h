@@ -17,8 +17,14 @@
 
 #include "util.h"
 #include "stm32/common_regs.h"
-#include "stm32/f1_regs.h"
 #include "stm32/common.h"
+#if STM32F == 1
+#include "stm32/f1_regs.h"
+#include "stm32/f1.h"
+#elif STM32F == 7
+#include "stm32/f7_regs.h"
+#include "stm32/f7.h"
+#endif
 #include "intrinsics.h"
 
 #include "time.h"

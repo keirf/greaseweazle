@@ -1,7 +1,8 @@
 RPATH = ../src
 
 OBJS += vectors.o
-OBJS += stm32f10x.o
+OBJS += cortex.o
+OBJS += stm32$(stm32).o
 OBJS += blinky.o
 OBJS += util.o
 OBJS += fpec.o

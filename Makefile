@@ -7,12 +7,12 @@ VER := v$(FW_MAJOR).$(FW_MINOR)
 
 SUBDIRS += src bootloader blinky_test
 
-.PHONY: all clean dist mrproper flash start serial
+.PHONY: all blinky clean dist mrproper flash start serial
 
 ifneq ($(RULES_MK),y)
 export ROOT := $(CURDIR)
 
-all:
+all blinky:
 	$(MAKE) -f $(ROOT)/Rules.mk $@
 
 clean:
@@ -27,7 +27,7 @@ dist:
 	mkdir -p $(PROJ)-$(VER)/scripts/greaseweazle/tools
 	mkdir -p $(PROJ)-$(VER)/alt
 	$(MAKE) clean
-	$(MAKE) all
+	stm32=f1 $(MAKE) all blinky
 	cp -a $(PROJ)-$(VER).hex $(PROJ)-$(VER)/
 	cp -a $(PROJ)-$(VER).upd $(PROJ)-$(VER)/
 	cp -a blinky_test/Blinky.hex $(PROJ)-$(VER)/alt/Blinky_Test-$(VER).hex
@@ -50,12 +50,14 @@ mrproper: clean
 
 else
 
+blinky:
+	debug=y $(MAKE) -C blinky_test -f $(ROOT)/Rules.mk \
+		Blinky.elf Blinky.bin Blinky.hex
+
 all: scripts/greaseweazle/version.py
 	$(MAKE) -C src -f $(ROOT)/Rules.mk $(PROJ).elf $(PROJ).bin $(PROJ).hex
 	bootloader=y $(MAKE) -C bootloader -f $(ROOT)/Rules.mk \
 		Bootloader.elf Bootloader.bin Bootloader.hex
-	debug=y $(MAKE) -C blinky_test -f $(ROOT)/Rules.mk \
-		Blinky.elf Blinky.bin Blinky.hex
 	srec_cat bootloader/Bootloader.hex -Intel src/$(PROJ).hex -Intel \
 	-o $(PROJ)-$(VER).hex -Intel
 	$(PYTHON) ./scripts/mk_update.py src/$(PROJ).bin $(PROJ)-$(VER).upd

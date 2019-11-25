@@ -264,7 +264,7 @@ struct gpio {
 #define GPIOF_BASE 0x40021400
 #define GPIOG_BASE 0x40021800
 #define GPIOH_BASE 0x40021C00
-#define GPIOH_BASE 0x40022000
+#define GPIOI_BASE 0x40022000
 
 /* System configuration controller */
 struct syscfg {
@@ -440,6 +440,7 @@ struct i2c {
 
 #define I2C1_BASE 0x40005400
 #define I2C2_BASE 0x40005800
+#define I2C3_BASE 0x40005C00
 
 /* USART */
 struct usart {
@@ -520,9 +521,12 @@ struct usart {
 #define USART_ICR_FECF       (1u<< 1)
 #define USART_ICR_PECF       (1u<< 0)
 
-#define USART1_BASE 0x40013800
+#define USART1_BASE 0x40011000
 #define USART2_BASE 0x40004400
 #define USART3_BASE 0x40004800
+#define USART4_BASE 0x40004C00
+#define USART5_BASE 0x40005000
+#define USART6_BASE 0x40011400
 
 #define USB_OTG_FS_BASE 0x50000000
 #define USB_OTG_HS_BASE 0x40040000

@@ -186,6 +186,7 @@ int main(void)
         memcpy(_sdat, _ldat, _edat-_sdat);
     memset(_sbss, 0, _ebss-_sbss);
 
+#if STM32F == 1
     /* Turn on AFIO and GPIOA clocks. */
     rcc->apb2enr = RCC_APB2ENR_IOPAEN | RCC_APB2ENR_AFIOEN;
 
@@ -213,6 +214,11 @@ int main(void)
                 :: "r" (sp), "r" (pc));
         }
     }
+#else
+    rcc->ahb1enr |= RCC_AHB1ENR_GPIOAEN;
+    gpio_configure_pin(gpioa, 15, GPO_pushpull(_2MHz, HIGH));
+    for (;;);
+#endif
 
     stm32_init();
     console_init();
