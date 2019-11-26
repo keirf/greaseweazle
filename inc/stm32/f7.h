@@ -66,11 +66,17 @@ static USB_OTG usb_otg_fs = (struct usb_otg *)USB_OTG_FS_BASE;
 static USB_OTG usb_otg_hs = (struct usb_otg *)USB_OTG_HS_BASE;
 
 #define SYSCLK_MHZ 216
+#define AHB_MHZ (SYSCLK_MHZ / 1)  /* 216MHz */
+#define APB1_MHZ (SYSCLK_MHZ / 4) /* 54MHz */
+#define APB2_MHZ (SYSCLK_MHZ / 2) /* 108MHz */
+
 #define FLASH_PAGE_SIZE 16384
 
 /* Delay after enabling peripheral clock, before accessing peripheral 
  * (Ref STMicro RM0431, Section 5.2.12) */
 void peripheral_clock_delay(void);
+
+void gpio_set_af(GPIO gpio, unsigned int pin, unsigned int af);
 
 /*
  * Local variables:

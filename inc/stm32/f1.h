@@ -56,6 +56,9 @@ static USB_BUF usb_buf = (uint32_t *)USB_BUF_BASE;
 #define SYSCLK_MHZ 72
 #define FLASH_PAGE_SIZE 1024
 
+/* No delay required after enabling a peripheral clock, before accessing it. */
+#define peripheral_clock_delay() ((void)0)
+
 /*
  * Local variables:
  * mode: C

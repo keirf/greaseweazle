@@ -34,20 +34,24 @@ int main(void)
     time_init();
     console_init();
     console_crash_on_input();
-
-    gpio_configure_pin(gpioa, 15, GPO_pushpull(_2MHz, HIGH));
-    for (;;) {
-        delay_ms(20);
-        gpio_write_pin(gpioa, 15, LOW);
-        delay_ms(20);
-        gpio_write_pin(gpioa, 15, HIGH);
-    }
-
-    board_init();
+//    board_init();
 
     printk("\n** Greaseweazle v%u.%u\n", fw_major, fw_minor);
     printk("** Keir Fraser <keir.xen@gmail.com>\n");
     printk("** https://github.com/keirf/Greaseweazle\n\n");
+
+
+    {
+        int i;
+        gpio_configure_pin(gpioa, 15, GPO_pushpull(_2MHz, HIGH));
+        for (i = 0;; i++) {
+            printk("Hello %d\n", i);
+            delay_ms(200);
+            gpio_write_pin(gpioa, 15, LOW);
+            delay_ms(200);
+            gpio_write_pin(gpioa, 15, HIGH);
+        }
+    }
 
     floppy_init();
     usb_init();

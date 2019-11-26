@@ -504,6 +504,12 @@ struct usart {
 #define USART_CR3_IREN       (1u<< 1)
 #define USART_CR3_EIE        (1u<< 0)
 
+#define USART_RQR_TXFRQ      (1u<< 4)
+#define USART_RQR_RXFRQ      (1u<< 3)
+#define USART_RQR_MMRQ       (1u<< 2)
+#define USART_RQR_SBKRQ      (1u<< 1)
+#define USART_RQR_ABRRQ      (1u<< 0)
+
 #define USART_ISR_TCBGT      (1u<<25)
 #define USART_ISR_TEACK      (1u<<21)
 #define USART_ISR_RWU        (1u<<19)

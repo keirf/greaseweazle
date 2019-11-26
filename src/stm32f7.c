@@ -107,6 +107,16 @@ void gpio_configure_pin(GPIO gpio, unsigned int pin, unsigned int mode)
     gpio->pupdr = (gpio->pupdr & ~(3<<(pin<<1))) | ((mode&3)<<(pin<<1));
 }
 
+void gpio_set_af(GPIO gpio, unsigned int pin, unsigned int af)
+{
+    if (pin < 8) {
+        gpio->afrl = (gpio->afrl & ~(15<<(pin<<2))) | (af<<(pin<<2));
+    } else {
+        pin -= 8;
+        gpio->afrh = (gpio->afrh & ~(15<<(pin<<2))) | (af<<(pin<<2));
+    }
+}
+
 /*
  * Local variables:
  * mode: C
