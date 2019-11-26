@@ -24,20 +24,28 @@ int ep_rx_ready(uint8_t ep) { return -1; }
 
 static void clock_init(void)
 {
-#if 0
-    /* Flash controller: reads require 2 wait states at 72MHz. */
-    flash->acr = FLASH_ACR_PRFTBE | FLASH_ACR_LATENCY(2);
+    /* Flash controller: reads require 7 wait states at 216MHz. */
+    flash->acr = FLASH_ACR_ARTEN | FLASH_ACR_PRFTEN | FLASH_ACR_LATENCY(7);
+
+    /* Bus divisors. */
+    rcc->cfgr = (RCC_CFGR_PPRE2(4) | /* APB2 = 216MHz/2 = 108MHz  */
+                 RCC_CFGR_PPRE1(5) | /* APB1 = 216MHz/4 = 54MHz */
+                 RCC_CFGR_HPRE(0));  /* AHB  = 216MHz/1 = 216MHz */
+
+    /* Timers run from Host Clock (216MHz). */
+    rcc->dckcfgr1 = RCC_DCKCFGR1_TIMPRE;
 
     /* Start up the external oscillator. */
     rcc->cr |= RCC_CR_HSEON;
     while (!(rcc->cr & RCC_CR_HSERDY))
         cpu_relax();
 
-    /* PLLs, scalers, muxes. */
-    rcc->cfgr = (RCC_CFGR_PLLMUL(9) |        /* PLL = 9*8MHz = 72MHz */
-                 RCC_CFGR_PLLSRC_PREDIV1 |
-                 RCC_CFGR_ADCPRE_DIV8 |
-                 RCC_CFGR_PPRE1_DIV2);
+    /* Main PLL. */
+    rcc->pllcfgr = (RCC_PLLCFGR_PLLSRC_HSE | /* PLLSrc = HSE = 8MHz */
+                    RCC_PLLCFGR_PLLM(4) |    /* PLL In = HSE/4 = 2MHz */
+                    RCC_PLLCFGR_PLLN(216) |  /* PLLVCO = 2MHz*216 = 432MHz */
+                    RCC_PLLCFGR_PLLP(0) |    /* SYSCLK = 432MHz/2 = 216MHz */
+                    RCC_PLLCFGR_PLLQ(9));    /* USB    = 432MHz/9 = 48MHz */
 
     /* Enable and stabilise the PLL. */
     rcc->cr |= RCC_CR_PLLON;
@@ -45,48 +53,38 @@ static void clock_init(void)
         cpu_relax();
 
     /* Switch to the externally-driven PLL for system clock. */
-    rcc->cfgr |= RCC_CFGR_SW_PLL;
-    while ((rcc->cfgr & RCC_CFGR_SWS_MASK) != RCC_CFGR_SWS_PLL)
+    rcc->cfgr |= RCC_CFGR_SW(2);
+    while ((rcc->cfgr & RCC_CFGR_SWS(3)) != RCC_CFGR_SWS(2))
         cpu_relax();
 
     /* Internal oscillator no longer needed. */
     rcc->cr &= ~RCC_CR_HSION;
 
-    /* Enable SysTick counter at 72/8=9MHz. */
+    /* Enable SysTick counter at 216MHz/8 = 27MHz. */
     stk->load = STK_MASK;
     stk->ctrl = STK_CTRL_ENABLE;
-#endif
 }
 
-static void gpio_init(GPIO gpio)
+void peripheral_clock_delay(void)
 {
-    /* Floating Input. Reference Manual states that JTAG pins are in PU/PD
-     * mode at reset, so ensure all PU/PD are disabled. */
-    //gpio->crl = gpio->crh = 0x44444444u;
+    delay_ticks(2);
 }
 
 static void peripheral_init(void)
 {
-#if 0
-    /* Enable basic GPIO and AFIO clocks, all timers, and DMA. */
-    rcc->apb1enr = (RCC_APB1ENR_TIM2EN |
-                    RCC_APB1ENR_TIM3EN |
-                    RCC_APB1ENR_TIM4EN);
-    rcc->apb2enr = (RCC_APB2ENR_IOPAEN |
-                    RCC_APB2ENR_IOPBEN |
-                    RCC_APB2ENR_IOPCEN |
-                    RCC_APB2ENR_AFIOEN |
-                    RCC_APB2ENR_TIM1EN);
-    rcc->ahbenr = RCC_AHBENR_DMA1EN;
+    /* Enable basic GPIO clocks, DTCM RAM, and DMA. */
+    rcc->ahb1enr = (RCC_AHB1ENR_DMA2EN |
+                    RCC_AHB1ENR_DMA1EN |
+                    RCC_AHB1ENR_DTCMRAMEN |
+                    RCC_AHB1ENR_GPIOCEN |
+                    RCC_AHB1ENR_GPIOBEN | 
+                    RCC_AHB1ENR_GPIOAEN);
+    peripheral_clock_delay();
 
-    /* Turn off serial-wire JTAG and reclaim the GPIOs. */
-    afio->mapr = AFIO_MAPR_SWJ_CFG_DISABLED;
-#endif
-
-    /* All pins in a stable state. */
-    gpio_init(gpioa);
-    gpio_init(gpiob);
-    gpio_init(gpioc);
+    /* Release JTAG pins. */
+    gpio_configure_pin(gpioa, 15, GPI_floating);
+    gpio_configure_pin(gpiob,  3, GPI_floating);
+    gpio_configure_pin(gpiob,  4, GPI_floating);
 }
 
 void stm32_init(void)

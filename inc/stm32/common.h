@@ -39,7 +39,6 @@ void stm32_bootloader_enter(void);
 void system_reset(void);
 
 /* Clocks */
-#define SYSCLK_MHZ 72
 #define SYSCLK     (SYSCLK_MHZ * 1000000)
 #define sysclk_ns(x) (((x) * SYSCLK_MHZ) / 1000)
 #define sysclk_us(x) ((x) * SYSCLK_MHZ)

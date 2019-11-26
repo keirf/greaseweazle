@@ -99,15 +99,15 @@ struct rcc {
     uint32_t apb2lpenr;/* 64: APB2 peripheral clock enable (low-power mode) */
     uint32_t _unused7; /* 68: - */
     uint32_t _unused8; /* 6C: - */
-    uint32_t rcc_bdcr; /* 70: Backup domain control */
-    uint32_t rcc_csr;  /* 74: Clock control & status */
+    uint32_t bdcr;     /* 70: Backup domain control */
+    uint32_t csr;      /* 74: Clock control & status */
     uint32_t _unused9; /* 78: - */
     uint32_t _unusedA; /* 7C: - */
-    uint32_t rcc_sscgr;/* 80: Spread spectrum clock generation */
-    uint32_t rcc_plli2scfgr;  /* 84: PLLI2S configuration */
-    uint32_t rcc_pllsaicfgr;  /* 88: PLLSAI configuration */
-    uint32_t rcc_plldckcfgr1; /* 8C: Dedicated clocks configuration #1 */
-    uint32_t rcc_plldckcfgr2; /* 90: Dedicated clocks configuration #2 */
+    uint32_t sscgr;    /* 80: Spread spectrum clock generation */
+    uint32_t plli2scfgr; /* 84: PLLI2S configuration */
+    uint32_t pllsaicfgr; /* 88: PLLSAI configuration */
+    uint32_t dckcfgr1; /* 8C: Dedicated clocks configuration #1 */
+    uint32_t dckcfgr2; /* 90: Dedicated clocks configuration #2 */
 };
 
 #define RCC_CR_SAIRDY        (1u<<29)
@@ -122,6 +122,24 @@ struct rcc {
 #define RCC_CR_HSEON         (1u<<16)
 #define RCC_CR_HSIRDY        (1u<<1)
 #define RCC_CR_HSION         (1u<<0)
+
+#define RCC_PLLCFGR_PLLQ(x)  ((x)<<24)
+#define RCC_PLLCFGR_PLLSRC_HSE (1<<22)
+#define RCC_PLLCFGR_PLLP(x)  ((x)<<16)
+#define RCC_PLLCFGR_PLLN(x)  ((x)<< 6)
+#define RCC_PLLCFGR_PLLM(x)  ((x)<< 0)
+
+#define RCC_CFGR_MCO2(x)     ((x)<<30)
+#define RCC_CFGR_MCO2PRE(x)  ((x)<<27)
+#define RCC_CFGR_MCO1PRE(x)  ((x)<<24)
+#define RCC_CFGR_I2SSCR      (1  <<23)
+#define RCC_CFGR_MCO1(x)     ((x)<<21)
+#define RCC_CFGR_RTCPRE(x)   ((x)<<16)
+#define RCC_CFGR_PPRE2(x)    ((x)<<13)
+#define RCC_CFGR_PPRE1(x)    ((x)<<10)
+#define RCC_CFGR_HPRE(x)     ((x)<< 4)
+#define RCC_CFGR_SWS(x)      ((x)<< 2)
+#define RCC_CFGR_SW(x)       ((x)<< 0)
 
 #define RCC_AHB1ENR_OTGHSULPIEN (1u<<30)
 #define RCC_AHB1ENR_OTGHSEN  (1u<<29)

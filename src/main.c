@@ -34,6 +34,15 @@ int main(void)
     time_init();
     console_init();
     console_crash_on_input();
+
+    gpio_configure_pin(gpioa, 15, GPO_pushpull(_2MHz, HIGH));
+    for (;;) {
+        delay_ms(20);
+        gpio_write_pin(gpioa, 15, LOW);
+        delay_ms(20);
+        gpio_write_pin(gpioa, 15, HIGH);
+    }
+
     board_init();
 
     printk("\n** Greaseweazle v%u.%u\n", fw_major, fw_minor);

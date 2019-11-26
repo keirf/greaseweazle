@@ -204,6 +204,8 @@ int main(void)
 
     /* Enter update mode only if PA14 (DCLK) is strapped to GND. */
     pa14_strapped = !gpio_read_pin(gpioa, 14);
+#endif
+
     if (!pa14_strapped) {
         /* Nope, so jump straight at the main firmware. */
         uint32_t sp = *(uint32_t *)FIRMWARE_START;
@@ -214,11 +216,6 @@ int main(void)
                 :: "r" (sp), "r" (pc));
         }
     }
-#else
-    rcc->ahb1enr |= RCC_AHB1ENR_GPIOAEN;
-    gpio_configure_pin(gpioa, 15, GPO_pushpull(_2MHz, HIGH));
-    for (;;);
-#endif
 
     stm32_init();
     console_init();

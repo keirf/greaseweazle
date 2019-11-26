@@ -9,10 +9,17 @@
  * See the file COPYING for more details, or visit <http://unlicense.org>.
  */
 
-/* TIM1_UP: IRQ 25. */
+#if STM32F == 1
 void IRQ_25(void) __attribute__((alias("IRQ_timer")));
 #define TIMER_IRQ 25
 #define tim tim1
+#define tim_bits 16
+#elif STM32F == 7
+void IRQ_50(void) __attribute__((alias("IRQ_timer")));
+#define TIMER_IRQ 50
+#define tim tim5 /* 32-bit timer */
+#define tim_bits 32
+#endif
 
 /* IRQ only on counter overflow, one-time enable. */
 #define TIM_CR1 (TIM_CR1_URS | TIM_CR1_OPM)
@@ -28,7 +35,7 @@ static struct timer *head;
 static void reprogram_timer(int32_t delta)
 {
     tim->cr1 = TIM_CR1;
-    if (delta < 0x10000) {
+    if ((tim_bits == 32) || (delta < 0x10000)) {
         /* Fine-grained deadline (sub-microsecond accurate) */
         tim->psc = SYSCLK_MHZ/TIME_MHZ-1;
         tim->arr = (delta <= SLACK_TICKS) ? 1 : delta-SLACK_TICKS;
@@ -107,6 +114,10 @@ void timer_cancel(struct timer *timer)
 
 void timers_init(void)
 {
+#if STM32F == 7
+    rcc->apb1enr |= RCC_APB1ENR_TIM5EN;
+    peripheral_clock_delay();
+#endif
     tim->cr2 = 0;
     tim->dier = TIM_DIER_UIE;
     IRQx_set_prio(TIMER_IRQ, TIMER_IRQ_PRI);

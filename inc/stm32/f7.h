@@ -65,7 +65,12 @@ static USART usart6 = (struct usart *)USART6_BASE;
 static USB_OTG usb_otg_fs = (struct usb_otg *)USB_OTG_FS_BASE;
 static USB_OTG usb_otg_hs = (struct usb_otg *)USB_OTG_HS_BASE;
 
+#define SYSCLK_MHZ 216
 #define FLASH_PAGE_SIZE 16384
+
+/* Delay after enabling peripheral clock, before accessing peripheral 
+ * (Ref STMicro RM0431, Section 5.2.12) */
+void peripheral_clock_delay(void);
 
 /*
  * Local variables:

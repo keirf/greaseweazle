@@ -53,6 +53,7 @@ static USB usb = (struct usb *)USB_BASE;
 static USB_BUFD usb_bufd = (struct usb_bufd *)USB_BUF_BASE;
 static USB_BUF usb_buf = (uint32_t *)USB_BUF_BASE;
 
+#define SYSCLK_MHZ 72
 #define FLASH_PAGE_SIZE 1024
 
 /*
