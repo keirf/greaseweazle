@@ -71,6 +71,10 @@ endif
 BAUD=115200
 DEV=/dev/ttyUSB0
 
+ocd: all
+	python3 scripts/telnet.py localhost 4444 \
+	"reset init ; flash write_image erase `pwd`/$(PROJ)-$(VER).hex ; reset"
+
 flash: all
 	sudo stm32flash -b $(BAUD) -w $(PROJ)-$(VER).hex $(DEV)
 
