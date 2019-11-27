@@ -9,7 +9,10 @@
  * See the file COPYING for more details, or visit <http://unlicense.org>.
  */
 
+#include "hw_f1.h"
+
 static uint16_t buf_end;
+static uint8_t pending_addr;
 
 static struct {
     /* We track which endpoints have been marked CTR (Correct TRansfer). On 
@@ -170,29 +173,7 @@ void usb_write(uint8_t ep, const void *buf, uint32_t len)
     usb->epr[ep] = epr;
 }
 
-static void usb_write_ep0(void)
-{
-    uint32_t len;
-
-    if ((ep0.tx.todo < 0) || !ep_tx_ready(0))
-        return;
-
-    len = min_t(uint32_t, ep0.tx.todo, USB_FS_MPS);
-    usb_write(0, ep0.tx.p, len);
-
-    ep0.tx.p += len;
-    ep0.tx.todo -= len;
-
-    if (ep0.tx.todo == 0) {
-        /* USB Spec 1.1, Section 5.5.3: Data stage of a control transfer is
-         * complete when we have transferred the exact amount of data specified
-         * during Setup *or* transferred a short/zero packet. */
-        if (!ep0.tx.trunc || (len < USB_FS_MPS))
-            ep0.tx.todo = -1;
-    }
-}
-
-static void usb_stall(uint8_t ep)
+void usb_stall(uint8_t ep)
 {
     uint16_t epr = usb->epr[ep];
     epr &= 0x073f;
@@ -203,6 +184,13 @@ static void usb_stall(uint8_t ep)
 
 void usb_configure_ep(uint8_t ep, uint8_t type, uint32_t size)
 {
+    static const uint8_t types[] = {
+        [EPT_CONTROL] = USB_EP_TYPE_CONTROL,
+        [EPT_ISO] = USB_EP_TYPE_ISO,
+        [EPT_BULK] = USB_EP_TYPE_BULK,
+        [EPT_INTERRUPT] = USB_EP_TYPE_INTERRUPT
+    };
+
     uint16_t old_epr, new_epr;
     bool_t in, dbl_buf;
     volatile struct usb_bufd *bd;
@@ -214,15 +202,17 @@ void usb_configure_ep(uint8_t ep, uint8_t type, uint32_t size)
     old_epr = usb->epr[ep];
     new_epr = 0;
 
-    dbl_buf = (type == USB_EP_TYPE_BULK_DBLBUF);
+    dbl_buf = (type == EPT_DBLBUF);
     if (dbl_buf) {
         ASSERT(ep != 0);
-        type = USB_EP_TYPE_BULK;
+        type = EPT_BULK;
         new_epr |= USB_EPR_EP_KIND_DBL_BUF;
         bd->addr_0 = buf_end;
         bd->addr_1 = buf_end + size;
         buf_end += 2*size;
     }
+
+    type = types[type];
 
     /* Sets: Type and Endpoint Address.
      * Clears: CTR_RX and CTR_TX. */
@@ -265,6 +255,11 @@ void usb_configure_ep(uint8_t ep, uint8_t type, uint32_t size)
     usb->epr[ep] = new_epr;
 }
 
+void usb_setaddr(uint8_t addr)
+{
+    pending_addr = addr;
+}
+
 static void handle_reset(void)
 {
     /* Reinitialise class-specific subsystem. */
@@ -280,7 +275,7 @@ static void handle_reset(void)
     /* Prepare for Enumeration: Set up Endpoint 0 at Address 0. */
     pending_addr = 0;
     buf_end = 64;
-    usb_configure_ep(0, USB_EP_TYPE_CONTROL, USB_FS_MPS);
+    usb_configure_ep(0, EPT_CONTROL, USB_FS_MPS);
     usb->daddr = USB_DADDR_EF | USB_DADDR_ADD(0);
     usb->istr &= ~USB_ISTR_RESET;
 }
@@ -297,83 +292,13 @@ static void clear_ctr(uint8_t ep, uint16_t ctr)
 static void handle_rx_transfer(uint8_t ep)
 {
     uint16_t epr = usb->epr[ep];
-    bool_t ready;
 
     clear_ctr(ep, USB_EPR_CTR_RX);
     eps[ep].rx_ready = TRUE;
 
     /* We only handle Control Transfers here (endpoint 0). */
-    if (ep != 0)
-        return;
-
-    ready = FALSE;
-
-    if (epr & USB_EPR_SETUP) {
-
-        /* Control Transfer: Setup Stage. */
-        ep0.data_len = 0;
-        ep0.tx.todo = -1;
-        usb_read(ep, &ep0.req, sizeof(ep0.req));
-        ready = ep0_data_in() || (ep0.req.wLength == 0);
-
-    } else if (ep0.data_len < 0) {
-
-        /* Unexpected Transaction */
-        usb_stall(0);
-        usb_read(ep, NULL, 0);
-
-    } else if (ep0_data_out()) {
-
-        /* OUT Control Transfer: Data from Host. */
-        uint32_t len = usb_bufd[ep].count_rx & 0x3ff;
-        int l = 0;
-        if (ep0.data_len < sizeof(ep0.data))
-            l = min_t(int, sizeof(ep0.data)-ep0.data_len, len);
-        usb_read(ep, &ep0.data[ep0.data_len], l);
-        ep0.data_len += len;
-        if (ep0.data_len >= ep0.req.wLength) {
-            ep0.data_len = ep0.req.wLength; /* clip */
-            ready = TRUE;
-        }
-
-    } else {
-
-        /* IN Control Transfer: Status from Host. */
-        usb_read(ep, NULL, 0);
-        ep0.tx.todo = -1;
-        ep0.data_len = -1; /* Complete */
-
-    }
-
-    /* Are we ready to handle the Control Request? */
-    if (!ready)
-        return;
-
-    /* Attempt to handle the Control Request: */
-    if (!handle_control_request()) {
-
-        /* Unhandled Control Transfer: STALL */
-        usb_stall(0);
-        ep0.data_len = -1; /* Complete */
-
-    } else if (ep0_data_in()) {
-
-        /* IN Control Transfer: Send Data to Host. */
-        ep0.tx.p = ep0.data;
-        ep0.tx.todo = ep0.data_len;
-        ep0.tx.trunc = (ep0.data_len < ep0.req.wLength);
-        usb_write_ep0();
-
-    } else {
-
-        /* OUT Control Transfer: Send Status to Host. */
-        ep0.tx.p = NULL;
-        ep0.tx.todo = 0;
-        ep0.tx.trunc = FALSE;
-        usb_write_ep0();
-        ep0.data_len = -1; /* Complete */
-
-    }
+    if (ep == 0)
+        handle_rx_ep0(!!(epr & USB_EPR_SETUP));
 }
 
 static void handle_tx_transfer(uint8_t ep)
@@ -385,7 +310,7 @@ static void handle_tx_transfer(uint8_t ep)
     if (ep != 0)
         return;
 
-    usb_write_ep0();
+    handle_tx_ep0();
 
     if (pending_addr && (ep0.tx.todo == -1)) {
         /* We have just completed the Status stage of a SET_ADDRESS request. 

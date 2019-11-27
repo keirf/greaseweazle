@@ -12,7 +12,7 @@ OBJS-$(stm32f1) += floppy.o
 
 OBJS-$(debug) += console.o
 
-SUBDIRS-$(stm32f1) += usb
+SUBDIRS += usb
 
 .PHONY: build_info.c
 build_info.o: CFLAGS += -DFW_MAJOR=$(FW_MAJOR) -DFW_MINOR=$(FW_MINOR)

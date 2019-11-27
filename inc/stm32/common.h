@@ -25,10 +25,6 @@
 #define SPI volatile struct spi * const
 #define I2C volatile struct i2c * const
 #define USART volatile struct usart * const
-#define USB volatile struct usb * const
-#define USB_BUFD volatile struct usb_bufd * const
-#define USB_BUF volatile uint32_t * const
-#define USB_OTG volatile struct usb_otg * const
 
 /* NVIC table */
 extern uint32_t vector_table[];

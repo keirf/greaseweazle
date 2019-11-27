@@ -12,15 +12,17 @@
 /* XXX */
 void floppy_init(void) {}
 void floppy_process(void) {}
-void usb_init(void) {}
-void usb_process(void) {}
 void fpec_init(void) {}
 void fpec_page_erase(uint32_t flash_address) {}
 void fpec_write(const void *data, unsigned int size, uint32_t flash_address) {}
-void usb_read(uint8_t ep, void *buf, uint32_t len) {}
-void usb_write(uint8_t ep, const void *buf, uint32_t len) {}
-bool_t ep_tx_ready(uint8_t ep) { return FALSE; }
-int ep_rx_ready(uint8_t ep) { return -1; }
+#ifndef BOOTLOADER
+static void floppy_reset(void) {}
+static void floppy_configure(void) {}
+const struct usb_class_ops usb_cdc_acm_ops = {
+    .reset = floppy_reset,
+    .configure = floppy_configure
+};
+#endif
 
 static void clock_init(void)
 {
@@ -79,6 +81,7 @@ static void peripheral_init(void)
                     RCC_AHB1ENR_GPIOCEN |
                     RCC_AHB1ENR_GPIOBEN | 
                     RCC_AHB1ENR_GPIOAEN);
+    rcc->apb2enr = (RCC_APB2ENR_SYSCFGEN);
     peripheral_clock_delay();
 
     /* Release JTAG pins. */

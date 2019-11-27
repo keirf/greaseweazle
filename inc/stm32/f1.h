@@ -49,9 +49,6 @@ static I2C i2c2 = (struct i2c *)I2C2_BASE;
 static USART usart1 = (struct usart *)USART1_BASE;
 static USART usart2 = (struct usart *)USART2_BASE;
 static USART usart3 = (struct usart *)USART3_BASE;
-static USB usb = (struct usb *)USB_BASE;
-static USB_BUFD usb_bufd = (struct usb_bufd *)USB_BUF_BASE;
-static USB_BUF usb_buf = (uint32_t *)USB_BUF_BASE;
 
 #define SYSCLK_MHZ 72
 #define FLASH_PAGE_SIZE 1024

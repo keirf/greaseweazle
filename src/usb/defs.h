@@ -67,12 +67,14 @@ bool_t cdc_acm_handle_class_request(void);
 bool_t cdc_acm_set_configuration(void);
 
 /* USB Core */
-extern uint8_t pending_addr;
-bool_t handle_control_request(void);
+void handle_rx_ep0(bool_t is_setup);
+void handle_tx_ep0(void);
 
 /* USB Hardware */
-#define USB_EP_TYPE_BULK_DBLBUF 4u /* Create a double-buffered Endpoint */
+enum { EPT_CONTROL=0, EPT_ISO, EPT_BULK, EPT_INTERRUPT, EPT_DBLBUF };
 void usb_configure_ep(uint8_t ep, uint8_t type, uint32_t size);
+void usb_stall(uint8_t ep);
+void usb_setaddr(uint8_t addr);
 
 #define WARN printk
 

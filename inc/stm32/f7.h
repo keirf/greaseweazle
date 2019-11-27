@@ -62,8 +62,6 @@ static USART usart3 = (struct usart *)USART3_BASE;
 static USART usart4 = (struct usart *)USART4_BASE;
 static USART usart5 = (struct usart *)USART5_BASE;
 static USART usart6 = (struct usart *)USART6_BASE;
-static USB_OTG usb_otg_fs = (struct usb_otg *)USB_OTG_FS_BASE;
-static USB_OTG usb_otg_hs = (struct usb_otg *)USB_OTG_HS_BASE;
 
 #define SYSCLK_MHZ 216
 #define AHB_MHZ (SYSCLK_MHZ / 1)  /* 216MHz */

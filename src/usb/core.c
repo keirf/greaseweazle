@@ -10,9 +10,8 @@
  */
 
 struct ep0 ep0;
-uint8_t pending_addr;
 
-bool_t handle_control_request(void)
+static bool_t handle_control_request(void)
 {
     struct usb_device_request *req = &ep0.req;
     bool_t handled = TRUE;
@@ -54,7 +53,7 @@ bool_t handle_control_request(void)
     } else if ((req->bmRequestType == 0x00)
                && (req->bRequest == SET_ADDRESS)) {
 
-        pending_addr = req->wValue & 0x7f;
+        usb_setaddr(req->wValue & 0x7f);
 
     } else if ((req->bmRequestType == 0x00)
               && (req->bRequest == SET_CONFIGURATION)) {
@@ -87,6 +86,106 @@ bool_t handle_control_request(void)
         ep0.data_len = req->wLength;
 
     return handled;
+}
+
+static void usb_write_ep0(void)
+{
+    uint32_t len;
+
+    if ((ep0.tx.todo < 0) || !ep_tx_ready(0))
+        return;
+
+    len = min_t(uint32_t, ep0.tx.todo, USB_FS_MPS);
+    usb_write(0, ep0.tx.p, len);
+
+    ep0.tx.p += len;
+    ep0.tx.todo -= len;
+
+    if (ep0.tx.todo == 0) {
+        /* USB Spec 1.1, Section 5.5.3: Data stage of a control transfer is
+         * complete when we have transferred the exact amount of data specified
+         * during Setup *or* transferred a short/zero packet. */
+        if (!ep0.tx.trunc || (len < USB_FS_MPS))
+            ep0.tx.todo = -1;
+    }
+}
+
+void handle_rx_ep0(bool_t is_setup)
+{
+    bool_t ready = FALSE;
+    uint8_t ep = 0;
+
+    if (is_setup) {
+
+        /* Control Transfer: Setup Stage. */
+        ep0.data_len = 0;
+        ep0.tx.todo = -1;
+        usb_read(ep, &ep0.req, sizeof(ep0.req));
+        ready = ep0_data_in() || (ep0.req.wLength == 0);
+
+    } else if (ep0.data_len < 0) {
+
+        /* Unexpected Transaction */
+        usb_stall(0);
+        usb_read(ep, NULL, 0);
+
+    } else if (ep0_data_out()) {
+
+        /* OUT Control Transfer: Data from Host. */
+        uint32_t len = ep_rx_ready(ep);
+        int l = 0;
+        if (ep0.data_len < sizeof(ep0.data))
+            l = min_t(int, sizeof(ep0.data)-ep0.data_len, len);
+        usb_read(ep, &ep0.data[ep0.data_len], l);
+        ep0.data_len += len;
+        if (ep0.data_len >= ep0.req.wLength) {
+            ep0.data_len = ep0.req.wLength; /* clip */
+            ready = TRUE;
+        }
+
+    } else {
+
+        /* IN Control Transfer: Status from Host. */
+        usb_read(ep, NULL, 0);
+        ep0.tx.todo = -1;
+        ep0.data_len = -1; /* Complete */
+
+    }
+
+    /* Are we ready to handle the Control Request? */
+    if (!ready)
+        return;
+
+    /* Attempt to handle the Control Request: */
+    if (!handle_control_request()) {
+
+        /* Unhandled Control Transfer: STALL */
+        usb_stall(0);
+        ep0.data_len = -1; /* Complete */
+
+    } else if (ep0_data_in()) {
+
+        /* IN Control Transfer: Send Data to Host. */
+        ep0.tx.p = ep0.data;
+        ep0.tx.todo = ep0.data_len;
+        ep0.tx.trunc = (ep0.data_len < ep0.req.wLength);
+        usb_write_ep0();
+
+    } else {
+
+        /* OUT Control Transfer: Send Status to Host. */
+        ep0.tx.p = NULL;
+        ep0.tx.todo = 0;
+        ep0.tx.trunc = FALSE;
+        usb_write_ep0();
+        ep0.data_len = -1; /* Complete */
+
+    }
+}
+
+void handle_tx_ep0(void)
+{
+    usb_write_ep0();
 }
 
 /*
