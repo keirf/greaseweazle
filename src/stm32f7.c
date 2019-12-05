@@ -10,19 +10,9 @@
  */
 
 /* XXX */
-void floppy_init(void) {}
-void floppy_process(void) {}
 void fpec_init(void) {}
 void fpec_page_erase(uint32_t flash_address) {}
 void fpec_write(const void *data, unsigned int size, uint32_t flash_address) {}
-#ifndef BOOTLOADER
-static void floppy_reset(void) {}
-static void floppy_configure(void) {}
-const struct usb_class_ops usb_cdc_acm_ops = {
-    .reset = floppy_reset,
-    .configure = floppy_configure
-};
-#endif
 
 static void clock_init(void)
 {

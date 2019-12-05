@@ -9,38 +9,26 @@
  * See the file COPYING for more details, or visit <http://unlicense.org>.
  */
 
-#define O_FALSE 1
-#define O_TRUE  0
-
-#define GPO_bus GPO_opendrain(_2MHz,O_FALSE)
-#define AFO_bus (AFO_opendrain(_2MHz) | (O_FALSE<<4))
-
 #define m(bitnr) (1u<<(bitnr))
 
-#define gpio_floppy gpiob
+#define get_index()   gpio_read_pin(gpio_index, pin_index)
+#define get_trk0()    gpio_read_pin(gpio_trk0, pin_trk0)
+#define get_wrprot()  gpio_read_pin(gpio_wrprot, pin_wrprot)
 
-/* Input pins */
-#define pin_index   6 /* PB6 */
-#define pin_trk0    7 /* PB7 */
-#define pin_wrprot  8 /* PB8 */
-#define get_index()   gpio_read_pin(gpio_floppy, pin_index)
-#define get_trk0()    gpio_read_pin(gpio_floppy, pin_trk0)
-#define get_wrprot()  gpio_read_pin(gpio_floppy, pin_wrprot)
+#define configure_pin(pin, type) \
+    gpio_configure_pin(gpio_##pin, pin_##pin, type)
 
-/* Output pins. */
-#define pin_densel  9 /* PB9 */
-#define pin_sel0   10 /* PB10 */
-#define pin_motor  11 /* PB11 */
-#define pin_dir    12 /* PB12 */
-#define pin_step   13 /* PB13 */
-#define pin_wgate  14 /* PB14 */
-#define pin_side   15 /* PB15 */
+#if STM32F == 1
+#include "floppy_f1.c"
+#elif STM32F == 7
+#include "floppy_f7.c"
+#endif
 
 /* Track and modify states of output pins. */
 static struct {
     bool_t densel;
     bool_t sel0;
-    bool_t motor;
+    bool_t mot0;
     bool_t dir;
     bool_t step;
     bool_t wgate;
@@ -48,21 +36,9 @@ static struct {
 } pins;
 #define read_pin(pin) pins.pin
 #define write_pin(pin, level) ({                                        \
-    gpio_write_pin(gpio_floppy, pin_##pin, level ? O_TRUE : O_FALSE);   \
+    gpio_write_pin(gpio_##pin, pin_##pin, level ? O_TRUE : O_FALSE);    \
     pins.pin = level; })
 
-#define gpio_data gpiob
-
-#define pin_rdata   3
-#define tim_rdata   (tim2)
-#define dma_rdata   (dma1->ch7)
-
-#define pin_wdata   4
-#define tim_wdata   (tim3)
-#define dma_wdata   (dma1->ch3)
-
-#define irq_index 23
-void IRQ_23(void) __attribute__((alias("IRQ_INDEX_changed"))); /* EXTI9_5 */
 static struct index {
     /* Main code can reset this at will. */
     volatile unsigned int count;
@@ -74,8 +50,6 @@ static struct index {
     time_t timestamp;
 } index;
 
-#define irq_index_delay 31
-void IRQ_31(void) __attribute__((alias("IRQ_INDEX_delay")));
 static void index_delay_timer(void *unused);
 
 /* A DMA buffer for running a timer associated with a floppy-data I/O pin. */
@@ -84,10 +58,10 @@ static struct dma_ring {
     uint16_t cons; /* dma_rd: our consumer index for flux samples */
     union {
         uint16_t prod; /* dma_wr: our producer index for flux samples */
-        uint16_t prev_sample; /* dma_rd: previous CCRx sample value */
+        timcnt_t prev_sample; /* dma_rd: previous CCRx sample value */
     };
     /* DMA ring buffer of timer values (ARR or CCRx). */
-    uint16_t buf[512];
+    timcnt_t buf[512];
 } dma;
 
 static struct {
@@ -192,72 +166,69 @@ static bool_t floppy_seek(unsigned int cyl)
 
 static void drive_motor(bool_t on)
 {
-    if (read_pin(motor) == on)
+    if (read_pin(mot0) == on)
         return;
-    write_pin(motor, on);
+    write_pin(mot0, on);
     if (on)
         delay_ms(delay_params.motor_delay);
 }
 
 static void floppy_flux_end(void)
 {
+    /* Turn off write pins. */
+    write_pin(wgate, FALSE);
+    configure_pin(wdata, GPO_bus);    
+
+    /* Turn off DMA. */
+    dma_rdata.cr &= ~DMA_CR_EN;
+    dma_wdata.cr &= ~DMA_CR_EN;
+    while ((dma_rdata.cr & DMA_CR_EN) || (dma_wdata.cr & DMA_CR_EN))
+        continue;
+
     /* Turn off timers. */
     tim_rdata->ccer = 0;
     tim_rdata->cr1 = 0;
     tim_rdata->sr = 0; /* dummy, drains any pending DMA */
+    tim_wdata->ccer = 0;
     tim_wdata->cr1 = 0;
     tim_wdata->sr = 0; /* dummy, drains any pending DMA */
-
-    /* Turn off DMA. */
-    dma_rdata.ccr = 0;
-    dma_wdata.ccr = 0;
-
-    /* Turn off write pins. */
-    write_pin(wgate, FALSE);
-    gpio_configure_pin(gpio_data, pin_wdata, GPO_bus);    
 }
 
 static void floppy_reset(void)
 {
-    unsigned int i;
-
     floppy_state = ST_inactive;
     auto_off.armed = FALSE;
 
     floppy_flux_end();
 
     /* Turn off all output pins. */
-    for (i = 9; i <= 15; i++)
-        gpio_write_pin(gpio_floppy, i, O_FALSE);
-    memset(&pins, 0, sizeof(pins));
+    write_pin(densel, FALSE);
+    write_pin(sel0,   FALSE);
+    write_pin(mot0,   FALSE);
+    write_pin(dir,    FALSE);
+    write_pin(step,   FALSE);
+    write_pin(wgate,  FALSE);
+    write_pin(side,   FALSE);
 }
 
 void floppy_init(void)
 {
-    unsigned int i, GPI_bus;
+    floppy_mcu_init();
 
     /* Output pins, unbuffered. */
-    for (i = 9; i <= 15; i++)
-        gpio_configure_pin(gpio_floppy, i, GPO_bus);
-
-    gpio_configure_pin(gpio_floppy, pin_index, GPI_pull_down);
-    delay_us(10);
-    GPI_bus = (get_index() == LOW) ? GPI_pull_up : GPI_floating;
-    printk("Floppy Inputs: %sternal Pullup\n",
-           (GPI_bus == GPI_pull_up) ? "In" : "Ex");
+    configure_pin(densel, GPO_bus);
+    configure_pin(sel0,   GPO_bus);
+    configure_pin(mot0,   GPO_bus);
+    configure_pin(dir,    GPO_bus);
+    configure_pin(step,   GPO_bus);
+    configure_pin(wgate,  GPO_bus);
+    configure_pin(side,   GPO_bus);
+    configure_pin(wdata,  GPO_bus);
 
     /* Input pins. */
-    for (i = 6; i <= 8; i++)
-        gpio_configure_pin(gpio_floppy, i, GPI_bus);
-
-    /* RDATA/WDATA */
-    gpio_configure_pin(gpio_data, pin_rdata, GPI_bus);
-    gpio_configure_pin(gpio_data, pin_wdata, GPO_bus);
-    afio->mapr |= (AFIO_MAPR_TIM2_REMAP_PARTIAL_1
-                   | AFIO_MAPR_TIM3_REMAP_PARTIAL);
-
-    /* PB[15:0] -> EXT[15:0] */
-    afio->exticr1 = afio->exticr2 = afio->exticr3 = afio->exticr4 = 0x1111;
+    configure_pin(index,  GPI_bus);
+    configure_pin(trk0,   GPI_bus);
+    configure_pin(wrprot, GPI_bus);
 
     /* Configure INDEX-changed IRQs and timer. */
     timer_init(&index.delay_timer, index_delay_timer, NULL);
@@ -267,47 +238,11 @@ void floppy_init(void)
     exti->imr = exti->ftsr = m(pin_index);
     IRQx_set_prio(irq_index, INDEX_IRQ_PRI);
     IRQx_enable(irq_index);
-
-    /* RDATA Timer setup: 
-     * The counter runs from 0x0000-0xFFFF inclusive at full SYSCLK rate.
-     *  
-     * Ch.2 (RDATA) is in Input Capture mode, sampling on every clock and with
-     * no input prescaling or filtering. Samples are captured on the falling 
-     * edge of the input (CCxP=1). DMA is used to copy the sample into a ring
-     * buffer for batch processing in the DMA-completion ISR. */
-    tim_rdata->psc = 0;
-    tim_rdata->arr = 0xffff;
-    tim_rdata->ccmr1 = TIM_CCMR1_CC2S(TIM_CCS_INPUT_TI1);
-    tim_rdata->dier = TIM_DIER_CC2DE;
-    tim_rdata->cr2 = 0;
-
-    /* RDATA DMA setup: From the RDATA Timer's CCRx into a circular buffer. */
-    dma_rdata.cpar = (uint32_t)(unsigned long)&tim_rdata->ccr2;
-    dma_rdata.cmar = (uint32_t)(unsigned long)dma.buf;
-
-    /* WDATA Timer setup:
-     * The counter is incremented at full SYSCLK rate. 
-     *  
-     * Ch.1 (WDATA) is in PWM mode 1. It outputs O_TRUE for 400ns and then 
-     * O_FALSE until the counter reloads. By changing the ARR via DMA we alter
-     * the time between (fixed-width) O_TRUE pulses, mimicking floppy drive 
-     * timings. */
-    tim_wdata->psc = 0;
-    tim_wdata->ccmr1 = (TIM_CCMR1_CC1S(TIM_CCS_OUTPUT) |
-                        TIM_CCMR1_OC1M(TIM_OCM_PWM1));
-    tim_wdata->ccer = TIM_CCER_CC1E | ((O_TRUE==0) ? TIM_CCER_CC1P : 0);
-    tim_wdata->ccr1 = sysclk_ns(400);
-    tim_wdata->dier = TIM_DIER_UDE;
-    tim_wdata->cr2 = 0;
-
-    /* WDATA DMA setup: From a circular buffer into the WDATA Timer's ARR. */
-    dma_wdata.cpar = (uint32_t)(unsigned long)&tim_wdata->arr;
-    dma_wdata.cmar = (uint32_t)(unsigned long)dma.buf;
 }
 
 static struct gw_info gw_info = {
     .max_index = 15, .max_cmd = CMD_SELECT,
-    .sample_freq = SYSCLK_MHZ * 1000000u
+    .sample_freq = 72000000u
 };
 
 static void auto_off_arm(void)
@@ -349,7 +284,8 @@ static struct {
 static void rdata_encode_flux(void)
 {
     const uint16_t buf_mask = ARRAY_SIZE(dma.buf) - 1;
-    uint16_t cons = dma.cons, prod, prev = dma.prev_sample, curr, next;
+    uint16_t cons = dma.cons, prod;
+    timcnt_t prev = dma.prev_sample, curr, next;
     uint32_t ticks = rw.ticks_since_flux;
     int ticks_since_index = rw.ticks_since_index;
 
@@ -359,12 +295,12 @@ static void rdata_encode_flux(void)
     IRQ_global_disable();
 
     /* Find out where the DMA engine's producer index has got to. */
-    prod = ARRAY_SIZE(dma.buf) - dma_rdata.cndtr;
+    prod = ARRAY_SIZE(dma.buf) - dma_rdata.ndtr;
 
     if (rw.idx != index.count) {
         /* We have just passed the index mark: Record information about 
          * the just-completed revolution. */
-        int partial_flux = ticks + (uint16_t)(index.rdata_cnt - prev);
+        int partial_flux = ticks + (timcnt_t)(index.rdata_cnt - prev);
         rw.index_ticks[rw.idx++] = ticks_since_index + partial_flux;
         ticks_since_index = -partial_flux;
     }
@@ -409,10 +345,12 @@ static void rdata_encode_flux(void)
      * accumulator. This avoids 16-bit overflow and because, we take care to
      * keep the 16-bit timestamp at least 200us behind, we cannot race the next
      * flux timestamp. */
-    curr = tim_rdata->cnt - prev;
-    if (unlikely(curr > sysclk_us(400))) {
-        prev += sysclk_us(200);
-        ticks += sysclk_us(200);
+    if (sizeof(timcnt_t) == sizeof(uint16_t)) {
+        curr = tim_rdata->cnt - prev;
+        if (unlikely(curr > sysclk_us(400))) {
+            prev += sysclk_us(200);
+            ticks += sysclk_us(200);
+        }
     }
 
     /* Save our progress for next time. */
@@ -427,22 +365,18 @@ static uint8_t floppy_read_prep(struct gw_read_flux *rf)
     if ((rf->nr_idx == 0) || (rf->nr_idx > gw_info.max_index))
         return ACK_BAD_COMMAND;
 
-    /* Start DMA. */
-    dma_rdata.cndtr = ARRAY_SIZE(dma.buf);
-    dma_rdata.ccr = (DMA_CCR_PL_HIGH |
-                     DMA_CCR_MSIZE_16BIT |
-                     DMA_CCR_PSIZE_16BIT |
-                     DMA_CCR_MINC |
-                     DMA_CCR_CIRC |
-                     DMA_CCR_DIR_P2M |
-                     DMA_CCR_EN);
+    /* Prepare Timer & DMA. */
+    dma_rdata.mar = (uint32_t)(unsigned long)dma.buf;
+    dma_rdata.ndtr = ARRAY_SIZE(dma.buf);    
+    rdata_prep();
+    tim_rdata->egr = TIM_EGR_UG; /* update CNT, PSC, ARR */
+    tim_rdata->sr = 0; /* dummy write */
 
     /* DMA soft state. */
     dma.cons = 0;
     dma.prev_sample = tim_rdata->cnt;
 
-    /* Start timer. */
-    tim_rdata->ccer = TIM_CCER_CC2E | TIM_CCER_CC2P;
+    /* Start Timer. */
     tim_rdata->cr1 = TIM_CR1_CEN;
 
     index.count = 0;
@@ -533,7 +467,7 @@ static void floppy_read(void)
  * WRITE PATH
  */
 
-static unsigned int _wdata_decode_flux(uint16_t *tbuf, unsigned int nr)
+static unsigned int _wdata_decode_flux(timcnt_t *tbuf, unsigned int nr)
 {
     unsigned int todo = nr;
     uint32_t x, ticks = rw.ticks_since_flux;
@@ -606,7 +540,7 @@ static void wdata_decode_flux(void)
     uint16_t nr_to_wrap, nr_to_cons, nr, dmacons;
 
     /* Find out where the DMA engine's consumer index has got to. */
-    dmacons = ARRAY_SIZE(dma.buf) - dma_wdata.cndtr;
+    dmacons = ARRAY_SIZE(dma.buf) - dma_wdata.ndtr;
 
     /* Find largest contiguous stretch of ring buffer we can fill. */
     nr_to_wrap = ARRAY_SIZE(dma.buf) - dma.prod;
@@ -652,8 +586,14 @@ static uint8_t floppy_write_prep(struct gw_write_flux *wf)
     if (get_wrprot() == LOW)
         return ACK_WRPROT;
 
+    wdata_prep();
+
+    /* WDATA DMA setup: From a circular buffer into the WDATA Timer's ARR. */
+    dma_wdata.par = (uint32_t)(unsigned long)&tim_wdata->arr;
+    dma_wdata.mar = (uint32_t)(unsigned long)dma.buf;
+
     /* Initialise DMA ring indexes (consumer index is implicit). */
-    dma_wdata.cndtr = ARRAY_SIZE(dma.buf);
+    dma_wdata.ndtr = ARRAY_SIZE(dma.buf);
     dma.prod = 0;
 
     floppy_state = ST_write_flux_wait_data;
@@ -689,13 +629,7 @@ static void floppy_write_wait_data(void)
     rw.start = time_now();
 
     /* Enable DMA only after flux values are generated. */
-    dma_wdata.ccr = (DMA_CCR_PL_HIGH |
-                     DMA_CCR_MSIZE_16BIT |
-                     DMA_CCR_PSIZE_16BIT |
-                     DMA_CCR_MINC |
-                     DMA_CCR_CIRC |
-                     DMA_CCR_DIR_M2P |
-                     DMA_CCR_EN);
+    dma_wdata_start();
 
     /* Preload timer with first flux value. */
     tim_wdata->egr = TIM_EGR_UG;
@@ -721,7 +655,7 @@ static void floppy_write_wait_index(void)
     tim_wdata->cr1 = TIM_CR1_CEN;
 
     /* Enable output. */
-    gpio_configure_pin(gpio_data, pin_wdata, AFO_bus);
+    configure_pin(wdata, AFO_bus);
     write_pin(wgate, TRUE);
 
     index.count = 0;
@@ -771,7 +705,7 @@ static void floppy_write(void)
             goto terminate;
         /* Check progress of draining the DMA ring. */
         prev_todo = todo;
-        dmacons = ARRAY_SIZE(dma.buf) - dma_wdata.cndtr;
+        dmacons = ARRAY_SIZE(dma.buf) - dma_wdata.ndtr;
         todo = (dma.prod - dmacons) & (ARRAY_SIZE(dma.buf) - 1);
     } while ((todo != 0) && (todo <= prev_todo));
 

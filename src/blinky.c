@@ -94,7 +94,7 @@ static volatile int dmac;
 static void IRQ_dma_tc(void)
 {
     dma1->ifcr = DMA_IFCR_CGIF(1);
-    dma1->ch1.ccr = 0;
+    dma1->ch1.cr = 0;
     dmac++;
 }
 
@@ -159,20 +159,20 @@ static void dma_test(void *a, void *b, int nr)
      * quickly. */
     printk("DMA Test #%u... ", nr);
     dma1->ifcr = DMA_IFCR_CGIF(1);
-    dma1->ch1.ccr = 0;
-    dma1->ch1.cmar = (uint32_t)(unsigned long)a;
-    dma1->ch1.cpar = (uint32_t)(unsigned long)b;
-    dma1->ch1.cndtr = 1024;
+    dma1->ch1.cr = 0;
+    dma1->ch1.mar = (uint32_t)(unsigned long)a;
+    dma1->ch1.par = (uint32_t)(unsigned long)b;
+    dma1->ch1.ndtr = 1024;
     memset(b, 0x12, 1024); /* scratch the destination */
     dmac = 0;
-    dma1->ch1.ccr = (DMA_CCR_MSIZE_8BIT |
-                     DMA_CCR_PSIZE_8BIT |
-                     DMA_CCR_MINC |
-                     DMA_CCR_PINC |
-                     DMA_CCR_DIR_M2P |
-                     DMA_CCR_MEM2MEM |
-                     DMA_CCR_TCIE |
-                     DMA_CCR_EN);
+    dma1->ch1.cr = (DMA_CR_MSIZE_8BIT |
+                    DMA_CR_PSIZE_8BIT |
+                    DMA_CR_MINC |
+                    DMA_CR_PINC |
+                    DMA_CR_DIR_M2P |
+                    DMA_CR_MEM2MEM |
+                    DMA_CR_TCIE |
+                    DMA_CR_EN);
     while (!dmac)
         continue;
     if (dmac > 1)

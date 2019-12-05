@@ -89,8 +89,8 @@ void console_init(void)
 #elif STM32F == 7
     gpio_set_af(gpioa, 9, 7);
     gpio_set_af(gpioa, 10, 7);
-    gpio_configure_pin(gpioa, 9, AFO_pushpull(_10MHz));
-    gpio_configure_pin(gpioa, 10, AFO_pushpull(_10MHz));
+    gpio_configure_pin(gpioa, 9, AFO_pushpull(IOSPD_MED));
+    gpio_configure_pin(gpioa, 10, AFI(PUPD_up));
 #endif
 
     /* BAUD, 8n1. */

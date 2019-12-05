@@ -11,6 +11,7 @@
 
 /* C pointer types */
 #define SYSCFG volatile struct syscfg * const
+#define DMA_STR volatile struct dma_str * const
 
 /* C-accessible registers. */
 static STK stk = (struct stk *)STK_BASE;

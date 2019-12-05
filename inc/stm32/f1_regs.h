@@ -243,10 +243,10 @@ struct afio {
 
 /* DMA */
 struct dma_chn {
-    uint32_t ccr;        /* +00: Configuration */
-    uint32_t cndtr;      /* +04: Number of data */
-    uint32_t cpar;       /* +08: Peripheral address */
-    uint32_t cmar;       /* +0C: Memory address */
+    uint32_t cr;         /* +00: Configuration */
+    uint32_t ndtr;       /* +04: Number of data */
+    uint32_t par;        /* +08: Peripheral address */
+    uint32_t mar;        /* +0C: Memory address */
     uint32_t rsvd;       /* +10: - */
 };
 struct dma {
@@ -273,26 +273,26 @@ struct dma {
 #define DMA_IFCR_CTCIF(n)    (2u<<(((n)-1)*4))
 #define DMA_IFCR_CGIF(n)     (1u<<(((n)-1)*4))
 
-#define DMA_CCR_MEM2MEM      (1u<<14)
-#define DMA_CCR_PL_LOW       (0u<<12)
-#define DMA_CCR_PL_MEDIUM    (1u<<12)
-#define DMA_CCR_PL_HIGH      (2u<<12)
-#define DMA_CCR_PL_V_HIGH    (3u<<12)
-#define DMA_CCR_MSIZE_8BIT   (0u<<10)
-#define DMA_CCR_MSIZE_16BIT  (1u<<10)
-#define DMA_CCR_MSIZE_32BIT  (2u<<10)
-#define DMA_CCR_PSIZE_8BIT   (0u<< 8)
-#define DMA_CCR_PSIZE_16BIT  (1u<< 8)
-#define DMA_CCR_PSIZE_32BIT  (2u<< 8)
-#define DMA_CCR_MINC         (1u<< 7)
-#define DMA_CCR_PINC         (1u<< 6)
-#define DMA_CCR_CIRC         (1u<< 5)
-#define DMA_CCR_DIR_P2M      (0u<< 4)
-#define DMA_CCR_DIR_M2P      (1u<< 4)
-#define DMA_CCR_TEIE         (1u<< 3)
-#define DMA_CCR_HTIE         (1u<< 2)
-#define DMA_CCR_TCIE         (1u<< 1)
-#define DMA_CCR_EN           (1u<< 0)
+#define DMA_CR_MEM2MEM       (1u<<14)
+#define DMA_CR_PL_LOW        (0u<<12)
+#define DMA_CR_PL_MEDIUM     (1u<<12)
+#define DMA_CR_PL_HIGH       (2u<<12)
+#define DMA_CR_PL_V_HIGH     (3u<<12)
+#define DMA_CR_MSIZE_8BIT    (0u<<10)
+#define DMA_CR_MSIZE_16BIT   (1u<<10)
+#define DMA_CR_MSIZE_32BIT   (2u<<10)
+#define DMA_CR_PSIZE_8BIT    (0u<< 8)
+#define DMA_CR_PSIZE_16BIT   (1u<< 8)
+#define DMA_CR_PSIZE_32BIT   (2u<< 8)
+#define DMA_CR_MINC          (1u<< 7)
+#define DMA_CR_PINC          (1u<< 6)
+#define DMA_CR_CIRC          (1u<< 5)
+#define DMA_CR_DIR_P2M       (0u<< 4)
+#define DMA_CR_DIR_M2P       (1u<< 4)
+#define DMA_CR_TEIE          (1u<< 3)
+#define DMA_CR_HTIE          (1u<< 2)
+#define DMA_CR_TCIE          (1u<< 1)
+#define DMA_CR_EN            (1u<< 0)
 
 #define DMA1_BASE 0x40020000
 #define DMA2_BASE 0x40020400

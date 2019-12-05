@@ -12,6 +12,7 @@
 /* C pointer types */
 #define BKP volatile struct bkp * const
 #define AFIO volatile struct afio * const
+#define DMA_CHN volatile struct dma_chn * const
 
 /* C-accessible registers. */
 static STK stk = (struct stk *)STK_BASE;

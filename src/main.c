@@ -43,9 +43,6 @@ int main(void)
     floppy_init();
     usb_init();
 
-    /* XXX */
-    gpio_configure_pin(gpioa, 15, GPO_pushpull(_2MHz, HIGH));
-
     for (;;) {
         canary_check();
         usb_process();

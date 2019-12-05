@@ -255,22 +255,23 @@ struct gpio {
 
 /* 0-1: MODE, 2: OTYPE, 3-4:OSPEED, 5-6:PUPD, 7:OUTPUT_LEVEL */
 #define GPI_analog    0x3u
-#define GPI_floating  0x0u
-#define _GPI_pulled(level) (0x0u|(((level)?1:2)<<5))
-#define GPI_pull_down _GPI_pulled(LOW)
-#define GPI_pull_up   _GPI_pulled(HIGH)
+#define GPI(pupd)     (0x0u|((pupd)<<5))
+#define PUPD_none     0
+#define PUPD_up       1
+#define PUPD_down     2
+#define GPI_floating  GPI(PUPD_none)
+#define GPI_pull_down GPI(PUPD_down)
+#define GPI_pull_up   GPI(PUPD_up)
 
 #define GPO_pushpull(speed,level)  (0x1u|((speed)<<3)|((level)<<7))
 #define GPO_opendrain(speed,level) (0x5u|((speed)<<3)|((level)<<7))
+#define AFI(pupd)                  (0x2u|((pupd)<<5))
 #define AFO_pushpull(speed)        (0x2u|((speed)<<3))
 #define AFO_opendrain(speed)       (0x6u|((speed)<<3))
-#define _4MHz   0 /* CL=50pF */
-#define _25MHz  1 /* CL=50pF */
-#define _50MHz  2 /* CL=40pF */
-#define _100MHz 3 /* CL=30pF */
-/* Compat defines */
-#define _2MHz  _4MHz
-#define _10MHz _25MHz
+#define IOSPD_LOW    0 /*   4MHz @ CL=50pF */
+#define IOSPD_MED    1 /*  25MHz @ CL=50pF */
+#define IOSPD_HIGH   2 /*  50MHz @ CL=40pF */
+#define IOSPD_V_HIGH 3 /* 100MHz @ CL=30pF */
 #define LOW  0
 #define HIGH 1
 
@@ -305,7 +306,10 @@ struct dma_str {
     uint32_t cr;        /* +00: Configuration */
     uint32_t ndtr;      /* +04: Number of data */
     uint32_t par;       /* +08: Peripheral address */
-    uint32_t m0ar;      /* +0C: Memory 0 address */
+    union {
+        uint32_t mar;   /* +0C: Memory address */
+        uint32_t m0ar;  /* +0C: Memory 0 address */
+    };
     uint32_t m1ar;      /* +10: Memory 1 address */
     uint32_t fcr;       /* +14: FIFO control */
 };
