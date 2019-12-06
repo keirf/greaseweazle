@@ -29,7 +29,7 @@ dist:
 	$(MAKE) clean
 	stm32=f1 $(MAKE) all blinky
 	cp -a $(PROJ)-$(VER).hex $(PROJ)-$(VER)/$(PROJ)-F1-$(VER).hex
-	cp -a $(PROJ)-$(VER).upd $(PROJ)-$(VER)/$(PROJ)-F1-$(VER).upd
+	cp -a $(PROJ)-$(VER).upd $(PROJ)-$(VER)/$(PROJ)-$(VER).upd
 	cp -a blinky_test/Blinky.hex $(PROJ)-$(VER)/alt/Blinky_Test-$(VER).hex
 	cp -a COPYING $(PROJ)-$(VER)/
 	cp -a README.md $(PROJ)-$(VER)/
@@ -45,7 +45,7 @@ dist:
 	$(MAKE) clean
 	stm32=f7 $(MAKE) all
 	cp -a $(PROJ)-$(VER).hex $(PROJ)-$(VER)/$(PROJ)-F7-$(VER).hex
-	cp -a $(PROJ)-$(VER).upd $(PROJ)-$(VER)/$(PROJ)-F7-$(VER).upd
+	cat $(PROJ)-$(VER).upd >>$(PROJ)-$(VER)/$(PROJ)-$(VER).upd
 	$(MAKE) clean
 	zip -r $(PROJ)-$(VER).zip $(PROJ)-$(VER)
 
@@ -64,7 +64,7 @@ all: scripts/greaseweazle/version.py
 		Bootloader.elf Bootloader.bin Bootloader.hex
 	srec_cat bootloader/Bootloader.hex -Intel src/$(PROJ).hex -Intel \
 	-o $(PROJ)-$(VER).hex -Intel
-	$(PYTHON) ./scripts/mk_update.py src/$(PROJ).bin $(PROJ)-$(VER).upd
+	$(PYTHON) ./scripts/mk_update.py src/$(PROJ).bin $(PROJ)-$(VER).upd $(stm32)
 
 scripts/greaseweazle/version.py: Makefile
 	echo "major = $(FW_MAJOR)" >$@

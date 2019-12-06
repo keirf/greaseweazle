@@ -17,17 +17,34 @@ from greaseweazle import usb as USB
 # Updates the Greaseweazle firmware using the specified Update File.
 def update_firmware(usb, args):
 
-    # Read and check the update file.
+    # Read the entire update catalogue.
     with open(args.file, "rb") as f:
         dat = f.read()
-    sig, maj, min, pad1, pad2, crc = struct.unpack(">2s4BH", dat[-8:])
-    if len(dat) & 3 != 0 or sig != b'GW' or pad1 != 0 or pad2 != 0:
+
+    # Search the catalogue for a match on our Weazle's hardware type.
+    while dat:
+        upd_len, hw_type = struct.unpack("<2H", dat[:4])
+        if hw_type == usb.hw_type:
+            # Match: Pull out the embedded update file.
+            dat = dat[4:upd_len+4]
+            break
+        # Skip to the next catalogue entry.
+        dat = dat[upd_len+4:]
+
+    if not dat:
+        print("%s: No match for hardware type %x" % (args.file, usb.hw_type))
+        return
+
+    # Check the matching update file's footer.
+    sig, maj, min, hw_type = struct.unpack("<2s2BH", dat[-8:-2])
+    if len(dat) & 3 != 0 or sig != b'GW' or hw_type != usb.hw_type:
         print("%s: Bad update file" % (args.file))
         return
     crc16 = crcmod.predefined.Crc('crc-ccitt-false')
     crc16.update(dat)
     if crc16.crcValue != 0:
         print("%s: Bad CRC" % (args.file))
+        return
 
     # Perform the update.
     print("Updating to v%u.%u..." % (maj, min))
