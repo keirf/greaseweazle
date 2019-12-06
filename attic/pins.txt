@@ -1,4 +1,7 @@
 
+F1 PINS
+*******
+
 Debug Console:
 --------------
 USART1: (Rx:DMA1/5, Tx:DMA1/4)
@@ -33,15 +36,61 @@ TimerOut: (AFO_opendrain or AFO_pushpull)
 
 Unused Pins:
 ------------
-All to be pulled high:
+Firmware pulls these high, internally:
  PA1-8,13-15
  PB0-2,5
  PC0-15
 
-Floppy bus connections:
------------------------
-Inputs: Pull to 5v via 1k.
-Outputs: Drive open-collector 2N3904, 1k base resistor.
+
+F7 PINS
+*******
+
+SWD:
+----
+ PA13  SWDIO
+ PA14  SWCLK
+
+Serial Debug:
+-------------
+ PA9   TX
+ PA10  RX
+
+USB:
+----
+ PB14  USB_DM
+ PB15  USB_DP
+
+Floppy:
+-------
+GPIn:
+ PB2     8: IDX
+ PA3    26: TRK0
+ PA1    28: WRPROT
+GPOut:
+ PB12    2: DENSEL
+ PB1    10: MTR_A
+ PB0    12: SEL_B
+ PB11   14: SEL_A
+ PB10   16: MTR_B
+ PC4    18: DIR
+ PA7    20: STEP
+ PA6    24: DKWE
+ PC3    32: SIDE
+TimerIn:
+ PA0    30: DKRD (Timer2/1, CC1:DMA1/Stream5/Chn3)
+TimerOut:
+ PA2    22: DKWD (Timer2/3, UP:DMA1/Stream1/Chn3)
+
+Unused Pins:
+------------
+Firmware pulls these high, internally:
+ PA4-5,8,11-12,15
+ PB3-9,13
+ PC0-2,5-15
+
+
+FLOPPY HEADER
+*************
 
 IBM/PC 34-pin Floppy Host Interface:
 ------------------------------------
