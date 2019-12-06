@@ -3,6 +3,15 @@
 ** Keir Fraser <keir.xen@gmail.com>
 ************************************
 
+** v0.7 - 6 December 2019
+ - USB: Fix end-of-stream detection on track writes
+   - Writes of empty/unformatted tracks sometimes hung forever
+ - No Flux Area: Firmware automatically masters long NFAs during track writes
+   - Generating no flux transitions does not read back as a NFA
+ - STM32F73xx: Initial support for new STM32 MCU
+   - Two HEX files are included: Use Greaseweazle-F1-* for existing boards!
+   - Single unified UPD file containing both firmware images
+
 ** v0.6 - 15 November 2019
  - gw.py: Big overhaul of underlying Python package
    - Action (read, write, update) must come first on the command line
