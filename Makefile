@@ -28,8 +28,8 @@ dist:
 	mkdir -p $(PROJ)-$(VER)/alt
 	$(MAKE) clean
 	stm32=f1 $(MAKE) all blinky
-	cp -a $(PROJ)-$(VER).hex $(PROJ)-$(VER)/
-	cp -a $(PROJ)-$(VER).upd $(PROJ)-$(VER)/
+	cp -a $(PROJ)-$(VER).hex $(PROJ)-$(VER)/$(PROJ)-F1-$(VER).hex
+	cp -a $(PROJ)-$(VER).upd $(PROJ)-$(VER)/$(PROJ)-F1-$(VER).upd
 	cp -a blinky_test/Blinky.hex $(PROJ)-$(VER)/alt/Blinky_Test-$(VER).hex
 	cp -a COPYING $(PROJ)-$(VER)/
 	cp -a README.md $(PROJ)-$(VER)/
@@ -42,6 +42,10 @@ dist:
 	cp -a scripts/greaseweazle/tools/*.py \
 		$(PROJ)-$(VER)/scripts/greaseweazle/tools/
 	cp -a RELEASE_NOTES $(PROJ)-$(VER)/
+	$(MAKE) clean
+	stm32=f7 $(MAKE) all
+	cp -a $(PROJ)-$(VER).hex $(PROJ)-$(VER)/$(PROJ)-F7-$(VER).hex
+	cp -a $(PROJ)-$(VER).upd $(PROJ)-$(VER)/$(PROJ)-F7-$(VER).upd
 	$(MAKE) clean
 	zip -r $(PROJ)-$(VER).zip $(PROJ)-$(VER)
 

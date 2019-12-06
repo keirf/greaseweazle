@@ -9,9 +9,15 @@
  * See the file COPYING for more details, or visit <http://unlicense.org>.
  */
 
-/* Main bootloader: flashes the main firmware. */
+#if STM32F == 1
+/*  8kB-64kB (56kB total) */
 #define FIRMWARE_START 0x08002000
 #define FIRMWARE_END   0x08010000
+#elif STM32F == 7
+/* 16kB-64KB (48kB total) */
+#define FIRMWARE_START 0x08004000
+#define FIRMWARE_END   0x08010000
+#endif
 
 int EXC_reset(void) __attribute__((alias("main")));
 
@@ -28,9 +34,8 @@ static bool_t pa14_strapped;
 
 static struct gw_info gw_info = {
     /* Max Index == 0 signals that this is the Bootloader. */
-    .max_index = 0,
-    /* Only support two commands: GET_INFO and UPDATE. */
-    .max_cmd = CMD_UPDATE,
+    .max_index = 0, .max_cmd = CMD_MAX,
+    .hw_type = STM32F
 };
 
 static void update_reset(void)
@@ -135,6 +140,17 @@ static void process_command(void)
         update_prep(u_len);
         break;
     }
+    case CMD_SWITCH_FW_MODE: {
+        uint8_t mode = u_buf[2];
+        if ((len != 3) || (mode & ~1))
+            goto bad_command;
+        if (mode == FW_MODE_NORMAL) {
+            usb_deinit();
+            delay_ms(500);
+            system_reset();
+        }
+        break;
+    }
     default:
         goto bad_command;
     }
@@ -179,13 +195,8 @@ static void update_process(void)
     }
 }
 
-int main(void)
+static bool_t enter_bootloader(void)
 {
-    /* Relocate DATA. Initialise BSS. */
-    if (_sdat != _ldat)
-        memcpy(_sdat, _ldat, _edat-_sdat);
-    memset(_sbss, 0, _ebss-_sbss);
-
 #if STM32F == 1
     /* Turn on AFIO and GPIOA clocks. */
     rcc->apb2enr = RCC_APB2ENR_IOPAEN | RCC_APB2ENR_AFIOEN;
@@ -204,9 +215,23 @@ int main(void)
 
     /* Enter update mode only if PA14 (DCLK) is strapped to GND. */
     pa14_strapped = !gpio_read_pin(gpioa, 14);
+    return pa14_strapped;
+#else
+    /* Check-and-clear a magic value poked into SRAM1 by the main firmware. */
+    bool_t match = (*(volatile uint32_t *)0x20010000 == 0xdeadbeef);
+    *(volatile uint32_t *)0x20010000 = 0;
+    return match;
 #endif
+}
 
-    if (!pa14_strapped) {
+int main(void)
+{
+    /* Relocate DATA. Initialise BSS. */
+    if (_sdat != _ldat)
+        memcpy(_sdat, _ldat, _edat-_sdat);
+    memset(_sbss, 0, _ebss-_sbss);
+
+    if (!enter_bootloader()) {
         /* Nope, so jump straight at the main firmware. */
         uint32_t sp = *(uint32_t *)FIRMWARE_START;
         uint32_t pc = *(uint32_t *)(FIRMWARE_START + 4);

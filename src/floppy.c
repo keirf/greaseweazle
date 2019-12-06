@@ -241,8 +241,9 @@ void floppy_init(void)
 }
 
 static struct gw_info gw_info = {
-    .max_index = 15, .max_cmd = CMD_SELECT,
-    .sample_freq = 72000000u
+    .max_index = 15, .max_cmd = CMD_MAX,
+    .sample_freq = 72000000u,
+    .hw_type = STM32F
 };
 
 static void auto_off_arm(void)
@@ -835,6 +836,19 @@ static void process_command(void)
         if ((len != 3) || (mask & ~1))
             goto bad_command;
         drive_select(mask & 1);
+        break;
+    }
+    case CMD_SWITCH_FW_MODE: {
+        uint8_t mode = u_buf[2];
+        if ((len != 3) || (mode & ~1))
+            goto bad_command;
+        if (mode == FW_MODE_BOOTLOADER) {
+            usb_deinit();
+            delay_ms(500);
+            /* Poke a flag in SRAM1, picked up by the bootloader. */
+            *(volatile uint32_t *)0x20010000 = 0xdeadbeef;
+            system_reset();
+        }
         break;
     }
     default:

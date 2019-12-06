@@ -42,6 +42,12 @@ void usb_init(void)
     gpio_configure_pin(gpioa, 0, GPO_pushpull(_2MHz, HIGH));
 }
 
+void usb_deinit(void)
+{
+    gpio_configure_pin(gpioa, 0, GPI_floating);
+    rcc->apb1enr &= ~RCC_APB1ENR_USBEN;
+}
+
 #if 0
 static void dump_ep(uint8_t ep)
 {

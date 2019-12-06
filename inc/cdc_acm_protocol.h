@@ -39,6 +39,9 @@
 #define CMD_GET_INDEX_TIMES 9
 /* CMD_SELECT, length=3, select_mask */
 #define CMD_SELECT         10
+/* CMD_SWITCH_FW_MODE, length=3, <mode> */
+#define CMD_SWITCH_FW_MODE 11
+#define CMD_MAX            11
 
 /* [BOOTLOADER] CMD_UPDATE, length=6, <update_len>. 
  * Host follows with <update_len> bytes.
@@ -78,6 +81,7 @@ struct packed gw_info {
     uint8_t max_index;
     uint8_t max_cmd;
     uint32_t sample_freq;
+    uint16_t hw_type;
 };
 
 /* CMD_READ_FLUX */
@@ -100,6 +104,10 @@ struct packed gw_delay {
     uint16_t motor_delay;  /* msec */
     uint16_t auto_off;     /* msec */
 };
+
+/* CMD_SWITCH_FW_MODE */
+#define FW_MODE_BOOTLOADER 0
+#define FW_MODE_NORMAL     1
 
 /*
  * Local variables:

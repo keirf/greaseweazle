@@ -117,6 +117,7 @@ void system_reset(void)
     IRQ_global_disable();
     printk("Resetting...\n");
     /* Request reset and loop waiting for it to happen. */
+    cpu_sync();
     scb->aircr = SCB_AIRCR_VECTKEY | SCB_AIRCR_SYSRESETREQ;
     for (;;) ;
 }

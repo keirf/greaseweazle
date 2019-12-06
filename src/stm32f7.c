@@ -9,11 +9,6 @@
  * See the file COPYING for more details, or visit <http://unlicense.org>.
  */
 
-/* XXX */
-void fpec_init(void) {}
-void fpec_page_erase(uint32_t flash_address) {}
-void fpec_write(const void *data, unsigned int size, uint32_t flash_address) {}
-
 static void clock_init(void)
 {
     /* Flash controller: reads require 7 wait states at 216MHz. */

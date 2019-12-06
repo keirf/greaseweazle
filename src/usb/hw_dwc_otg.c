@@ -192,6 +192,24 @@ void usb_init(void)
     delay_ms(3);
 }
 
+void usb_deinit(void)
+{
+    switch (conf_port) {
+    case PORT_FS:
+        gpio_configure_pin(gpioa, 11, GPI_floating);
+        gpio_configure_pin(gpioa, 12, GPI_floating);
+        rcc->ahb2enr &= ~RCC_AHB2ENR_OTGFSEN;
+        break;
+    case PORT_HS:
+        gpio_configure_pin(gpiob, 14, GPI_floating);
+        gpio_configure_pin(gpiob, 15, GPI_floating);
+        rcc->ahb1enr &= ~RCC_AHB1ENR_OTGHSEN;
+        break;
+    default:
+        ASSERT(0);
+    }
+}
+
 int ep_rx_ready(uint8_t ep)
 {
     return eps[ep].rx_ready ? eps[ep].rx_count : -1;

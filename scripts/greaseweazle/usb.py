@@ -28,6 +28,7 @@ class Cmd:
     GetFluxStatus   =  8
     GetIndexTimes   =  9
     Select          = 10
+    SwitchFwMode    = 11
     # Bootloader specific:
     Update          =  1
 
@@ -80,9 +81,12 @@ class Unit:
         self.reset()
         # Copy firmware info to instance variables (see above for definitions).
         self._send_cmd(struct.pack("3B", Cmd.GetInfo, 3, 0))
-        x = struct.unpack("<4BI24x", self.ser.read(32))
+        x = struct.unpack("<4BIH22x", self.ser.read(32))
         (self.major, self.minor, self.max_index,
-         self.max_cmd, self.sample_freq) = x
+         self.max_cmd, self.sample_freq, self.hw_type) = x
+        # Old firmware doesn't report HW type but runs on STM32F1 only.
+        if self.hw_type == 0:
+            self.hw_type = 1
         # Check whether firmware is in update mode: limited command set if so.
         self.update_mode = (self.max_index == 0)
         if self.update_mode:
@@ -148,6 +152,12 @@ class Unit:
         self._send_cmd(struct.pack("4B", Cmd.GetIndexTimes, 4, 0, nr))
         x = struct.unpack("<%dI" % nr, self.ser.read(4*nr))
         return x
+
+
+    ## switch_fw_mode:
+    ## Switch between update bootloader and main firmware.
+    def switch_fw_mode(self, mode):
+        self._send_cmd(struct.pack("3B", Cmd.SwitchFwMode, 3, int(mode)))
 
 
     ## update_firmware:

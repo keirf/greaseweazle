@@ -7,7 +7,7 @@
 # This is free and unencumbered software released into the public domain.
 # See the file COPYING for more details, or visit <http://unlicense.org>.
 
-import sys, argparse, struct
+import sys, argparse, serial, struct
 import crcmod.predefined
 
 from greaseweazle.tools import util
@@ -36,7 +36,11 @@ def update_firmware(usb, args):
         print("** UPDATE FAILED: Please retry!")
         return
     print("Done.")
-    print("** Disconnect Greaseweazle and remove the Programming Jumper.")
+    
+    if usb.hw_type == 7:
+        util.usb_reopen(usb, is_update=False)
+    else:
+        print("** Disconnect Greaseweazle and remove the Programming Jumper.")
 
 
 def main(argv):

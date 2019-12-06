@@ -25,6 +25,7 @@ extern const struct usb_class_ops usb_cdc_acm_ops;
 
 /* Main entry points for USB processing. */
 void usb_init(void);
+void usb_deinit(void);
 void usb_process(void);
 
 /* Does OUT endpoint have data ready? If so return packet length, else -1. */

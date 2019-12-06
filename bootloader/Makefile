@@ -9,7 +9,7 @@ OBJS += string.o
 OBJS += cortex.o
 OBJS += stm32$(stm32).o
 OBJS += util.o
-OBJS-$(stm32f1) += fpec.o
+OBJS += fpec_$(stm32).o
 
 OBJS-$(debug) += console.o
 
