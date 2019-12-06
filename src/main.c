@@ -34,7 +34,7 @@ int main(void)
     time_init();
     console_init();
     console_crash_on_input();
-//    board_init();
+    board_init();
 
     printk("\n** Greaseweazle v%u.%u\n", fw_major, fw_minor);
     printk("** Keir Fraser <keir.xen@gmail.com>\n");

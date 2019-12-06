@@ -357,20 +357,6 @@ void usb_process(void)
         printk("[RESET]\n");
         handle_reset();
     }
-
-    /* We ignore all the below... */
-
-    if (istr & USB_ISTR_SUSP) {
-//        printk("[SUSP]\n");
-    }
-
-    if (istr & USB_ISTR_SOF) {
-//        printk("[SOF]\n");
-    }
-
-    if (istr & USB_ISTR_ESOF) {
-//        printk("[ESOF]\n");
-    }
 }
 
 /*

@@ -882,9 +882,6 @@ void floppy_process(void)
         drive_motor(FALSE);
         drive_select(FALSE);
         auto_off.armed = FALSE;
-        //gpio_write_pin(gpioa, 0, LOW);
-        //delay_ms(100); /* force disconnect */
-        //gpio_write_pin(gpioa, 0, HIGH);
     }
 
     switch (floppy_state) {
