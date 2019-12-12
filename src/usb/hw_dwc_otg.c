@@ -11,8 +11,10 @@
 
 #include "hw_dwc_otg.h"
 
-struct rx_buf {
-    uint32_t data[USB_FS_MPS / 4];
+static bool_t is_hs;
+
+static struct rx_buf {
+    uint32_t data[USB_HS_MPS / 4];
     uint32_t count;
 } rx_buf0[1], rx_bufn[32];
 
@@ -24,11 +26,42 @@ static struct ep {
     bool_t rx_active, tx_ready;
 } eps[conf_nr_ep];
 
+bool_t hw_has_highspeed(void)
+{
+    return conf_iface == IFACE_HS_EMBEDDED;
+}
+
+bool_t hw_is_highspeed(void)
+{
+    return is_hs;
+}
+
 static void core_reset(void)
 {
     do { delay_us(1); } while (!(otg->grstctl & OTG_GRSTCTL_AHBIDL));
     otg->grstctl |= OTG_GRSTCTL_CSRST;
     do { delay_us(1); } while (otg->grstctl & OTG_GRSTCTL_CSRST);
+}
+
+static void hsphyc_init(void)
+{
+    /* Enable the LDO and wait for it to be ready. */
+    hsphyc->ldo |= HSPHYC_LDO_ENABLE;
+    do { delay_us(1); } while (!(hsphyc->ldo & HSPHYC_LDO_STATUS));
+
+    /* HSE must be 25MHz! SEL(3) for 16MHz. */
+    hsphyc->pll1 |= HSPHYC_PLL1_SEL(5);
+
+    /* Magic values from the LL driver. We can probably discard them. */
+    hsphyc->tune |= (HSPHYC_TUNE_HSDRVCHKITRIM(7) |
+                     HSPHYC_TUNE_HSDRVRFRED |
+                     HSPHYC_TUNE_HSDRVDCCUR |
+                     HSPHYC_TUNE_INCURRINT |
+                     HSPHYC_TUNE_INCURREN);
+
+    /* Enable the PLL and wait to stabilise. */
+    hsphyc->pll1 |= HSPHYC_PLL1_EN;
+    delay_ms(2);
 }
 
 static void flush_tx_fifo(int num)
@@ -60,7 +93,7 @@ static void prepare_rx(uint8_t epnr)
 {
     struct ep *ep = &eps[epnr];
     OTG_DOEP doep = &otg_doep[epnr];
-    uint16_t mps = (epnr == 0) ? 64 : (doep->ctl & 0x7ff);
+    uint16_t mps = (epnr == 0) ? EP0_MPS : (doep->ctl & 0x7ff);
     uint32_t tsiz = doep->tsiz & 0xe0000000;
 
     tsiz |= OTG_DOEPTSZ_PKTCNT(ep->rx_nr);
@@ -117,6 +150,7 @@ void hw_usb_init(void)
 
     switch (conf_port) {
     case PORT_FS:
+        ASSERT(conf_iface == IFACE_FS);
         gpio_set_af(gpioa, 11, 10);
         gpio_set_af(gpioa, 12, 10);
         gpio_configure_pin(gpioa, 11, AFO_pushpull(IOSPD_HIGH));
@@ -124,11 +158,18 @@ void hw_usb_init(void)
         rcc->ahb2enr |= RCC_AHB2ENR_OTGFSEN;
         break;
     case PORT_HS:
-        gpio_set_af(gpiob, 14, 12);
-        gpio_set_af(gpiob, 15, 12);
-        gpio_configure_pin(gpiob, 14, AFO_pushpull(IOSPD_HIGH));
-        gpio_configure_pin(gpiob, 15, AFO_pushpull(IOSPD_HIGH));
-        rcc->ahb1enr |= RCC_AHB1ENR_OTGHSEN;
+        ASSERT((conf_iface == IFACE_FS) || (conf_iface == IFACE_HS_EMBEDDED));
+        if (conf_iface == IFACE_FS) {
+            gpio_set_af(gpiob, 14, 12);
+            gpio_set_af(gpiob, 15, 12);
+            gpio_configure_pin(gpiob, 14, AFO_pushpull(IOSPD_HIGH));
+            gpio_configure_pin(gpiob, 15, AFO_pushpull(IOSPD_HIGH));
+            rcc->ahb1enr |= RCC_AHB1ENR_OTGHSEN;
+        } else {
+            rcc->ahb1enr |= RCC_AHB1ENR_OTGHSEN;
+            rcc->ahb1enr |= RCC_AHB1ENR_OTGHSULPIEN;
+            rcc->apb2enr |= RCC_APB2ENR_OTGPHYCEN;
+        }
         break;
     default:
         ASSERT(0);
@@ -148,7 +189,11 @@ void hw_usb_init(void)
         /* Activate FS transceiver. */
         otg->gccfg |= OTG_GCCFG_PWRDWN;
     } else {
-        ASSERT(0);
+        /* Disable the FS transceiver, enable the HS transceiver. */
+        otg->gccfg &= ~OTG_GCCFG_PWRDWN;
+        otg->gccfg |= OTG_GCCFG_PHYHSEN;
+        hsphyc_init();
+        core_reset();
     }
 
     /*
@@ -175,9 +220,9 @@ void hw_usb_init(void)
 
     /* USB_SetDevSpeed */
     if (conf_iface == IFACE_FS) {
-        otgd->dcfg = OTG_DCFG_DSPD(3); /* Full Speed */
+        otgd->dcfg = OTG_DCFG_DSPD(DSPD_FULL);
     } else {
-        ASSERT(0);
+        otgd->dcfg = OTG_DCFG_DSPD(DSPD_HIGH);
     }
 
     flush_tx_fifo(0x10);
@@ -468,17 +513,17 @@ void usb_process(void)
     }
 
     if (gintsts & OTG_GINT_ENUMDNE) {
-        bool_t hs;
-        printk("[ENUMDNE]\n");
         /* USB_ActivateSetup */
         otg_diep[0].ctl &= ~OTG_DIEPCTL_MPSIZ(0x7ff);
         otgd->dctl |= OTG_DCTL_CGINAK;
         /* USB_SetTurnaroundTime */
-        hs = is_high_speed();
+        is_hs = is_high_speed();
+        usb_bulk_mps = is_hs ? USB_HS_MPS : USB_FS_MPS;
         /* Ref. Table 232, FS Mode */
-        otg->gusbcfg |= OTG_GUSBCFG_TRDT(hs ? 9 : 6);
-        usb_configure_ep(0, EPT_CONTROL, USB_FS_MPS);
+        otg->gusbcfg |= OTG_GUSBCFG_TRDT(is_hs ? 9 : 6);
+        usb_configure_ep(0, EPT_CONTROL, EP0_MPS);
         otg->gintsts = OTG_GINT_ENUMDNE;
+        printk("[ENUMDNE: %cS]\n", is_hs ? 'H' : 'F');
     }
 
     if (gintsts & OTG_GINT_USBRST) {

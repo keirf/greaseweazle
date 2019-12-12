@@ -264,7 +264,7 @@ static void floppy_end_command(void *ack, unsigned int ack_len)
     u_cons = u_prod = 0;
     if (floppy_state == ST_command_wait)
         act_led(FALSE);
-    if (ack_len == USB_FS_MPS) {
+    if (ack_len == usb_bulk_mps) {
         ASSERT(floppy_state == ST_command_wait);
         floppy_state = ST_zlp;
     }
@@ -289,7 +289,7 @@ static struct {
     int ticks_since_index;
     uint32_t ticks_since_flux;
     uint32_t index_ticks[15];
-    uint8_t packet[USB_FS_MPS];
+    uint8_t packet[USB_HS_MPS];
 } rw;
 
 static void rdata_encode_flux(void)
@@ -449,12 +449,12 @@ static void floppy_read(void)
 
         }
 
-    } else if ((avail < USB_FS_MPS)
+    } else if ((avail < usb_bulk_mps)
                && !rw.packet_ready
                && ep_tx_ready(EP_TX)) {
 
         /* Final packet, including ACK byte (NUL). */
-        memset(rw.packet, 0, USB_FS_MPS);
+        memset(rw.packet, 0, usb_bulk_mps);
         make_read_packet(avail);
         floppy_state = ST_command_wait;
         floppy_end_command(rw.packet, avail+1);
@@ -462,11 +462,11 @@ static void floppy_read(void)
 
     }
 
-    if (!rw.packet_ready && (avail >= USB_FS_MPS))
-        make_read_packet(USB_FS_MPS);
+    if (!rw.packet_ready && (avail >= usb_bulk_mps))
+        make_read_packet(usb_bulk_mps);
 
     if (rw.packet_ready && ep_tx_ready(EP_TX)) {
-        usb_write(EP_TX, rw.packet, USB_FS_MPS);
+        usb_write(EP_TX, rw.packet, usb_bulk_mps);
         rw.packet_ready = FALSE;
     }
 }
@@ -819,15 +819,15 @@ static void source_bytes(void)
     if (!ep_tx_ready(EP_TX))
         return;
 
-    if (ss.todo < USB_FS_MPS) {
+    if (ss.todo < usb_bulk_mps) {
         floppy_state = ST_command_wait;
         floppy_end_command(rw.packet, ss.todo);
         return; /* FINISHED */
     }
 
-    usb_write(EP_TX, rw.packet, USB_FS_MPS);
-    ss.todo -= USB_FS_MPS;
-    ss_update_deltas(USB_FS_MPS);
+    usb_write(EP_TX, rw.packet, usb_bulk_mps);
+    ss.todo -= usb_bulk_mps;
+    ss_update_deltas(usb_bulk_mps);
 }
 
 static void sink_bytes(void)

@@ -271,6 +271,9 @@ struct otg_dfifo { /* 1000.. */
 #define OTG_DCFG_DAD(x)       ((x)<<4)
 #define OTG_DCFG_NZLSOHSK     (1u<< 2)
 #define OTG_DCFG_DSPD(x)      ((x)<<0)
+#define DSPD_HIGH             0u
+#define DSPD_HIGH_IN_FULL     1u
+#define DSPD_FULL             3u
 
 #define OTG_DCTL_DSBESLRJCT   (1u<<18)
 #define OTG_DCTL_POPRGDNE     (1u<<11)

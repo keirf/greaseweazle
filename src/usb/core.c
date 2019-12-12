@@ -9,6 +9,8 @@
  * See the file COPYING for more details, or visit <http://unlicense.org>.
  */
 
+unsigned int usb_bulk_mps = USB_FS_MPS;
+
 struct ep0 ep0;
 
 void usb_init(void)
@@ -41,9 +43,19 @@ static bool_t handle_control_request(void)
         if ((type == DESC_DEVICE) && (idx == 0)) {
             ep0.data_len = device_descriptor[0]; /* bLength */
             memcpy(ep0.data, device_descriptor, ep0.data_len);
+        } else if ((type == DESC_DEVICE_QUALIFIER) && (idx == 0)) {
+            if ((handled = hw_has_highspeed())) {
+                ep0.data_len = device_qualifier[0]; /* bLength */
+                memcpy(ep0.data, device_qualifier, ep0.data_len);
+            }
         } else if ((type == DESC_CONFIGURATION) && (idx == 0)) {
-            ep0.data_len = config_descriptor[2]; /* wTotalLength */
-            memcpy(ep0.data, config_descriptor, ep0.data_len);
+            if (hw_is_highspeed()) {
+                ep0.data_len = config_hs_descriptor[2]; /* wTotalLength */
+                memcpy(ep0.data, config_hs_descriptor, ep0.data_len);
+            } else {
+                ep0.data_len = config_fs_descriptor[2]; /* wTotalLength */
+                memcpy(ep0.data, config_fs_descriptor, ep0.data_len);
+            }
         } else if ((type == DESC_STRING) && (idx < NR_STRING_DESC)) {
             const char *s = string_descriptors[idx];
             uint16_t *odat = (uint16_t *)ep0.data;
@@ -107,7 +119,7 @@ static void usb_write_ep0(void)
     if ((ep0.tx.todo < 0) || !ep_tx_ready(0))
         return;
 
-    len = min_t(uint32_t, ep0.tx.todo, USB_FS_MPS);
+    len = min_t(uint32_t, ep0.tx.todo, EP0_MPS);
     usb_write(0, ep0.tx.p, len);
 
     ep0.tx.p += len;
@@ -117,7 +129,7 @@ static void usb_write_ep0(void)
         /* USB Spec 1.1, Section 5.5.3: Data stage of a control transfer is
          * complete when we have transferred the exact amount of data specified
          * during Setup *or* transferred a short/zero packet. */
-        if (!ep0.tx.trunc || (len < USB_FS_MPS))
+        if (!ep0.tx.trunc || (len < EP0_MPS))
             ep0.tx.todo = -1;
     }
 }

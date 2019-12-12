@@ -9,8 +9,10 @@
  * See the file COPYING for more details, or visit <http://unlicense.org>.
  */
 
-/* Full Speed Max Packet Size */
+/* Max Packet Size */
 #define USB_FS_MPS 64
+#define USB_HS_MPS 512
+extern unsigned int usb_bulk_mps;
 
 /* Class-specific callback hooks */
 struct usb_class_ops {

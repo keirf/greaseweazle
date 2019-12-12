@@ -22,6 +22,16 @@ static struct {
     bool_t tx_ready;
 } eps[8];
 
+bool_t hw_has_highspeed(void)
+{
+    return FALSE;
+}
+
+bool_t hw_is_highspeed(void)
+{
+    return FALSE;
+}
+
 void hw_usb_init(void)
 {
     /* Turn on clock. */
@@ -281,7 +291,7 @@ static void handle_reset(void)
     /* Prepare for Enumeration: Set up Endpoint 0 at Address 0. */
     pending_addr = 0;
     buf_end = 64;
-    usb_configure_ep(0, EPT_CONTROL, USB_FS_MPS);
+    usb_configure_ep(0, EPT_CONTROL, EP0_MPS);
     usb->daddr = USB_DADDR_EF | USB_DADDR_ADD(0);
     usb->istr &= ~USB_ISTR_RESET;
 }

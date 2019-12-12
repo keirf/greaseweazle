@@ -43,8 +43,12 @@ struct packed usb_device_request {
     uint16_t wLength;
 };
 
+#define EP0_MPS 64
+
 extern const uint8_t device_descriptor[];
-extern const uint8_t config_descriptor[];
+extern const uint8_t device_qualifier[];
+extern const uint8_t config_fs_descriptor[];
+extern const uint8_t config_hs_descriptor[];
 
 #define NR_STRING_DESC 4
 extern char * const string_descriptors[];
@@ -78,6 +82,8 @@ void usb_stall(uint8_t ep);
 void usb_setaddr(uint8_t addr);
 void hw_usb_init(void);
 void hw_usb_deinit(void);
+bool_t hw_has_highspeed(void);
+bool_t hw_is_highspeed(void);
 
 #define WARN printk
 
