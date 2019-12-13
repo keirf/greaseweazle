@@ -12,6 +12,7 @@
 /* C pointer types */
 #define SYSCFG volatile struct syscfg * const
 #define DMA_STR volatile struct dma_str * const
+#define HSPHYC volatile struct hsphyc * const
 
 /* C-accessible registers. */
 static STK stk = (struct stk *)STK_BASE;
@@ -63,6 +64,7 @@ static USART usart3 = (struct usart *)USART3_BASE;
 static USART usart4 = (struct usart *)USART4_BASE;
 static USART usart5 = (struct usart *)USART5_BASE;
 static USART usart6 = (struct usart *)USART6_BASE;
+static HSPHYC hsphyc = (struct hsphyc *)HSPHYC_BASE;
 
 #define SYSCLK_MHZ 216
 #define AHB_MHZ (SYSCLK_MHZ / 1)  /* 216MHz */

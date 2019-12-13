@@ -559,6 +559,43 @@ struct usart {
 #define USB_OTG_FS_BASE 0x50000000
 #define USB_OTG_HS_BASE 0x40040000
 
+/* USB High-Speed PHY Controller */
+struct hsphyc {
+    uint32_t pll1;     /* +00: PLL1 control */
+    uint32_t _0[2];
+    uint32_t tune;     /* +0C: Tuning control */
+    uint32_t _1[2];
+    uint32_t ldo;      /* +18: LDO control and status */
+};
+
+#define HSPHYC_PLL1_SEL(x)   ((x)<<1)
+#define HSPHYC_PLL1_EN       (1u<< 0)
+
+#define HSPHYC_TUNE_SQLBYP            (1u<<23)
+#define HSPHYC_TUNE_SHTCCTCTLPROT     (1u<<22)
+#define HSPHYC_TUNE_HSRXOFF(x)        ((x)<<20)
+#define HSPHYC_TUNE_HSFALLPREEM       (1u<<19)
+#define HSPHYC_TUNE_STAGSEL           (1u<<18)
+#define HSPHYC_TUNE_HFRXGNEQEN        (1u<<17)
+#define HSPHYC_TUNE_SQLCHCTL(x)       ((x)<<15)
+#define HSPHYC_TUNE_HSDRVCHKZTRM(x)   ((x)<<13)
+#define HSPHYC_TUNE_HSDRVCHKITRIM(x)  ((x)<< 9)
+#define HSPHYC_TUNE_HSDRVRFRED        (1u<< 8)
+#define HSPHYC_TUNE_FSDRVRFADJ        (1u<< 7)
+#define HSPHYC_TUNE_HSDRVCURINGR      (1u<< 6)
+#define HSPHYC_TUNE_HSDRVDCLEV        (1u<< 5)
+#define HSPHYC_TUNE_HSDRVDCCUR        (1u<< 4)
+#define HSPHYC_TUNE_HSDRVSLEW         (1u<< 3)
+#define HSPHYC_TUNE_LFSCAPEN          (1u<< 2)
+#define HSPHYC_TUNE_INCURRINT         (1u<< 1)
+#define HSPHYC_TUNE_INCURREN          (1u<< 0)
+
+#define HSPHYC_LDO_ENABLE    (1u<< 2)
+#define HSPHYC_LDO_STATUS    (1u<< 1)
+#define HSPHYC_LDO_USED      (1u<< 0)
+
+#define HSPHYC_BASE 0x40017C00
+
 /*
  * Local variables:
  * mode: C
