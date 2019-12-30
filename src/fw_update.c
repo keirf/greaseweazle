@@ -30,7 +30,7 @@ static enum {
 static uint8_t u_buf[256];
 static uint32_t u_prod;
 
-static bool_t pa14_strapped;
+static bool_t upd_strapped;
 
 static struct gw_info gw_info = {
     /* Max Index == 0 signals that this is the Bootloader. */
@@ -127,8 +127,8 @@ static void process_command(void)
         gw_info.fw_major = fw_major;
         gw_info.fw_minor = fw_minor;
         /* sample_freq is used as flags: bit 0 indicates if we entered 
-         * the bootloader because PA14 is strapped to GND. */
-        gw_info.sample_freq = pa14_strapped;
+         * the bootloader because the update jumper is strapped. */
+        gw_info.sample_freq = upd_strapped;
         memcpy(&u_buf[2], &gw_info, sizeof(gw_info));
         resp_sz += 32;
         break;
@@ -195,9 +195,10 @@ static void update_process(void)
     }
 }
 
+#if STM32F == 1
+
 static bool_t enter_bootloader(void)
 {
-#if STM32F == 1
     /* Turn on AFIO and GPIOA clocks. */
     rcc->apb2enr = RCC_APB2ENR_IOPAEN | RCC_APB2ENR_AFIOEN;
 
@@ -214,15 +215,48 @@ static bool_t enter_bootloader(void)
     cpu_relax();
 
     /* Enter update mode only if PA14 (DCLK) is strapped to GND. */
-    pa14_strapped = !gpio_read_pin(gpioa, 14);
-    return pa14_strapped;
-#else
+    upd_strapped = !gpio_read_pin(gpioa, 14);
+    return upd_strapped;
+}
+
+#elif STM32F == 7
+
+static bool_t check_update_requested(void)
+{
     /* Check-and-clear a magic value poked into SRAM1 by the main firmware. */
     bool_t match = (*(volatile uint32_t *)0x20010000 == 0xdeadbeef);
     *(volatile uint32_t *)0x20010000 = 0;
     return match;
-#endif
 }
+
+static bool_t check_update_strapped(void)
+{
+    int i, j;
+
+    /* Check whether the Serial TX/RX lines (PA9/PA10) are strapped. */
+    rcc->ahb1enr |= RCC_AHB1ENR_GPIOAEN;
+    (void)rcc->ahb1enr;
+    gpio_configure_pin(gpioa, 9, GPO_pushpull(IOSPD_LOW, HIGH));
+    gpio_configure_pin(gpioa, 10, GPI_pull_up);
+    for (i = 0; i < 10; i++) {
+        gpio_write_pin(gpioa, 9, i&1);
+        for (j = 0; j < 10000; j++)
+            cpu_relax();
+        if (gpio_read_pin(gpioa, 10) != (i&1))
+            return FALSE;
+    }
+
+    return TRUE;
+}
+
+static bool_t enter_bootloader(void)
+{
+    bool_t upd_requested = check_update_requested();
+    upd_strapped = check_update_strapped();
+    return upd_requested || upd_strapped;
+}
+
+#endif
 
 int main(void)
 {

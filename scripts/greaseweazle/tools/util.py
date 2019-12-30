@@ -57,7 +57,7 @@ def usb_reopen(usb, is_update):
             pass
         else:
             return USB.Unit(usb.ser)
-    return None
+    raise serial.SerialException('Could not reopen port after mode switch')
 
 
 def usb_open(devicename, is_update=False):
@@ -70,8 +70,10 @@ def usb_open(devicename, is_update=False):
              version.major, version.minor))
 
     if usb.update_mode and not is_update:
-        if usb.hw_type == 7:
-            return usb_reopen(usb, is_update)
+        if usb.hw_type == 7 and not usb.update_jumpered:
+            usb = usb_reopen(usb, is_update)
+            if not usb.update_mode:
+                return usb
         print("Greaseweazle is in Firmware Update Mode:")
         print(" The only available action is \"update <update_file>\"")
         if usb.update_jumpered:
