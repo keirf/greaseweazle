@@ -179,12 +179,6 @@ static void floppy_flux_end(void)
     write_pin(wgate, FALSE);
     configure_pin(wdata, GPO_bus);    
 
-    /* Turn off DMA. */
-    dma_rdata.cr &= ~DMA_CR_EN;
-    dma_wdata.cr &= ~DMA_CR_EN;
-    while ((dma_rdata.cr & DMA_CR_EN) || (dma_wdata.cr & DMA_CR_EN))
-        continue;
-
     /* Turn off timers. */
     tim_rdata->ccer = 0;
     tim_rdata->cr1 = 0;
@@ -192,6 +186,12 @@ static void floppy_flux_end(void)
     tim_wdata->ccer = 0;
     tim_wdata->cr1 = 0;
     tim_wdata->sr = 0; /* dummy, drains any pending DMA */
+
+    /* Turn off DMA. */
+    dma_rdata.cr &= ~DMA_CR_EN;
+    dma_wdata.cr &= ~DMA_CR_EN;
+    while ((dma_rdata.cr & DMA_CR_EN) || (dma_wdata.cr & DMA_CR_EN))
+        continue;
 }
 
 static void floppy_reset(void)
@@ -370,8 +370,6 @@ static uint8_t floppy_read_prep(struct gw_read_flux *rf)
     dma_rdata.mar = (uint32_t)(unsigned long)dma.buf;
     dma_rdata.ndtr = ARRAY_SIZE(dma.buf);    
     rdata_prep();
-    tim_rdata->egr = TIM_EGR_UG; /* update CNT, PSC, ARR */
-    tim_rdata->sr = 0; /* dummy write */
 
     /* DMA soft state. */
     dma.cons = 0;

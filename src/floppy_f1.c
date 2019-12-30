@@ -94,6 +94,8 @@ static void rdata_prep(void)
     tim_rdata->ccmr1 = TIM_CCMR1_CC2S(TIM_CCS_INPUT_TI1);
     tim_rdata->dier = TIM_DIER_CC2DE;
     tim_rdata->cr2 = 0;
+    tim_rdata->egr = TIM_EGR_UG; /* update CNT, PSC, ARR */
+    tim_rdata->sr = 0; /* dummy write */
 
     /* RDATA DMA setup: From the RDATA Timer's CCRx into a circular buffer. */
     dma_rdata.par = (uint32_t)(unsigned long)&tim_rdata->ccr2;
