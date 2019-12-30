@@ -18,6 +18,12 @@
 #define configure_pin(pin, type) \
     gpio_configure_pin(gpio_##pin, pin_##pin, type)
 
+#define SAMPLE_MHZ 72
+#define TIM_PSC (SYSCLK_MHZ / SAMPLE_MHZ)
+#define sample_ns(x) (((x) * SAMPLE_MHZ) / 1000)
+#define sample_us(x) ((x) * SAMPLE_MHZ)
+#define time_from_samples(x) ((x) * TIME_MHZ / SAMPLE_MHZ)
+
 #if STM32F == 1
 #include "floppy_f1.c"
 #elif STM32F == 7
@@ -348,9 +354,9 @@ static void rdata_encode_flux(void)
      * flux timestamp. */
     if (sizeof(timcnt_t) == sizeof(uint16_t)) {
         curr = tim_rdata->cnt - prev;
-        if (unlikely(curr > sysclk_us(400))) {
-            prev += sysclk_us(200);
-            ticks += sysclk_us(200);
+        if (unlikely(curr > sample_us(400))) {
+            prev += sample_us(200);
+            ticks += sample_us(200);
         }
     }
 
@@ -475,7 +481,7 @@ static unsigned int _wdata_decode_flux(timcnt_t *tbuf, unsigned int nr)
         return 0;
 
     if (rw.no_flux_area) {
-        unsigned int nfa_pulse = sysclk_ns(1250);
+        unsigned int nfa_pulse = sample_ns(1250);
         while (ticks >= nfa_pulse) {
             *tbuf++ = nfa_pulse - 1;
             ticks -= nfa_pulse;
@@ -514,10 +520,10 @@ static unsigned int _wdata_decode_flux(timcnt_t *tbuf, unsigned int nr)
         }
 
         ticks += x;
-        if (ticks < sysclk_ns(800))
+        if (ticks < sample_ns(800))
             continue;
 
-        if (ticks > sysclk_us(150)) {
+        if (ticks > sample_us(150)) {
             rw.no_flux_area = TRUE;
             goto out;
         }
@@ -599,7 +605,7 @@ static uint8_t floppy_write_prep(struct gw_write_flux *wf)
     memset(&rw, 0, sizeof(rw));
     rw.status = ACK_OKAY;
 
-    index.delay = time_sysclk(wf->index_delay_ticks);
+    index.delay = time_from_samples(wf->index_delay_ticks);
     rw.terminate_at_index = wf->terminate_at_index;
 
     return ACK_OKAY;

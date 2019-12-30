@@ -53,7 +53,6 @@ static unsigned int GPI_bus;
 #define dma_wdata   (dma1->ch3)
 
 typedef uint16_t timcnt_t;
-#define TIM_PSC 0
 
 #define irq_index 23
 void IRQ_23(void) __attribute__((alias("IRQ_INDEX_changed"))); /* EXTI9_5 */
@@ -83,13 +82,13 @@ static void floppy_mcu_init(void)
 static void rdata_prep(void)
 {
     /* RDATA Timer setup: 
-     * The counter runs from 0x0000-0xFFFF inclusive at full SYSCLK rate.
+     * The counter runs from 0x0000-0xFFFF inclusive at SAMPLE rate.
      *  
      * Ch.2 (RDATA) is in Input Capture mode, sampling on every clock and with
      * no input prescaling or filtering. Samples are captured on the falling 
      * edge of the input (CCxP=1). DMA is used to copy the sample into a ring
      * buffer for batch processing in the DMA-completion ISR. */
-    tim_rdata->psc = 0;
+    tim_rdata->psc = TIM_PSC-1;
     tim_rdata->arr = 0xffff;
     tim_rdata->ccmr1 = TIM_CCMR1_CC2S(TIM_CCS_INPUT_TI1);
     tim_rdata->dier = TIM_DIER_CC2DE;
@@ -113,17 +112,17 @@ static void rdata_prep(void)
 static void wdata_prep(void)
 {
     /* WDATA Timer setup:
-     * The counter is incremented at full SYSCLK rate. 
+     * The counter is incremented at SAMPLE rate. 
      *  
      * Ch.1 (WDATA) is in PWM mode 1. It outputs O_TRUE for 400ns and then 
      * O_FALSE until the counter reloads. By changing the ARR via DMA we alter
      * the time between (fixed-width) O_TRUE pulses, mimicking floppy drive 
      * timings. */
-    tim_wdata->psc = 0;
+    tim_wdata->psc = TIM_PSC-1;
     tim_wdata->ccmr1 = (TIM_CCMR1_CC1S(TIM_CCS_OUTPUT) |
                         TIM_CCMR1_OC1M(TIM_OCM_PWM1));
     tim_wdata->ccer = TIM_CCER_CC1E | ((O_TRUE==0) ? TIM_CCER_CC1P : 0);
-    tim_wdata->ccr1 = sysclk_ns(400);
+    tim_wdata->ccr1 = sample_ns(400);
     tim_wdata->dier = TIM_DIER_UDE;
     tim_wdata->cr2 = 0;
 }

@@ -57,7 +57,6 @@
 #define dma_wdata   (dma1->str[1])
 
 typedef uint32_t timcnt_t;
-#define TIM_PSC (SYSCLK_MHZ/72)
 
 #define irq_index 8
 void IRQ_8(void) __attribute__((alias("IRQ_INDEX_changed"))); /* EXTI2 */
@@ -83,8 +82,7 @@ static void floppy_mcu_init(void)
 static void rdata_prep(void)
 {
     /* RDATA Timer setup: 
-     * The counter runs from 0x00000000-0xFFFFFFFF inclusive.
-     * The prescaler is used to reduce the clock rate to 72MHz.
+     * The counter runs from 0x00000000-0xFFFFFFFF inclusive at SAMPLE rate.
      *  
      * Ch.1 (RDATA) is in Input Capture mode, sampling on every clock and with
      * no input prescaling or filtering. Samples are captured on the falling 
@@ -115,7 +113,7 @@ static void rdata_prep(void)
 static void wdata_prep(void)
 {
     /* WDATA Timer setup:
-     * The counter is incremented at 72MHz.
+     * The counter is incremented at SAMPLE rate.
      *  
      * Ch.3 (WDATA) is in PWM mode 1. It outputs O_TRUE for 400ns and then 
      * O_FALSE until the counter reloads. By changing the ARR via DMA we alter
@@ -125,7 +123,7 @@ static void wdata_prep(void)
     tim_wdata->ccmr2 = (TIM_CCMR2_CC3S(TIM_CCS_OUTPUT) |
                         TIM_CCMR2_OC3M(TIM_OCM_PWM1));
     tim_wdata->ccer = TIM_CCER_CC3E | ((O_TRUE==0) ? TIM_CCER_CC3P : 0);
-    tim_wdata->ccr3 = sysclk_ns(400) / TIM_PSC;
+    tim_wdata->ccr3 = sample_ns(400);
     tim_wdata->dier = TIM_DIER_UDE;
     tim_wdata->cr2 = 0;
 }
