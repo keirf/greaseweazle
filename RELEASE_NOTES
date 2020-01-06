@@ -3,6 +3,13 @@
 ** Keir Fraser <keir.xen@gmail.com>
 ************************************
 
+** v0.8 - 6 January 2020
+ - STM32F73xx: Various Fixes and Improvements
+   - Allow Firmware Update mode to be forced via strapping Serial RX/TX
+   - Fix bogus sample values at start of read flux values
+   - Fix some time constants to be in units of the sample clock
+ - USB: Advertise USB 2.0 device descriptor
+
 ** v0.7 - 6 December 2019
  - USB: Fix end-of-stream detection on track writes
    - Writes of empty/unformatted tracks sometimes hung forever
