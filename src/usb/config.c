@@ -12,7 +12,7 @@
 const uint8_t device_descriptor[] aligned(2) = {
     18,        /* Length */
     DESC_DEVICE, /* Descriptor Type */
-    0x10,0x01, /* USB 1.1 */
+    0x00,0x02, /* USB 2.0 */
     2, 0, 0,   /* Class, Subclass, Protocol: CDC */
     64,        /* Max Packet Size */
     0x09,0x12, /* VID = pid.codes Open Source projects */
