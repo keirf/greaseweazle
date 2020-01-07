@@ -215,6 +215,8 @@ static void floppy_reset(void)
     write_pin(step,   FALSE);
     write_pin(wgate,  FALSE);
     write_pin(side,   FALSE);
+
+    act_led(FALSE);
 }
 
 void floppy_init(void)
@@ -263,6 +265,8 @@ static void floppy_end_command(void *ack, unsigned int ack_len)
     auto_off_arm();
     usb_write(EP_TX, ack, ack_len);
     u_cons = u_prod = 0;
+    if (floppy_state == ST_command_wait)
+        act_led(FALSE);
     if (ack_len == USB_FS_MPS) {
         ASSERT(floppy_state == ST_command_wait);
         floppy_state = ST_zlp;
@@ -752,6 +756,7 @@ static void process_command(void)
     uint8_t resp_sz = 2;
 
     auto_off_arm();
+    act_led(TRUE);
 
     switch (cmd) {
     case CMD_GET_INFO: {
@@ -875,6 +880,7 @@ static void floppy_configure(void)
     floppy_flux_end();
     floppy_state = ST_command_wait;
     u_cons = u_prod = 0;
+    act_led(FALSE);
 }
 
 void floppy_process(void)

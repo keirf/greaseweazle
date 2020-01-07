@@ -202,6 +202,9 @@ struct gpio {
 #define _2MHz  2
 #define _10MHz 1
 #define _50MHz 3
+#define IOSPD_LOW  _2MHz
+#define IOSPD_MED  _10MHz
+#define IOSPD_HIGH _50MHz
 #define LOW  0
 #define HIGH 1
 

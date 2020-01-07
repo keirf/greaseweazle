@@ -21,6 +21,11 @@
 
 int EXC_reset(void) __attribute__((alias("main")));
 
+static struct {
+    time_t time;
+    bool_t state;
+} blink;
+
 static enum {
     ST_inactive,
     ST_command_wait,
@@ -38,13 +43,22 @@ static struct gw_info gw_info = {
     .hw_type = STM32F
 };
 
+static void blink_init(void)
+{
+    blink.time = time_now();
+    blink.state = FALSE;
+    act_led(FALSE);
+}
+
 static void update_reset(void)
 {
+    blink_init();
     state = ST_inactive;
 }
 
 static void update_configure(void)
 {
+    blink_init();
     state = ST_command_wait;
     u_prod = 0;
 }
@@ -56,6 +70,8 @@ const struct usb_class_ops usb_cdc_acm_ops = {
 
 static void end_command(void *ack, unsigned int ack_len)
 {
+    if (state == ST_command_wait)
+        blink_init();
     usb_write(EP_TX, ack, ack_len);
     u_prod = 0;
 }
@@ -118,6 +134,8 @@ static void process_command(void)
     uint8_t len = u_buf[1];
     uint8_t resp_sz = 2;
 
+    act_led(TRUE);
+
     switch (cmd) {
     case CMD_GET_INFO: {
         uint8_t idx = u_buf[2];
@@ -168,10 +186,17 @@ bad_command:
 static void update_process(void)
 {
     int len;
+    time_t now = time_now();
 
     switch (state) {
 
     case ST_command_wait:
+
+        if (time_diff(blink.time, now) > time_ms(200)) {
+            blink.time = now;
+            blink.state ^= 1;
+            act_led(blink.state);
+        }
 
         len = ep_rx_ready(EP_RX);
         if ((len >= 0) && (len < (sizeof(u_buf)-u_prod))) {
@@ -277,6 +302,7 @@ int main(void)
     }
 
     stm32_init();
+    time_init();
     console_init();
     console_crash_on_input();
     board_init();

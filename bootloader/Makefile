@@ -8,6 +8,8 @@ OBJS += fw_update.o
 OBJS += string.o
 OBJS += cortex.o
 OBJS += stm32$(stm32).o
+OBJS += time.o
+OBJS += timer.o
 OBJS += util.o
 OBJS += fpec_$(stm32).o
 

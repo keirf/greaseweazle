@@ -76,6 +76,7 @@ int snprintf(char *str, size_t size, const char *format, ...)
 
 /* Board-specific callouts */
 void board_init(void);
+void act_led(bool_t on);
 
 #ifndef NDEBUG
 

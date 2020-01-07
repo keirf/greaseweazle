@@ -9,6 +9,14 @@
  * See the file COPYING for more details, or visit <http://unlicense.org>.
  */
 
+#if STM32F == 1
+#define gpio_led gpioc
+#define pin_led 13
+#elif STM32F == 7
+#define gpio_led gpiob
+#define pin_led 13
+#endif
+
 /* Pull up currently unused and possibly-floating pins. */
 static void gpio_pull_up_pins(GPIO gpio, uint16_t mask)
 {
@@ -37,6 +45,15 @@ void board_init(void)
     /* Pull up unused debug pins (A9,A10 = serial console). */
     gpio_pull_up_pins(gpioa, (1u<<9) | (1u<<10));
 #endif
+
+    /* Activity LED is active low. */
+    gpio_configure_pin(gpio_led, pin_led, GPO_pushpull(IOSPD_LOW, HIGH));
+}
+
+/* Set the activity LED status. */
+void act_led(bool_t on)
+{
+    gpio_write_pin(gpio_led, pin_led, on ? LOW : HIGH);
 }
 
 /*
