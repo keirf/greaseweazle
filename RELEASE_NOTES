@@ -3,6 +3,11 @@
 ** Keir Fraser <keir.xen@gmail.com>
 ************************************
 
+** v0.9 - 7 January 2020
+ - Activity LED
+   - Lights while a USB-issued command is in progress
+   - Flashes when enumerated but idle in the firmware-update bootloader
+
 ** v0.8 - 6 January 2020
  - STM32F73xx: Various Fixes and Improvements
    - Allow Firmware Update mode to be forced via strapping Serial RX/TX
