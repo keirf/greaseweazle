@@ -24,26 +24,29 @@
 #define sample_us(x) ((x) * SAMPLE_MHZ)
 #define time_from_samples(x) ((x) * TIME_MHZ / SAMPLE_MHZ)
 
+#define write_pin(pin, level) \
+    gpio_write_pin(gpio_##pin, pin_##pin, level ? O_TRUE : O_FALSE)
+
+static int bus_type = -1;
+static int unit_nr = -1;
+static struct {
+    int cyl;
+    bool_t motor;
+} unit[3];
+
+static struct gw_delay delay_params = {
+    .select_delay = 10,
+    .step_delay = 3000,
+    .seek_settle = 15,
+    .motor_delay = 750,
+    .auto_off = 10000
+};
+
 #if STM32F == 1
 #include "floppy_f1.c"
 #elif STM32F == 7
 #include "floppy_f7.c"
 #endif
-
-/* Track and modify states of output pins. */
-static struct {
-    bool_t densel;
-    bool_t sel0;
-    bool_t mot0;
-    bool_t dir;
-    bool_t step;
-    bool_t wgate;
-    bool_t side;
-} pins;
-#define read_pin(pin) pins.pin
-#define write_pin(pin, level) ({                                        \
-    gpio_write_pin(gpio_##pin, pin_##pin, level ? O_TRUE : O_FALSE);    \
-    pins.pin = level; })
 
 static struct index {
     /* Main code can reset this at will. */
@@ -91,14 +94,6 @@ static uint8_t u_buf[8192];
 static uint32_t u_cons, u_prod;
 #define U_MASK(x) ((x)&(sizeof(u_buf)-1))
 
-static struct gw_delay delay_params = {
-    .select_delay = 10,
-    .step_delay = 3000,
-    .seek_settle = 15,
-    .motor_delay = 750,
-    .auto_off = 10000
-};
-
 static void step_one_out(void)
 {
     write_pin(dir, FALSE);
@@ -119,19 +114,35 @@ static void step_one_in(void)
     delay_us(delay_params.step_delay);
 }
 
-static int cur_cyl = -1;
-
-static void drive_select(bool_t on)
+static bool_t set_bus_type(uint8_t type)
 {
-    if (read_pin(sel0) == on)
-        return;
-    write_pin(sel0, on);
-    if (on)
-        delay_us(delay_params.select_delay);
+    int i;
+
+    if (type == bus_type)
+        return TRUE;
+
+    if (type > BUS_SHUGART)
+        return FALSE;
+
+    bus_type = type;
+    unit_nr = -1;
+    for (i = 0; i < ARRAY_SIZE(unit); i++) {
+        unit[i].cyl = -1;
+        unit[i].motor = FALSE;
+    }
+    reset_bus();
+
+    return TRUE;
 }
 
-static bool_t floppy_seek(unsigned int cyl)
+static uint8_t floppy_seek(unsigned int cyl)
 {
+    int cur_cyl;
+
+    if (unit_nr < 0)
+        return ACK_NO_UNIT;
+    cur_cyl = unit[unit_nr].cyl;
+
     if ((cyl == 0) || (cur_cyl < 0)) {
 
         unsigned int i;
@@ -142,8 +153,8 @@ static bool_t floppy_seek(unsigned int cyl)
         }
         cur_cyl = 0;
         if (get_trk0() == HIGH) {
-            cur_cyl = -1;
-            return FALSE;
+            unit[unit_nr].cyl = -1;
+            return ACK_NO_TRK0;
         }
 
     }
@@ -165,18 +176,9 @@ static bool_t floppy_seek(unsigned int cyl)
     }
 
     delay_ms(delay_params.seek_settle);
-    cur_cyl = cyl;
+    unit[unit_nr].cyl = cyl;
 
-    return TRUE;
-}
-
-static void drive_motor(bool_t on)
-{
-    if (read_pin(mot0) == on)
-        return;
-    write_pin(mot0, on);
-    if (on)
-        delay_ms(delay_params.motor_delay);
+    return ACK_OKAY;
 }
 
 static void floppy_flux_end(void)
@@ -207,14 +209,7 @@ static void floppy_reset(void)
 
     floppy_flux_end();
 
-    /* Turn off all output pins. */
-    write_pin(densel, FALSE);
-    write_pin(sel0,   FALSE);
-    write_pin(mot0,   FALSE);
-    write_pin(dir,    FALSE);
-    write_pin(step,   FALSE);
-    write_pin(wgate,  FALSE);
-    write_pin(side,   FALSE);
+    drive_deselect();
 
     act_led(FALSE);
 }
@@ -225,8 +220,6 @@ void floppy_init(void)
 
     /* Output pins, unbuffered. */
     configure_pin(densel, GPO_bus);
-    configure_pin(sel0,   GPO_bus);
-    configure_pin(mot0,   GPO_bus);
     configure_pin(dir,    GPO_bus);
     configure_pin(step,   GPO_bus);
     configure_pin(wgate,  GPO_bus);
@@ -246,6 +239,8 @@ void floppy_init(void)
     exti->imr = exti->ftsr = m(pin_index);
     IRQx_set_prio(irq_index, INDEX_IRQ_PRI);
     IRQx_enable(irq_index);
+
+    set_bus_type(BUS_NONE);
 }
 
 static struct gw_info gw_info = {
@@ -774,7 +769,7 @@ static void process_command(void)
         uint8_t cyl = u_buf[2];
         if ((len != 3) || (cyl > 85))
             goto bad_command;
-        u_buf[1] = floppy_seek(cyl) ? ACK_OKAY : ACK_NO_TRK0;
+        u_buf[1] = floppy_seek(cyl);
         goto out;
     }
     case CMD_SIDE: {
@@ -803,11 +798,11 @@ static void process_command(void)
         break;
     }
     case CMD_MOTOR: {
-        uint8_t mask = u_buf[2];
-        if ((len != 3) || (mask & ~1))
+        uint8_t unit = u_buf[2], on_off = u_buf[3];
+        if ((len != 4) || (on_off & ~1))
             goto bad_command;
-        drive_motor(mask & 1);
-        break;
+        u_buf[1] = drive_motor(unit, on_off & 1);
+        goto out;
     }
     case CMD_READ_FLUX: {
         struct gw_read_flux rf = { .nr_idx = 2 };
@@ -841,10 +836,22 @@ static void process_command(void)
         break;
     }
     case CMD_SELECT: {
-        uint8_t mask = u_buf[2];
-        if ((len != 3) || (mask & ~1))
+        uint8_t unit = u_buf[2];
+        if (len != 3)
             goto bad_command;
-        drive_select(mask & 1);
+        u_buf[1] = drive_select(unit);
+        goto out;
+    }
+    case CMD_DESELECT: {
+        if (len != 2)
+            goto bad_command;
+        drive_deselect();
+        break;
+    }
+    case CMD_SET_BUS_TYPE: {
+        uint8_t type = u_buf[2];
+        if ((len != 3) || !set_bus_type(type))
+            goto bad_command;
         break;
     }
     case CMD_SWITCH_FW_MODE: {
@@ -885,12 +892,15 @@ static void floppy_configure(void)
 
 void floppy_process(void)
 {
-    int len;
+    int i, len;
 
     if (auto_off.armed && (time_since(auto_off.deadline) >= 0)) {
         floppy_flux_end();
-        drive_motor(FALSE);
-        drive_select(FALSE);
+        for (i = 0; i < ARRAY_SIZE(unit); i++) {
+            if (unit[i].motor)
+                drive_motor(i, FALSE);
+        }
+        drive_deselect();
         auto_off.armed = FALSE;
     }
 

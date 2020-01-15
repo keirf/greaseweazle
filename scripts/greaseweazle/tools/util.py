@@ -7,12 +7,25 @@
 # This is free and unencumbered software released into the public domain.
 # See the file COPYING for more details, or visit <http://unlicense.org>.
 
-import os, sys, serial, struct, time
+import argparse, os, sys, serial, struct, time
 
 from greaseweazle import version
 from greaseweazle import usb as USB
 from greaseweazle.image.scp import SCP
 from greaseweazle.image.hfe import HFE
+
+
+def drive_letter(letter):
+    types = {
+        'A': (USB.BusType.IBMPC, 0),
+        'B': (USB.BusType.IBMPC, 1),
+        '0': (USB.BusType.Shugart, 0),
+        '1': (USB.BusType.Shugart, 1),
+        '2': (USB.BusType.Shugart, 2)
+    }
+    if not letter.upper() in types:
+        raise argparse.ArgumentTypeError("invalid drive letter: '%s'" % letter)
+    return types[letter.upper()]
 
 
 def get_image_class(name):
@@ -25,9 +38,10 @@ def get_image_class(name):
 
 
 def with_drive_selected(fn, usb, args):
+    usb.set_bus_type(args.drive[0])
     try:
-        usb.drive_select(True)
-        usb.drive_motor(True)
+        usb.drive_select(args.drive[1])
+        usb.drive_motor(args.drive[1], True)
         fn(usb, args)
     except KeyboardInterrupt:
         print()
@@ -35,8 +49,8 @@ def with_drive_selected(fn, usb, args):
         usb.ser.close()
         usb.ser.open()
     finally:
-        usb.drive_motor(False)
-        usb.drive_select(False)
+        usb.drive_motor(args.drive[1], False)
+        usb.drive_deselect()
 
 
 def usb_reopen(usb, is_update):

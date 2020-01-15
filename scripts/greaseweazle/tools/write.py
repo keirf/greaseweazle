@@ -67,6 +67,8 @@ def main(argv):
 
     parser = argparse.ArgumentParser(
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument("--drive", type=util.drive_letter, default='A',
+                        help="drive to write (A,B,0,1,2)")
     parser.add_argument("--scyl", type=int, default=0,
                         help="first cylinder to write")
     parser.add_argument("--ecyl", type=int, default=81,

@@ -16,37 +16,48 @@
 
 /* CMD_GET_INFO, length=3, 0. Returns 32 bytes after ACK. */
 #define CMD_GET_INFO        0
-/* CMD_SEEK, length=3, cyl# */
-#define CMD_SEEK            1
-/* CMD_SIDE, length=3, side# (0=bottom) */
-#define CMD_SIDE            2
-/* CMD_SET_PARAMS, length=3+nr, idx, <nr bytes> */
-#define CMD_SET_PARAMS      3
-/* CMD_GET_PARAMS, length=4, idx, nr_bytes. Returns nr_bytes after ACK. */
-#define CMD_GET_PARAMS      4
-/* CMD_MOTOR, length=3, motor_mask */
-#define CMD_MOTOR           5
-/* CMD_READ_FLUX, length=2-3. Optionally include all or part of gw_read_flux.
- * Returns flux readings until EOStream. */
-#define CMD_READ_FLUX       6
-/* CMD_WRITE_FLUX, length=2-7. Optionally include all or part of gw_write_flux.
- * Host follows with flux readings until EOStream. */
-#define CMD_WRITE_FLUX      7
-/* CMD_GET_FLUX_STATUS, length=2. Last read/write status returned in ACK. */
-#define CMD_GET_FLUX_STATUS 8
-/* CMD_GET_INDEX_TIMES, length=4, first, nr.
- * Returns nr*4 bytes after ACK. */
-#define CMD_GET_INDEX_TIMES 9
-/* CMD_SELECT, length=3, select_mask */
-#define CMD_SELECT         10
-/* CMD_SWITCH_FW_MODE, length=3, <mode> */
-#define CMD_SWITCH_FW_MODE 11
-#define CMD_MAX            11
-
 /* [BOOTLOADER] CMD_UPDATE, length=6, <update_len>. 
  * Host follows with <update_len> bytes.
  * Bootloader finally returns a status byte, 0 on success. */
 #define CMD_UPDATE          1
+/* CMD_SEEK, length=3, cyl#. Seek to cyl# on selected drive. */
+#define CMD_SEEK            2
+/* CMD_SIDE, length=3, side# (0=bottom) */
+#define CMD_SIDE            3
+/* CMD_SET_PARAMS, length=3+nr, idx, <nr bytes> */
+#define CMD_SET_PARAMS      4
+/* CMD_GET_PARAMS, length=4, idx, nr_bytes. Returns nr_bytes after ACK. */
+#define CMD_GET_PARAMS      5
+/* CMD_MOTOR, length=4, drive#, on/off. Turn on/off a drive motor. */
+#define CMD_MOTOR           6
+/* CMD_READ_FLUX, length=2-3. Optionally include all or part of gw_read_flux.
+ * Returns flux readings until EOStream. */
+#define CMD_READ_FLUX       7
+/* CMD_WRITE_FLUX, length=2-7. Optionally include all or part of gw_write_flux.
+ * Host follows with flux readings until EOStream. */
+#define CMD_WRITE_FLUX      8
+/* CMD_GET_FLUX_STATUS, length=2. Last read/write status returned in ACK. */
+#define CMD_GET_FLUX_STATUS 9
+/* CMD_GET_INDEX_TIMES, length=4, first, nr.
+ * Returns nr*4 bytes after ACK. */
+#define CMD_GET_INDEX_TIMES 10
+/* CMD_SWITCH_FW_MODE, length=3, <mode> */
+#define CMD_SWITCH_FW_MODE 11
+/* CMD_SELECT, length=3, drive#. Select drive# as current unit. */
+#define CMD_SELECT         12
+/* CMD_DESELECT, length=2. Deselect current unit (if any). */
+#define CMD_DESELECT       13
+/* CMD_SET_BUS_TYPE, length=3, bus_type. Set the bus type. */
+#define CMD_SET_BUS_TYPE   14
+#define CMD_MAX            14
+
+
+/*
+ * CMD_SET_BUS CODES
+ */
+#define BUS_NONE            0
+#define BUS_IBMPC           1
+#define BUS_SHUGART         2
 
 
 /*
@@ -59,6 +70,9 @@
 #define ACK_FLUX_OVERFLOW   4
 #define ACK_FLUX_UNDERFLOW  5
 #define ACK_WRPROT          6
+#define ACK_NO_UNIT         7
+#define ACK_NO_BUS          8
+#define ACK_BAD_UNIT        9
 
 
 /*

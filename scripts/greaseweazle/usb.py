@@ -18,19 +18,37 @@ class ControlCmd:
 ## Command set
 class Cmd:
     GetInfo         =  0
-    Seek            =  1
-    Side            =  2
-    SetParams       =  3
-    GetParams       =  4
-    Motor           =  5
-    ReadFlux        =  6
-    WriteFlux       =  7
-    GetFluxStatus   =  8
-    GetIndexTimes   =  9
-    Select          = 10
-    SwitchFwMode    = 11
-    # Bootloader specific:
     Update          =  1
+    Seek            =  2
+    Side            =  3
+    SetParams       =  4
+    GetParams       =  5
+    Motor           =  6
+    ReadFlux        =  7
+    WriteFlux       =  8
+    GetFluxStatus   =  9
+    GetIndexTimes   = 10
+    SwitchFwMode    = 11
+    Select          = 12
+    Deselect        = 13
+    SetBusType      = 14
+    str = {
+        GetInfo: "GetInfo",
+        Update: "Update",
+        Seek: "Seek",
+        Side: "Side",
+        SetParams: "SetParams",
+        GetParams: "GetParams",
+        Motor: "Motor",
+        ReadFlux: "ReadFlux",
+        WriteFlux: "WriteFlux",
+        GetFluxStatus: "GetFluxStatus",
+        GetIndexTimes: "GetIndexTimes",
+        SwitchFwMode: "SwitchFwMode",
+        Select: "Select",
+        Deselect: "Deselect",
+        SetBusType: "SetBusType"
+    }
 
 
 ## Command responses/acknowledgements
@@ -42,7 +60,22 @@ class Ack:
     FluxOverflow    = 4
     FluxUnderflow   = 5
     Wrprot          = 6
-    Max             = 6
+    NoUnit          = 7
+    NoBus           = 8
+    BadUnit         = 9
+    str = {
+        Okay: "Okay",
+        BadCommand: "Bad Command",
+        NoIndex: "No Index",
+        NoTrk0: "Track 0 not found",
+        FluxOverflow: "Flux Overflow",
+        FluxUnderflow: "Flux Underflow",
+        Wrprot: "Disk is Write Protected",
+        NoUnit: "No drive unit selected",
+        NoBus: "No bus type (eg. Shugart, IBM/PC) specified",
+        BadUnit: "Bad unit number"
+    }
+
 
 
 ## Cmd.{Get,Set}Params indexes
@@ -50,20 +83,24 @@ class Params:
     Delays          = 0
 
 
+## Cmd.SetBusType values
+class BusType:
+    Invalid         = 0
+    IBMPC           = 1
+    Shugart         = 2
+
+
 ## CmdError: Encapsulates a command acknowledgement.
 class CmdError(Exception):
-
-    str = [ "Okay", "Bad Command", "No Index", "Track 0 not found",
-            "Flux Overflow", "Flux Underflow", "Disk is Write Protected" ]
 
     def __init__(self, cmd, code):
         self.cmd = cmd
         self.code = code
 
     def __str__(self):
-        if self.code <= Ack.Max:
-            return self.str[self.code]
-        return "Unknown Error (%u)" % self.code
+        return "%s: %s" % (Cmd.str.get(self.cmd, "UnknownCmd"),
+                           Ack.str.get(self.code, "Unknown Error (%u)"
+                                       % self.code))
 
 
 class Unit:
@@ -134,16 +171,28 @@ class Unit:
         self._send_cmd(struct.pack("3B", Cmd.Side, 3, side))
 
 
+    ## set_bus_type:
+    ## Set the floppy bus type.
+    def set_bus_type(self, type):
+        self._send_cmd(struct.pack("3B", Cmd.SetBusType, 3, type))
+
+
     ## drive_select:
-    ## Select/deselect the drive.
-    def drive_select(self, state):
-        self._send_cmd(struct.pack("3B", Cmd.Select, 3, int(state)))
+    ## Select the specified drive unit.
+    def drive_select(self, unit):
+        self._send_cmd(struct.pack("3B", Cmd.Select, 3, unit))
+
+
+    ## drive_deselect:
+    ## Deselect currently-selected drive unit (if any).
+    def drive_deselect(self):
+        self._send_cmd(struct.pack("2B", Cmd.Deselect, 2))
 
 
     ## drive_motor:
-    ## Turn the selected drive's motor on/off.
-    def drive_motor(self, state):
-        self._send_cmd(struct.pack("3B", Cmd.Motor, 3, int(state)))
+    ## Turn the specified drive's motor on/off.
+    def drive_motor(self, unit, state):
+        self._send_cmd(struct.pack("4B", Cmd.Motor, 4, unit, int(state)))
 
 
     ## _get_index_times:

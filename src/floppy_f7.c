@@ -27,14 +27,14 @@
 /* Output pins. */
 #define gpio_densel gpiob
 #define pin_densel 12 /* PB12 */
-#define gpio_sel0  gpiob
-#define pin_sel0   11 /* PB11 */
-#define gpio_mot0  gpiob
-#define pin_mot0   1  /* PB1 */
-#define gpio_sel1  gpiob
-#define pin_sel1   0  /* PB0 */
-#define gpio_mot1  gpiob
-#define pin_mot1   10 /* PB10 */
+#define gpio_pin10 gpiob
+#define pin_pin10  1  /* PB1 */
+#define gpio_pin12 gpiob
+#define pin_pin12  0  /* PB0 */
+#define gpio_pin14 gpiob
+#define pin_pin14  11 /* PB11 */
+#define gpio_pin16 gpiob
+#define pin_pin16  10 /* PB10 */
 #define gpio_dir   gpioc
 #define pin_dir    4  /* PC4 */
 #define gpio_step  gpioa
@@ -74,6 +74,12 @@ static void floppy_mcu_init(void)
     gpio_set_af(gpio_rdata, pin_rdata, 1);
     gpio_set_af(gpio_wdata, pin_wdata, 1);
     configure_pin(rdata, AFI(PUPD_none));
+
+    /* Configure SELECT/MOTOR lines. */
+    configure_pin(pin10, GPO_bus);
+    configure_pin(pin12, GPO_bus);
+    configure_pin(pin14, GPO_bus);
+    configure_pin(pin16, GPO_bus);
 
     /* Set up EXTI mapping for INDEX: PB[3:0] -> EXT[3:0] */
     syscfg->exticr1 = 0x1111;
@@ -138,6 +144,105 @@ static void dma_wdata_start(void)
                     DMA_CR_CIRC |
                     DMA_CR_DIR_M2P);
     dma_wdata.cr |= DMA_CR_EN;
+}
+
+static void drive_deselect(void)
+{
+    if (unit_nr == -1)
+        return;
+
+    switch (bus_type) {
+    case BUS_IBMPC:
+        switch (unit_nr) {
+        case 0: write_pin(pin14, FALSE); break;
+        case 1: write_pin(pin12, FALSE); break;
+        }
+        break;
+    case BUS_SHUGART:
+        switch (unit_nr) {
+        case 0: write_pin(pin10, FALSE); break;
+        case 1: write_pin(pin12, FALSE); break;
+        case 2: write_pin(pin14, FALSE); break;
+        }
+        break;
+    }
+
+    unit_nr = -1;
+}
+
+static uint8_t drive_select(uint8_t nr)
+{
+    if (nr == unit_nr)
+        return ACK_OKAY;
+
+    drive_deselect();
+
+    switch (bus_type) {
+    case BUS_IBMPC:
+        switch (nr) {
+        case 0: write_pin(pin14, TRUE); break;
+        case 1: write_pin(pin12, TRUE); break;
+        default: return ACK_BAD_UNIT;
+        }
+        break;
+    case BUS_SHUGART:
+        switch (nr) {
+        case 0: write_pin(pin10, TRUE); break;
+        case 1: write_pin(pin12, TRUE); break;
+        case 2: write_pin(pin14, TRUE); break;
+        default: return ACK_BAD_UNIT;
+        }
+        break;
+    default:
+        return ACK_NO_BUS;
+    }
+
+    unit_nr = nr;
+    delay_us(delay_params.select_delay);
+
+    return ACK_OKAY;
+}
+
+static uint8_t drive_motor(uint8_t nr, bool_t on)
+{
+    switch (bus_type) {
+    case BUS_IBMPC:
+        if (nr >= 2) 
+            return ACK_BAD_UNIT;
+        if (unit[nr].motor == on)
+            return ACK_OKAY;
+        switch (nr) {
+        case 0: write_pin(pin10, on); break;
+        case 1: write_pin(pin16, on); break;
+        }
+        break;
+    case BUS_SHUGART:
+        if (nr >= 3)
+            return ACK_BAD_UNIT;
+        /* All shugart units share one motor line. Alias them all to unit 0. */
+        nr = 0;
+        if (unit[nr].motor == on)
+            return ACK_OKAY;
+        write_pin(pin16, on);
+        break;
+    default:
+        return ACK_NO_BUS;
+    }
+
+    unit[nr].motor = on;
+    if (on)
+        delay_ms(delay_params.motor_delay);
+
+    return ACK_OKAY;
+
+}
+
+static void reset_bus(void)
+{
+    write_pin(pin10, FALSE);
+    write_pin(pin12, FALSE);
+    write_pin(pin14, FALSE);
+    write_pin(pin16, FALSE);
 }
 
 /*

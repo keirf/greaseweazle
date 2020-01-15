@@ -27,10 +27,10 @@ static unsigned int GPI_bus;
 /* Output pins. */
 #define gpio_densel gpiob
 #define pin_densel  9 /* PB9 */
-#define gpio_sel0  gpiob
-#define pin_sel0   10 /* PB10 */
-#define gpio_mot0  gpiob
-#define pin_mot0   11 /* PB11 */
+#define gpio_sel   gpiob
+#define pin_sel    10 /* PB10 */
+#define gpio_mot   gpiob
+#define pin_mot    11 /* PB11 */
 #define gpio_dir   gpiob
 #define pin_dir    12 /* PB12 */
 #define gpio_step  gpiob
@@ -77,6 +77,10 @@ static void floppy_mcu_init(void)
     afio->exticr1 = afio->exticr2 = afio->exticr3 = afio->exticr4 = 0x1111;
 
     configure_pin(rdata, GPI_bus);
+
+    /* Configure SELECT/MOTOR lines. */
+    configure_pin(sel, GPO_bus);
+    configure_pin(mot, GPO_bus);
 }
 
 static void rdata_prep(void)
@@ -136,6 +140,39 @@ static void dma_wdata_start(void)
                     DMA_CR_CIRC |
                     DMA_CR_DIR_M2P |
                     DMA_CR_EN);
+}
+
+static void drive_deselect(void)
+{
+    write_pin(sel, FALSE);
+    unit_nr = -1;
+}
+
+static uint8_t drive_select(uint8_t nr)
+{
+    write_pin(sel, TRUE);
+    unit_nr = 0;
+    delay_us(delay_params.select_delay);
+    return ACK_OKAY;
+}
+
+static uint8_t drive_motor(uint8_t nr, bool_t on)
+{
+    if (unit[0].motor == on)
+        return ACK_OKAY;
+
+    write_pin(mot, on);
+    unit[0].motor = on;
+    if (on)
+        delay_ms(delay_params.motor_delay);
+
+    return ACK_OKAY;
+}
+
+static void reset_bus(void)
+{
+    write_pin(sel, FALSE);
+    write_pin(mot, FALSE);
 }
 
 /*
