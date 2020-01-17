@@ -3,6 +3,12 @@
 ** Keir Fraser <keir.xen@gmail.com>
 ************************************
 
+** v0.10 - 17 January 2020
+ - STM32F7xx: Multi-drive support via drive-select config option
+   - Up to three Shugart drives or two IBM/PC drives
+   - gw.py read|write --drive {a,b,0,1,2}
+   - See the "Drive Select" wiki page
+
 ** v0.9 - 7 January 2020
  - Activity LED
    - Lights while a USB-issued command is in progress
