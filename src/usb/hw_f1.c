@@ -22,7 +22,7 @@ static struct {
     bool_t tx_ready;
 } eps[8];
 
-void usb_init(void)
+void hw_usb_init(void)
 {
     /* Turn on clock. */
     rcc->apb1enr |= RCC_APB1ENR_USBEN;
@@ -42,7 +42,7 @@ void usb_init(void)
     gpio_configure_pin(gpioa, 0, GPO_pushpull(_2MHz, HIGH));
 }
 
-void usb_deinit(void)
+void hw_usb_deinit(void)
 {
     gpio_configure_pin(gpioa, 0, GPI_floating);
     rcc->apb1enr &= ~RCC_APB1ENR_USBEN;

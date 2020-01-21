@@ -11,6 +11,17 @@
 
 struct ep0 ep0;
 
+void usb_init(void)
+{
+    base64(string_descriptors[3], (const void *)ser_id, 96);
+    hw_usb_init();
+}
+
+void usb_deinit(void)
+{
+    hw_usb_deinit();
+}
+
 static bool_t handle_control_request(void)
 {
     struct usb_device_request *req = &ep0.req;

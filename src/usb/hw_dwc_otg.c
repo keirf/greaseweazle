@@ -78,7 +78,7 @@ static void write_packet(const void *p, uint8_t ep, int len)
         otg_dfifo[ep].x[0] = *_p++;
 }
 
-void usb_init(void)
+void hw_usb_init(void)
 {
     int i;
 
@@ -192,7 +192,7 @@ void usb_init(void)
     delay_ms(3);
 }
 
-void usb_deinit(void)
+void hw_usb_deinit(void)
 {
     switch (conf_port) {
     case PORT_FS:

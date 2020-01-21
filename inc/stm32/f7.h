@@ -65,6 +65,7 @@ static USART usart4 = (struct usart *)USART4_BASE;
 static USART usart5 = (struct usart *)USART5_BASE;
 static USART usart6 = (struct usart *)USART6_BASE;
 static HSPHYC hsphyc = (struct hsphyc *)HSPHYC_BASE;
+static SER_ID ser_id = (uint32_t *)0x1ff07a10;
 
 #define SYSCLK_MHZ 216
 #define AHB_MHZ (SYSCLK_MHZ / 1)  /* 216MHz */

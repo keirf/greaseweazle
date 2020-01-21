@@ -18,7 +18,7 @@ const uint8_t device_descriptor[] aligned(2) = {
     0x09,0x12, /* VID = pid.codes Open Source projects */
     0x01,0x00, /* PID = Test PID #1 */
     0,1,       /* Device Release 1.0 */
-    1,2,0,     /* Manufacturer, Product, Serial */
+    1,2,3,     /* Manufacturer, Product, Serial */
     1          /* Number of configurations */
 };
 
@@ -97,10 +97,12 @@ const uint8_t config_descriptor[] aligned(2) = {
     0x00 /* 6 bInterval */
 };
 
-const char *string_descriptors[] = {
+static char serial_string[32];
+char * const string_descriptors[] = {
     "\x09\x04", /* LANGID: US English */
     "Keir Fraser",
     "Greaseweazle",
+    serial_string,
 };
 
 /*

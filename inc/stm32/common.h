@@ -25,6 +25,7 @@
 #define SPI volatile struct spi * const
 #define I2C volatile struct i2c * const
 #define USART volatile struct usart * const
+#define SER_ID volatile uint32_t * const
 
 /* NVIC table */
 extern uint32_t vector_table[];

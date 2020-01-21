@@ -50,6 +50,7 @@ static I2C i2c2 = (struct i2c *)I2C2_BASE;
 static USART usart1 = (struct usart *)USART1_BASE;
 static USART usart2 = (struct usart *)USART2_BASE;
 static USART usart3 = (struct usart *)USART3_BASE;
+static SER_ID ser_id = (uint32_t *)0x1ffff7e8;
 
 #define SYSCLK_MHZ 72
 #define FLASH_PAGE_SIZE 1024
