@@ -4,11 +4,12 @@
 ************************************
 
 ** v0.11 - 21 January 2020
+ - GW.py: Auto-detect the COM/serial port device name
+   - The device argument is now optional!
  - USB: Provide a serial-id string to the host
    - Identifier is unique to each Greaseweazle device
-   - Allows disambiguation between multiple Gresaeweazle devices
-   - WARNING: Breaks auto-update (Greaseweazle F7) on Windows
-   - Fix (and recommended for F1 too): Full manual reflash from HEX file
+   - Allows disambiguation between multiple Greaseweazle devices
+   - Recommended: Full flash from HEX file (embeds serial in bootloader)
  - Ubuntu: Udev script now creates a /dev/greaseweazle symlink
 
 ** v0.10 - 17 January 2020
