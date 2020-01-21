@@ -78,7 +78,8 @@ def main(argv):
     parser.add_argument("--adjust-speed", action="store_true",
                         help="adjust write-flux times for drive speed")
     parser.add_argument("file", help="input filename")
-    parser.add_argument("device", help="serial device")
+    parser.add_argument("device", nargs="?", default="auto",
+                        help="serial device")
     parser.prog += ' ' + argv[1]
     args = parser.parse_args(argv[2:])
     args.nr_sides = 1 if args.single_sided else 2

@@ -65,7 +65,8 @@ def main(argv):
     parser = argparse.ArgumentParser(
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument("file", help="update filename")
-    parser.add_argument("device", help="serial device")
+    parser.add_argument("device", nargs="?", default="auto",
+                        help="serial device")
     parser.prog += ' ' + argv[1]
     args = parser.parse_args(argv[2:])
 

@@ -8,6 +8,7 @@
 # See the file COPYING for more details, or visit <http://unlicense.org>.
 
 import argparse, os, sys, serial, struct, time
+import serial.tools.list_ports
 
 from greaseweazle import version
 from greaseweazle import usb as USB
@@ -53,6 +54,30 @@ def with_drive_selected(fn, usb, args):
         usb.drive_deselect()
 
 
+def valid_ser_id(ser_id):
+    return ser_id and ser_id.upper().startswith("GW")
+
+def find_port(ser_id=None):
+    for x in serial.tools.list_ports.comports():
+        if x.manufacturer == "Keir Fraser":
+            if not valid_ser_id(x.serial_number) or not valid_ser_id(ser_id) \
+               or x.serial_number == ser_id:
+                return x.device
+        elif x.manufacturer == "Microsoft" and x.vid == 0x1209 \
+             and x.pid == 0x0001:
+            if not valid_ser_id(x.serial_number) or not valid_ser_id(ser_id) \
+               or x.serial_number == ser_id:
+                return x.device
+    raise serial.SerialException('Could not auto-detect Greaseweazle device')
+
+def get_ser_id(devname):
+    for x in serial.tools.list_ports.comports():
+        if x.device == devname:
+            if valid_ser_id(x.serial_number):
+                return x.serial_number
+            return None
+    return None
+
 def usb_reopen(usb, is_update):
     mode = { False: 1, True: 0 }
     try:
@@ -65,18 +90,27 @@ def usb_reopen(usb, is_update):
     for i in range(10):
         time.sleep(0.5)
         try:
-            usb.ser.open()
+            devicename = find_port(usb.ser_id)
+            new_ser = serial.Serial(devicename)
         except serial.SerialException:
             # Device not found
             pass
         else:
-            return USB.Unit(usb.ser)
+            new_usb = USB.Unit(new_ser)
+            new_usb.ser_id = usb.ser_id
+            new_usb.devname = devicename
+            return new_usb
     raise serial.SerialException('Could not reopen port after mode switch')
 
 
 def usb_open(devicename, is_update=False):
 
+    if devicename == "auto":
+        devicename = find_port()
+    
     usb = USB.Unit(serial.Serial(devicename))
+    usb.ser_id = get_ser_id(devicename)
+    usb.devname = devicename
 
     print("** %s v%u.%u [F%u], Host Tools v%u.%u"
           % (("Greaseweazle", "Bootloader")[usb.update_mode],
