@@ -3,6 +3,14 @@
 ** Keir Fraser <keir.xen@gmail.com>
 ************************************
 
+** v0.11 - 21 January 2020
+ - USB: Provide a serial-id string to the host
+   - Identifier is unique to each Greaseweazle device
+   - Allows disambiguation between multiple Gresaeweazle devices
+   - WARNING: Breaks auto-update (Greaseweazle F7) on Windows
+   - Fix (and recommended for F1 too): Full manual reflash from HEX file
+ - Ubuntu: Udev script now creates a /dev/greaseweazle symlink
+
 ** v0.10 - 17 January 2020
  - STM32F7xx: Multi-drive support via drive-select config option
    - Up to three Shugart drives or two IBM/PC drives
