@@ -97,7 +97,7 @@ const uint8_t config_descriptor[] aligned(2) = {
     0x00 /* 6 bInterval */
 };
 
-static char serial_string[32];
+char serial_string[32];
 char * const string_descriptors[] = {
     "\x09\x04", /* LANGID: US English */
     "Keir Fraser",

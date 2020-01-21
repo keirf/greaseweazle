@@ -13,7 +13,8 @@ struct ep0 ep0;
 
 void usb_init(void)
 {
-    base64(string_descriptors[3], (const void *)ser_id, 96);
+    snprintf(serial_string, sizeof(serial_string),
+             "GW%08X%08X%08X", ser_id[0], ser_id[1], ser_id[2]);
     hw_usb_init();
 }
 

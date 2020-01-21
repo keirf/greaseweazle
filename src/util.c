@@ -142,25 +142,6 @@ char *strcpy(char *dest, const char *src)
     return dest;
 }
 
-void base64(char *dest, const char *src, size_t bits)
-{
-    static const char base64[] =
-        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-
-    char *p = dest;
-    unsigned int i, j, x;
-
-    for (i = 0; i < bits; ) {
-        x = 0;
-        for (j = 0; j < 6; j++, i++) {
-            x <<= 1;
-            x |= (src[i>>3] >> (i&7)) & 1;
-        }
-        *p++ = base64[x];
-    }
-    *p++ = '\0';
-}
-
 /*
  * Local variables:
  * mode: C

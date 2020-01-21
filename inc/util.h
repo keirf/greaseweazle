@@ -65,8 +65,6 @@ int vsnprintf(char *str, size_t size, const char *format, va_list ap)
 int snprintf(char *str, size_t size, const char *format, ...)
     __attribute__ ((format (printf, 3, 4)));
 
-void base64(char *dest, const char *src, size_t bits);
-
 #define le16toh(x) (x)
 #define le32toh(x) (x)
 #define htole16(x) (x)

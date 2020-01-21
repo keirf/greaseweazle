@@ -48,6 +48,7 @@ extern const uint8_t config_descriptor[];
 
 #define NR_STRING_DESC 4
 extern char * const string_descriptors[];
+extern char serial_string[32];
 
 extern struct ep0 {
     struct usb_device_request req;
