@@ -57,25 +57,39 @@ def with_drive_selected(fn, usb, args):
 def valid_ser_id(ser_id):
     return ser_id and ser_id.upper().startswith("GW")
 
-def find_port(ser_id=None):
+def find_port(old_port=None):
+    # If we are reopening, and we know the location of the old port, require
+    # to match on location.
+    if old_port and old_port.location:
+        for x in serial.tools.list_ports.comports():
+            if x.location and x.location == old_port.location:
+                return x.device
+        return None
+    # Score each serial port
+    best_score, best_port = 0, None
     for x in serial.tools.list_ports.comports():
-        if x.manufacturer == "Keir Fraser":
-            if not valid_ser_id(x.serial_number) or not valid_ser_id(ser_id) \
-               or x.serial_number == ser_id:
-                return x.device
-        elif x.manufacturer == "Microsoft" and x.vid == 0x1209 \
-             and x.pid == 0x0001:
-            if not valid_ser_id(x.serial_number) or not valid_ser_id(ser_id) \
-               or x.serial_number == ser_id:
-                return x.device
-    raise serial.SerialException('Could not auto-detect Greaseweazle device')
+        score = 0
+        if x.manufacturer == "Keir Fraser" and x.product == "Greaseweazle":
+            score = 20
+        elif x.vid == 0x1209 and x.pid == 0x0001:
+            score = 10
+        if score > 0 and valid_ser_id(x.serial_number):
+            if not old_port or not valid_ser_id(old_port.serial_number):
+                score = 20
+            elif x.serial_number == old_port.serial_number:
+                score = 30
+            else:
+                score = 0
+        if score > best_score:
+            best_score, best_port = score, x
+    if best_port:
+        return best_port.device
+    raise serial.SerialException('Could not auto-probe Greaseweazle device')
 
-def get_ser_id(devname):
+def port_info(devname):
     for x in serial.tools.list_ports.comports():
         if x.device == devname:
-            if valid_ser_id(x.serial_number):
-                return x.serial_number
-            return None
+            return x
     return None
 
 def usb_reopen(usb, is_update):
@@ -90,15 +104,14 @@ def usb_reopen(usb, is_update):
     for i in range(10):
         time.sleep(0.5)
         try:
-            devicename = find_port(usb.ser_id)
+            devicename = find_port(usb.port_info)
             new_ser = serial.Serial(devicename)
         except serial.SerialException:
             # Device not found
             pass
         else:
             new_usb = USB.Unit(new_ser)
-            new_usb.ser_id = usb.ser_id
-            new_usb.devname = devicename
+            new_usb.port_info = port_info(devicename)
             return new_usb
     raise serial.SerialException('Could not reopen port after mode switch')
 
@@ -109,8 +122,7 @@ def usb_open(devicename, is_update=False):
         devicename = find_port()
     
     usb = USB.Unit(serial.Serial(devicename))
-    usb.ser_id = get_ser_id(devicename)
-    usb.devname = devicename
+    usb.port_info = port_info(devicename)
 
     print("** %s v%u.%u [F%u], Host Tools v%u.%u"
           % (("Greaseweazle", "Bootloader")[usb.update_mode],
