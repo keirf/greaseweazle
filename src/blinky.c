@@ -142,7 +142,7 @@ static void spi_test(SPI spi, int nr)
 
 static void tim_test(TIM tim, int nr)
 {
-    /* Configure to overflow at 2Hz. */
+    /* Configure to overflow every 500ms. */
     printk("Testing TIM%d... ", nr);
     tim->psc = sysclk_us(100)-1;
     tim->arr = 5000-1;
@@ -268,7 +268,7 @@ int main(void)
     spi_test(spi2, 2);
 #endif
 
-    /* Test TIM peripherals, set up to overflow at 2Hz. */
+    /* Test TIM peripherals, set up to overflow every 500ms. */
 #if NR_TIM >= 1
     tim_test(tim1, 1);
 #endif
@@ -295,7 +295,7 @@ int main(void)
     /* Test Flash. */
     flash_test();
 
-    /* Enable TIM4 IRQ, to be triggered at 2Hz. */
+    /* Enable TIM4 IRQ, to be triggered every 500ms. */
     printk("Enable TIM4 IRQ... ");
     IRQx_set_prio(IRQ_TIM4, TIMER_IRQ_PRI);
     IRQx_clear_pending(IRQ_TIM4);
