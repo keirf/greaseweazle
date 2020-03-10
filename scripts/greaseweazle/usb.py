@@ -33,6 +33,7 @@ class Cmd:
     Deselect        = 13
     SetBusType      = 14
     SetPin          = 15
+    Reset           = 16
     str = {
         GetInfo: "GetInfo",
         Update: "Update",
@@ -49,7 +50,8 @@ class Cmd:
         Select: "Select",
         Deselect: "Deselect",
         SetBusType: "SetBusType",
-        SetPin: "SetPin"
+        SetPin: "SetPin",
+        Reset: "Reset"
     }
 
 
@@ -185,6 +187,12 @@ class Unit:
     ## Set a pin level.
     def set_pin(self, pin, level):
         self._send_cmd(struct.pack("4B", Cmd.SetPin, 4, pin, int(level)))
+
+
+    ## power_on_reset:
+    ## Re-initialise to power-on defaults.
+    def power_on_reset(self):
+        self._send_cmd(struct.pack("2B", Cmd.Reset, 2))
 
 
     ## drive_select:

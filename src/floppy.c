@@ -34,7 +34,8 @@ static struct {
     bool_t motor;
 } unit[3];
 
-static struct gw_delay delay_params = {
+static struct gw_delay delay_params;
+static const struct gw_delay factory_delay_params = {
     .select_delay = 10,
     .step_delay = 3000,
     .seek_settle = 15,
@@ -114,16 +115,9 @@ static void step_one_in(void)
     delay_us(delay_params.step_delay);
 }
 
-static bool_t set_bus_type(uint8_t type)
+static void _set_bus_type(uint8_t type)
 {
     int i;
-
-    if (type == bus_type)
-        return TRUE;
-
-    if (type > BUS_SHUGART)
-        return FALSE;
-
     bus_type = type;
     unit_nr = -1;
     for (i = 0; i < ARRAY_SIZE(unit); i++) {
@@ -131,6 +125,17 @@ static bool_t set_bus_type(uint8_t type)
         unit[i].motor = FALSE;
     }
     reset_bus();
+}
+
+static bool_t set_bus_type(uint8_t type)
+{
+    if (type == bus_type)
+        return TRUE;
+
+    if (type > BUS_SHUGART)
+        return FALSE;
+
+    _set_bus_type(type);
 
     return TRUE;
 }
@@ -240,7 +245,9 @@ void floppy_init(void)
     IRQx_set_prio(irq_index, INDEX_IRQ_PRI);
     IRQx_enable(irq_index);
 
-    set_bus_type(BUS_NONE);
+    delay_params = factory_delay_params;
+
+    _set_bus_type(BUS_NONE);
 }
 
 static struct gw_info gw_info = {
@@ -864,6 +871,14 @@ static void process_command(void)
             goto out;
         }
         gpio_write_pin(gpio_densel, pin_densel, level);
+        break;
+    }
+    case CMD_RESET: {
+        if (len != 2)
+            goto bad_command;
+        delay_params = factory_delay_params;
+        _set_bus_type(BUS_NONE);
+        write_pin(densel, FALSE);
         break;
     }
     case CMD_SWITCH_FW_MODE: {
