@@ -24,7 +24,7 @@ def read_to_image(usb, args):
     for cyl in range(args.scyl, args.ecyl+1):
         for side in range(0, args.nr_sides):
             print("\rReading Track %u.%u..." % (cyl, side), end="")
-            usb.seek(cyl, side)
+            usb.seek((cyl, cyl*2)[args.double_step], side)
             image.append_track(usb.read_track(args.revs))
 
     print()
@@ -48,6 +48,8 @@ def main(argv):
                         help="last cylinder to read")
     parser.add_argument("--single-sided", action="store_true",
                         help="single-sided read")
+    parser.add_argument("--double-step", action="store_true",
+                        help="double-step drive heads")
     parser.add_argument("file", help="output filename")
     parser.add_argument("device", nargs="?", default="auto",
                         help="serial device")
