@@ -3,6 +3,15 @@
 ** Keir Fraser <keir.xen@gmail.com>
 ************************************
 
+** v0.12 - 10 March 2020
+ - GW Autodetect: General improvements, and now works on Windows 7
+ - New read parameter --double-step to double-step drive heads
+   - Useful for reading a 40-cylinder disk in an 80-cylinder drive
+ - New 'pin' command allows a floppy pin to be set to specified level
+   - Currently supported only for pin 2 (DENSEL)
+ - New 'reset' command resets the Greaseweazle to power-on settings
+   - Motors off, drives deselected, power-on pin levels and delay values
+
 ** v0.11 - 21 January 2020
  - GW.py: Auto-detect the COM/serial port device name
    - The device argument is now optional!
