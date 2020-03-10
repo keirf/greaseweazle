@@ -32,6 +32,7 @@ class Cmd:
     Select          = 12
     Deselect        = 13
     SetBusType      = 14
+    SetPin          = 15
     str = {
         GetInfo: "GetInfo",
         Update: "Update",
@@ -47,22 +48,24 @@ class Cmd:
         SwitchFwMode: "SwitchFwMode",
         Select: "Select",
         Deselect: "Deselect",
-        SetBusType: "SetBusType"
+        SetBusType: "SetBusType",
+        SetPin: "SetPin"
     }
 
 
 ## Command responses/acknowledgements
 class Ack:
-    Okay            = 0
-    BadCommand      = 1
-    NoIndex         = 2
-    NoTrk0          = 3
-    FluxOverflow    = 4
-    FluxUnderflow   = 5
-    Wrprot          = 6
-    NoUnit          = 7
-    NoBus           = 8
-    BadUnit         = 9
+    Okay            =  0
+    BadCommand      =  1
+    NoIndex         =  2
+    NoTrk0          =  3
+    FluxOverflow    =  4
+    FluxUnderflow   =  5
+    Wrprot          =  6
+    NoUnit          =  7
+    NoBus           =  8
+    BadUnit         =  9
+    BadPin          = 10
     str = {
         Okay: "Okay",
         BadCommand: "Bad Command",
@@ -73,7 +76,8 @@ class Ack:
         Wrprot: "Disk is Write Protected",
         NoUnit: "No drive unit selected",
         NoBus: "No bus type (eg. Shugart, IBM/PC) specified",
-        BadUnit: "Bad unit number"
+        BadUnit: "Bad unit number",
+        BadPin: "Not a modifiable pin"
     }
 
 
@@ -175,6 +179,12 @@ class Unit:
     ## Set the floppy bus type.
     def set_bus_type(self, type):
         self._send_cmd(struct.pack("3B", Cmd.SetBusType, 3, type))
+
+
+    ## set_pin:
+    ## Set a pin level.
+    def set_pin(self, pin, level):
+        self._send_cmd(struct.pack("4B", Cmd.SetPin, 4, pin, int(level)))
 
 
     ## drive_select:

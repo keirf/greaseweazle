@@ -854,6 +854,18 @@ static void process_command(void)
             goto bad_command;
         break;
     }
+    case CMD_SET_PIN: {
+        uint8_t pin = u_buf[2];
+        uint8_t level = u_buf[3];
+        if ((len != 4) || (level & ~1))
+            goto bad_command;
+        if (pin != 2) {
+            u_buf[1] = ACK_BAD_PIN;
+            goto out;
+        }
+        gpio_write_pin(gpio_densel, pin_densel, level);
+        break;
+    }
     case CMD_SWITCH_FW_MODE: {
         uint8_t mode = u_buf[2];
         if ((len != 3) || (mode & ~1))

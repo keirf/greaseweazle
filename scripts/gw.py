@@ -12,7 +12,7 @@
 import sys
 import importlib
 
-actions = [ 'read', 'write', 'delays', 'update' ]
+actions = [ 'read', 'write', 'delays', 'update', 'pin' ]
 argv = sys.argv
 
 if len(argv) < 2 or argv[1] not in actions:

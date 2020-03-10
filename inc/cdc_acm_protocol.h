@@ -49,7 +49,9 @@
 #define CMD_DESELECT       13
 /* CMD_SET_BUS_TYPE, length=3, bus_type. Set the bus type. */
 #define CMD_SET_BUS_TYPE   14
-#define CMD_MAX            14
+/* CMD_SET_PIN, length=4, pin#, level. */
+#define CMD_SET_PIN        15
+#define CMD_MAX            15
 
 
 /*
@@ -73,6 +75,7 @@
 #define ACK_NO_UNIT         7
 #define ACK_NO_BUS          8
 #define ACK_BAD_UNIT        9
+#define ACK_BAD_PIN        10
 
 
 /*
