@@ -26,8 +26,11 @@ def write_from_image(usb, args):
     image_class = util.get_image_class(args.file)
     if not image_class:
         return
-    with open(args.file, "rb") as f:
-        image = image_class.from_file(f.read())
+    if hasattr(image_class, 'from_filename'):
+        image = image_class.from_filename(args.file)
+    else:
+        with open(args.file, "rb") as f:
+            image = image_class.from_file(f.read())
 
     for cyl in range(args.scyl, args.ecyl+1):
         for side in range(0, args.nr_sides):

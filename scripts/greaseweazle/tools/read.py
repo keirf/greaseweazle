@@ -19,7 +19,11 @@ def read_to_image(usb, args):
     image_class = util.get_image_class(args.file)
     if not image_class:
         return
-    image = image_class(args.scyl, args.nr_sides)
+    if not hasattr(image_class, 'to_file'):
+        print("%s: Cannot create %s image files"
+              % (args.file, image_class.__name__))
+        return
+    image = image_class.to_file(args.scyl, args.nr_sides)
 
     for cyl in range(args.scyl, args.ecyl+1):
         for side in range(0, args.nr_sides):

@@ -14,6 +14,7 @@ from greaseweazle import version
 from greaseweazle import usb as USB
 from greaseweazle.image.scp import SCP
 from greaseweazle.image.hfe import HFE
+from greaseweazle.image.ipf import IPF
 
 
 def drive_letter(letter):
@@ -30,10 +31,10 @@ def drive_letter(letter):
 
 
 def get_image_class(name):
-    image_types = { '.scp': SCP, '.hfe': HFE }
+    image_types = { '.scp': SCP, '.hfe': HFE, '.ipf': IPF }
     _, ext = os.path.splitext(name)
     if not ext.lower() in image_types:
-        print("**Error: Unrecognised file suffix '%s'" % ext)
+        print("%s: Unrecognised file suffix '%s'" % (name, ext))
         return None
     return image_types[ext.lower()]
 

@@ -22,6 +22,12 @@ class SCP:
 
 
     @classmethod
+    def to_file(cls, start_cyl, nr_sides):
+        hfe = cls(start_cyl, nr_sides)
+        return hfe
+
+
+    @classmethod
     def from_file(cls, dat):
 
         header = struct.unpack("<3s9BI", dat[0:16])

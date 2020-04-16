@@ -24,16 +24,19 @@ class Flux:
 
 
     @classmethod
-    def from_bitarray(cls, bitarray, bitrate):
+    def from_bitarray(cls, bitarray, bitrate, timing=None):
+        if not timing:
+            timing = [1000] * len(bitarray)
+        timing_i = iter(timing)
         flux_list = []
         count = 0
         for bit in bitarray:
-            count += 1
+            count += next(timing_i)
             if bit:
                 flux_list.append(count)
                 count = 0
         flux_list[0] += count
-        return Flux([sum(flux_list)], flux_list, bitrate)
+        return Flux([sum(flux_list)], flux_list, bitrate * 1000)
 
  
 # Local variables:

@@ -23,6 +23,12 @@ class HFE:
 
 
     @classmethod
+    def to_file(cls, start_cyl, nr_sides):
+        hfe = cls(start_cyl, nr_sides)
+        return hfe
+
+
+    @classmethod
     def from_file(cls, dat):
 
         (sig, f_rev, nr_cyls, nr_sides, t_enc, bitrate,
