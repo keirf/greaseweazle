@@ -83,6 +83,7 @@ static enum {
     ST_write_flux_wait_index,
     ST_write_flux,
     ST_write_flux_drain,
+    ST_erase_flux,
 } floppy_state = ST_inactive;
 
 static uint8_t u_buf[8192];
@@ -271,7 +272,10 @@ static void floppy_end_command(void *ack, unsigned int ack_len)
  */
 
 static struct {
-    time_t start;
+    union {
+        time_t start; /* read, write: Time at which read/write started. */
+        time_t end;   /* erase: Time at which to end the erasure. */
+    };
     uint8_t status;
     uint8_t idx, nr_idx;
     bool_t packet_ready;
@@ -364,7 +368,7 @@ static void rdata_encode_flux(void)
     rw.ticks_since_index = ticks_since_index;
 }
 
-static uint8_t floppy_read_prep(struct gw_read_flux *rf)
+static uint8_t floppy_read_prep(const struct gw_read_flux *rf)
 {
     if ((rf->nr_idx == 0) || (rf->nr_idx > gw_info.max_index))
         return ACK_BAD_COMMAND;
@@ -583,7 +587,7 @@ static void floppy_process_write_packet(void)
     }
 }
 
-static uint8_t floppy_write_prep(struct gw_write_flux *wf)
+static uint8_t floppy_write_prep(const struct gw_write_flux *wf)
 {
     if (get_wrprot() == LOW)
         return ACK_WRPROT;
@@ -734,6 +738,39 @@ static void floppy_write_drain(void)
     floppy_end_command(u_buf, 1);
 }
 
+
+/*
+ * ERASE PATH
+ */
+
+static uint8_t floppy_erase_prep(const struct gw_erase_flux *ef)
+{
+    if (get_wrprot() == LOW)
+        return ACK_WRPROT;
+
+    write_pin(wgate, TRUE);
+
+    floppy_state = ST_erase_flux;
+    memset(&rw, 0, sizeof(rw));
+    rw.status = ACK_OKAY;
+    rw.end = time_now() + time_from_samples(ef->erase_ticks);
+
+    return ACK_OKAY;
+}
+
+static void floppy_erase(void)
+{
+    if (time_since(rw.end) < 0)
+        return;
+
+    write_pin(wgate, FALSE);
+
+    /* ACK with Status byte. */
+    u_buf[0] = rw.status;
+    floppy_state = ST_command_wait;
+    floppy_end_command(u_buf, 1);
+}
+
 static void process_command(void)
 {
     uint8_t cmd = u_buf[0];
@@ -809,7 +846,6 @@ static void process_command(void)
         memcpy(&wf, &u_buf[2], len-2);
         u_buf[1] = floppy_write_prep(&wf);
         goto out;
-
     }
     case CMD_GET_FLUX_STATUS: {
         if (len != 2)
@@ -863,6 +899,14 @@ static void process_command(void)
         _set_bus_type(BUS_NONE);
         write_pin(densel, FALSE);
         break;
+    }
+    case CMD_ERASE_FLUX: {
+        struct gw_erase_flux ef;
+        if (len != (2 + sizeof(ef)))
+            goto bad_command;
+        memcpy(&ef, &u_buf[2], len-2);
+        u_buf[1] = floppy_erase_prep(&ef);
+        goto out;
     }
     case CMD_SWITCH_FW_MODE: {
         uint8_t mode = u_buf[2];
@@ -956,6 +1000,10 @@ void floppy_process(void)
 
     case ST_write_flux_drain:
         floppy_write_drain();
+        break;
+
+    case ST_erase_flux:
+        floppy_erase();
         break;
 
     default:

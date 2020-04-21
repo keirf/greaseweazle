@@ -16,12 +16,11 @@ from greaseweazle import usb as USB
 # Writes the specified image file to floppy disk.
 def write_from_image(usb, args):
 
-    if args.adjust_speed:
-        # @drive_ticks is the time in Gresaeweazle ticks between index pulses.
-        # We will adjust the flux intervals per track to allow for this.
-        flux = usb.read_track(2)
-        drive_ticks = (flux.index_list[0] + flux.index_list[1]) / 2
-        del flux
+    # @drive_ticks is the time in Gresaeweazle ticks between index pulses.
+    # We will adjust the flux intervals per track to allow for this.
+    flux = usb.read_track(2)
+    drive_ticks = (flux.index_list[0] + flux.index_list[1]) / 2
+    del flux
 
     # Read and parse the image file.
     image_class = util.get_image_class(args.file)
@@ -33,20 +32,17 @@ def write_from_image(usb, args):
     for cyl in range(args.scyl, args.ecyl+1):
         for side in range(0, args.nr_sides):
 
-            flux = image.get_track(cyl, side, writeout=True)
-            if not flux:
-                continue
-
             print("\rWriting Track %u.%u..." % (cyl, side), end="")
             usb.seek(cyl, side)
 
-            if args.adjust_speed:
-                # @factor adjusts flux times for speed variations between the
-                # read-in and write-out drives.
-                factor = drive_ticks / flux.index_list[0]
-            else:
-                # Simple ratio between the GW and image sample frequencies.
-                factor = usb.sample_freq / flux.sample_freq
+            flux = image.get_track(cyl, side, writeout=True)
+            if not flux:
+                usb.erase_track(drive_ticks * 1.1)
+                continue
+            
+            # @factor adjusts flux times for speed variations between the
+            # read-in and write-out drives.
+            factor = drive_ticks / flux.index_list[0]
 
             # Convert the flux samples to Greaseweazle sample frequency.
             rem = 0.0
@@ -75,8 +71,6 @@ def main(argv):
                         help="last cylinder to write")
     parser.add_argument("--single-sided", action="store_true",
                         help="single-sided write")
-    parser.add_argument("--adjust-speed", action="store_true",
-                        help="adjust write-flux times for drive speed")
     parser.add_argument("file", help="input filename")
     parser.add_argument("device", nargs="?", default="auto",
                         help="serial device")

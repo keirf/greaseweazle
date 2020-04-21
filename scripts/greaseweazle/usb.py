@@ -34,6 +34,7 @@ class Cmd:
     SetBusType      = 14
     SetPin          = 15
     Reset           = 16
+    EraseFlux       = 17
     str = {
         GetInfo: "GetInfo",
         Update: "Update",
@@ -51,7 +52,8 @@ class Cmd:
         Deselect: "Deselect",
         SetBusType: "SetBusType",
         SetPin: "SetPin",
-        Reset: "Reset"
+        Reset: "Reset",
+        EraseFlux: "EraseFlux"
     }
 
 
@@ -368,6 +370,14 @@ class Unit:
             else:
                 # Success!
                 break
+
+
+    ## erase_track:
+    ## Erase the current track via Greaseweazle.
+    def erase_track(self, ticks):
+        self._send_cmd(struct.pack("<2BI", Cmd.EraseFlux, 6, int(ticks)))
+        self.ser.read(1) # Sync with Greaseweazle
+        self._send_cmd(struct.pack("2B", Cmd.GetFluxStatus, 2))
 
 
     ##

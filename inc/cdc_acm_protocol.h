@@ -53,7 +53,9 @@
 #define CMD_SET_PIN        15
 /* CMD_RESET, length=2. Reset all state to initial (power on) values. */
 #define CMD_RESET          16
-#define CMD_MAX            16
+/* CMD_ERASE_FLUX, length=6. Argument is gw_erase_flux. */
+#define CMD_ERASE_FLUX     17
+#define CMD_MAX            17
 
 
 /*
@@ -111,6 +113,11 @@ struct packed gw_read_flux {
 /* CMD_WRITE_FLUX */
 struct packed gw_write_flux {
     uint8_t terminate_at_index; /* default: 0 */
+};
+
+/* CMD_ERASE_FLUX */
+struct packed gw_erase_flux {
+    uint32_t erase_ticks;
 };
 
 /* CMD_{GET,SET}_PARAMS, index 0 */
