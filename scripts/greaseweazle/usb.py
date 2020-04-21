@@ -355,7 +355,7 @@ class Unit:
         while True:
             try:
                 # Write the flux stream to the track via Greaseweazle.
-                self._send_cmd(struct.pack("<2BIB", Cmd.WriteFlux, 7, 0, 1))
+                self._send_cmd(struct.pack("3B", Cmd.WriteFlux, 3, 1))
                 self.ser.write(dat)
                 self.ser.read(1) # Sync with Greaseweazle
                 self._send_cmd(struct.pack("2B", Cmd.GetFluxStatus, 2))

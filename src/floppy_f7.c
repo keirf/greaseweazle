@@ -61,9 +61,6 @@ typedef uint32_t timcnt_t;
 #define irq_index 8
 void IRQ_8(void) __attribute__((alias("IRQ_INDEX_changed"))); /* EXTI2 */
 
-#define irq_index_delay 31
-void IRQ_31(void) __attribute__((alias("IRQ_INDEX_delay")));
-
 static void floppy_mcu_init(void)
 {
     /* Enable clock for Timer 2. */

@@ -54,13 +54,7 @@ static struct index {
     volatile unsigned int count;
     /* For synchronising index pulse reporting to the RDATA flux stream. */
     volatile unsigned int rdata_cnt;
-    /* Following fields are for delayed-index writes. */
-    unsigned int delay;
-    struct timer delay_timer;
-    time_t timestamp;
 } index;
-
-static void index_delay_timer(void *unused);
 
 /* A DMA buffer for running a timer associated with a floppy-data I/O pin. */
 static struct dma_ring {
@@ -237,9 +231,6 @@ void floppy_init(void)
     configure_pin(wrprot, GPI_bus);
 
     /* Configure INDEX-changed IRQs and timer. */
-    timer_init(&index.delay_timer, index_delay_timer, NULL);
-    IRQx_set_prio(irq_index_delay, TIMER_IRQ_PRI);
-    IRQx_enable(irq_index_delay);
     exti->rtsr = 0;
     exti->imr = exti->ftsr = m(pin_index);
     IRQx_set_prio(irq_index, INDEX_IRQ_PRI);
@@ -611,7 +602,6 @@ static uint8_t floppy_write_prep(struct gw_write_flux *wf)
     memset(&rw, 0, sizeof(rw));
     rw.status = ACK_OKAY;
 
-    index.delay = time_from_samples(wf->index_delay_ticks);
     rw.terminate_at_index = wf->terminate_at_index;
 
     return ACK_OKAY;
@@ -742,13 +732,6 @@ static void floppy_write_drain(void)
     u_buf[0] = rw.status;
     floppy_state = ST_command_wait;
     floppy_end_command(u_buf, 1);
-
-    /* Reset INDEX handling. */
-    IRQ_global_disable();
-    index.delay = 0;
-    IRQx_clear_pending(irq_index_delay);
-    timer_cancel(&index.delay_timer);
-    IRQ_global_enable();
 }
 
 static void process_command(void)
@@ -990,29 +973,13 @@ const struct usb_class_ops usb_cdc_acm_ops = {
  * INTERRUPT HANDLERS
  */
 
-static void index_delay_timer(void *unused)
-{
-    index.count++;
-}
-
-static void IRQ_INDEX_delay(void)
-{
-    timer_set(&index.delay_timer, index.timestamp + index.delay);
-}
-
 static void IRQ_INDEX_changed(void)
 {
     /* Clear INDEX-changed flag. */
     exti->pr = m(pin_index);
 
+    index.count++;
     index.rdata_cnt = tim_rdata->cnt;
-    index.timestamp = time_now();
-
-    if (index.delay != 0) {
-        IRQx_set_pending(irq_index_delay);
-    } else {
-        index.count++;
-    }
 }
 
 /*

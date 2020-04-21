@@ -57,9 +57,6 @@ typedef uint16_t timcnt_t;
 #define irq_index 23
 void IRQ_23(void) __attribute__((alias("IRQ_INDEX_changed"))); /* EXTI9_5 */
 
-#define irq_index_delay 31
-void IRQ_31(void) __attribute__((alias("IRQ_INDEX_delay")));
-
 static void floppy_mcu_init(void)
 {
     /* Determine whether input pins must be internally pulled down. */

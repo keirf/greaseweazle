@@ -33,7 +33,7 @@
 /* CMD_READ_FLUX, length=2-3. Optionally include all or part of gw_read_flux.
  * Returns flux readings until EOStream. */
 #define CMD_READ_FLUX       7
-/* CMD_WRITE_FLUX, length=2-7. Optionally include all or part of gw_write_flux.
+/* CMD_WRITE_FLUX, length=2-3. Optionally include all or part of gw_write_flux.
  * Host follows with flux readings until EOStream. */
 #define CMD_WRITE_FLUX      8
 /* CMD_GET_FLUX_STATUS, length=2. Last read/write status returned in ACK. */
@@ -110,7 +110,6 @@ struct packed gw_read_flux {
 
 /* CMD_WRITE_FLUX */
 struct packed gw_write_flux {
-    uint32_t index_delay_ticks; /* default: 0 */
     uint8_t terminate_at_index; /* default: 0 */
 };
 
