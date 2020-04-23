@@ -5,7 +5,7 @@
 # This is free and unencumbered software released into the public domain.
 # See the file COPYING for more details, or visit <http://unlicense.org>.
 
-import os
+import os, sys
 import platform
 import ctypes as ct
 from bitarray import bitarray
@@ -252,8 +252,12 @@ def open_libcaps():
             break
         except:
             pass
-    assert "lib" in locals(), "Could not find SPS/CAPS IPF decode library"
-    print(name)
+    if "lib" not in locals():
+        print("""\
+ERROR: Could not find SPS/CAPS IPF decode library.
+For installation instructions please read:
+<https://github.com/keirf/Greaseweazle/wiki/IPF-Images>""")
+        sys.exit()
     
     # We have opened the library. Now initialise it.
     res = lib.CAPSInit()
