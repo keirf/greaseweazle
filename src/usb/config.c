@@ -16,7 +16,7 @@ const uint8_t device_descriptor[] aligned(2) = {
     2, 0, 0,   /* Class, Subclass, Protocol: CDC */
     64,        /* Max Packet Size */
     0x09,0x12, /* VID = pid.codes Open Source projects */
-    0x01,0x00, /* PID = Test PID #1 */
+    0x69,0x4D, /* PID = Keir Fraser Greaseweazle */
     0,1,       /* Device Release 1.0 */
     1,2,3,     /* Manufacturer, Product, Serial */
     1          /* Number of configurations */

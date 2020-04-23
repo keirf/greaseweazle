@@ -72,7 +72,11 @@ def find_port(old_port=None):
         score = 0
         if x.manufacturer == "Keir Fraser" and x.product == "Greaseweazle":
             score = 20
+        elif x.vid == 0x1209 and x.pid == 0x4d69:
+            # Our very own properly-assigned PID. Guaranteed to be us.
+            score = 20
         elif x.vid == 0x1209 and x.pid == 0x0001:
+            # Our old shared Test PID. It's not guaranteed to be us.
             score = 10
         if score > 0 and valid_ser_id(x.serial_number):
             if not old_port or not valid_ser_id(old_port.serial_number):
