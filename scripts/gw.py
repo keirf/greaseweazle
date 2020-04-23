@@ -11,6 +11,36 @@
 
 import sys
 import importlib
+import platform
+
+try:
+    import bitarray
+except ModuleNotFoundError:
+    print("""\
+Please install module 'bitarray'. This may require a C compiler.""")
+    if platform.system() == "Windows":
+        print("""\
+Windows: Either install Visual Studio, or download a pre-built bitarray
+wheel from https://lfd.uci.edu/~gohlke/pythonlibs/#bitarray""")
+    elif platform.system() == "Darwin":
+        print("""\
+macOS: Install Xcode from App Store.""")
+    else:
+        print("""\
+Linux: Install GCC using your package manager (eg. apt install gcc)""")
+    sys.exit()
+
+try:
+    import crcmod
+except ModuleNotFoundError:
+    print("Please install module 'crcmod'.")
+    sys.exit()
+
+try:
+    import serial.tools.list_ports
+except ModuleNotFoundError:
+    print("Please install module 'pyserial'.")
+    sys.exit()
 
 actions = [ 'read', 'write', 'delays', 'update', 'pin', 'reset' ]
 argv = sys.argv
