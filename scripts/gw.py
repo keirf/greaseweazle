@@ -11,22 +11,23 @@
 
 import sys
 import importlib
+from greaseweazle import error
 
 missing_modules = []
 
 try:
     import bitarray
-except ModuleNotFoundError:
+except ImportError:
     missing_modules.append("bitarray")
     
 try:
     import crcmod
-except ModuleNotFoundError:
+except ImportError:
     missing_modules.append("crcmod")
     
 try:
     import serial.tools.list_ports
-except ModuleNotFoundError:
+except ImportError:
     missing_modules.append("pyserial")
 
 if missing_modules:
@@ -48,9 +49,14 @@ if len(argv) < 2 or argv[1] not in actions:
 
 mod = importlib.import_module('greaseweazle.tools.' + argv[1])
 main = mod.__dict__['main']
-res = main(argv)
-if res is None:
-    res = 0
+try:
+    res = main(argv)
+    if res is None:
+        res = 0
+except error.Fatal as err:
+    print("** FATAL ERROR:")
+    print(err)
+    res = 1
 sys.exit(res)
     
 # Local variables:

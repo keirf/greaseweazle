@@ -7,6 +7,7 @@
 
 import struct
 
+from greaseweazle import error
 from greaseweazle.flux import Flux
 from greaseweazle.bitcell import Bitcell
 from bitarray import bitarray
@@ -33,11 +34,11 @@ class HFE:
 
         (sig, f_rev, nr_cyls, nr_sides, t_enc, bitrate,
          _, _, _, tlut_base) = struct.unpack("<8s4B2H2BH", dat[:20])
-        assert sig != b"HXCHFEV3", "HFEv3 is not supported"
-        assert sig == b"HXCPICFE" and f_rev <= 1, "Not a valid HFE file"
-        assert 0 < nr_cyls
-        assert 0 < nr_sides < 3
-        assert bitrate != 0
+        error.check(sig != b"HXCHFEV3", "HFEv3 is not supported")
+        error.check(sig == b"HXCPICFE" and f_rev <= 1, "Not a valid HFE file")
+        error.check(0 < nr_cyls, "HFE: Invalid #cyls")
+        error.check(0 < nr_sides < 3, "HFE: Invalid #sides")
+        error.check(bitrate != 0, "HFE: Invalid bitrate")
         
         hfe = cls(0, nr_sides)
         hfe.bitrate = bitrate

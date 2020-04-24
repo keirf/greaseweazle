@@ -7,6 +7,7 @@
 
 import struct
 from greaseweazle import version
+from greaseweazle import error
 from greaseweazle.flux import Flux
 
 ## Control-Path command set
@@ -167,7 +168,8 @@ class Unit:
     def _send_cmd(self, cmd):
         self.ser.write(cmd)
         (c,r) = struct.unpack("2B", self.ser.read(2))
-        assert c == cmd[0]
+        error.check(c == cmd[0], "Command returned garbage (%02x != %02x)"
+                    % (c, cmd[0]))
         if r != 0:
             raise CmdError(c, r)
 
@@ -260,7 +262,7 @@ class Unit:
                     flux.append(val)
         except StopIteration:
             pass
-        assert flux[-1] == 0
+        error.check(flux[-1] == 0, "Missing terminator on flux read stream")
         return flux[:-1]
 
 

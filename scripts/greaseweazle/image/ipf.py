@@ -10,6 +10,7 @@ import platform
 import ctypes as ct
 from bitarray import bitarray
 from greaseweazle.flux import Flux
+from greaseweazle import error
 
 class CapsDateTimeExt(ct.Structure):
     _pack_ = 1
@@ -139,15 +140,15 @@ class IPF:
         ipf = cls(0, 0)
 
         ipf.iid = ipf.lib.CAPSAddImage()
-        assert ipf.iid >= 0, "Could not create IPF image container"
+        error.check(ipf.iid >= 0, "Could not create IPF image container")
         cname = ct.c_char_p(name.encode())
         res = ipf.lib.CAPSLockImage(ipf.iid, cname)
-        assert res == 0, "Could not open IPF image '%s'" % name
+        error.check(res == 0, "Could not open IPF image '%s'" % name)
         res = ipf.lib.CAPSLoadImage(ipf.iid, DI_LOCK.def_flags)
-        assert res == 0, "Could not load IPF image '%s'" % name
+        error.check(res == 0, "Could not load IPF image '%s'" % name)
         ipf.pi = CapsImageInfo()
         res = ipf.lib.CAPSGetImageInfo(ct.byref(ipf.pi), ipf.iid)
-        assert res == 0
+        error.check(res == 0, "Could not get info for IPF '%s'" % name)
         print(ipf)
 
         return ipf
@@ -163,7 +164,7 @@ class IPF:
         ti = CapsTrackInfoT2(2)
         res = self.lib.CAPSLockTrack(ct.byref(ti), self.iid,
                                      cyl, head, DI_LOCK.def_flags)
-        assert res == 0
+        error.check(res == 0, "Could not lock IPF track %d.%d" % (cyl, head))
 
         if not ti.trackbuf:
             return None # unformatted/empty
@@ -179,16 +180,16 @@ class IPF:
         #    si = CapsSectorInfo()
         #    res = self.lib.CAPSGetInfo(ct.byref(si), self.iid,
         #                               cyl, head, 1, i)
-        #    assert res == 0
+        #    error.check(res == 0, "Couldn't get sector info")
         #    # Data is at trackbuf[si.datastart:si.datastart + si.datasize]
         #for i in range(ti.weakcnt):
         #    wi = CapsDataInfo()
         #    res = self.lib.CAPSGetInfo(ct.byref(wi), self.iid,
         #                               cyl, head, 2, i)
-        #    assert res == 0
+        #    error.check(res == 0, "Couldn't get weak data info")
         #    # Weak data at trackbuf[wi.start:wi.start + wi.size]
 
-        assert ti.weakcnt == 0, "Can't yet handle weak data"
+        error.check(ti.weakcnt == 0, "Can't yet handle weak data")
 
         # We don't really have access to the bitrate. It depends on RPM.
         # So we assume a rotation rate of 300 RPM (5 rev/sec).
@@ -252,16 +253,15 @@ def open_libcaps():
             break
         except:
             pass
-    if "lib" not in locals():
-        print("""\
-** Could not find SPS/CAPS IPF decode library
+    
+    error.check("lib" in locals(), """\
+Could not find SPS/CAPS IPF decode library
 For installation instructions please read the wiki:
 <https://github.com/keirf/Greaseweazle/wiki/IPF-Images>""")
-        sys.exit(1)
     
     # We have opened the library. Now initialise it.
     res = lib.CAPSInit()
-    assert res == 0, "Failure initialising %s" % libname
+    error.check(res == 0, "Failure initialising IPF library '%s'" % name)
 
     return lib
 

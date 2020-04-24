@@ -7,6 +7,7 @@
 
 import struct
 
+from greaseweazle import error
 from greaseweazle.flux import Flux
 
 class SCP:
@@ -32,7 +33,7 @@ class SCP:
 
         header = struct.unpack("<3s9BI", dat[0:16])
         (sig, _, _, nr_revs, s_trk, e_trk, flags, _, ss, _, _) = header
-        assert sig == b"SCP"
+        error.check(sig == b"SCP", "SCP: Bad signature")
         nr_sides = 1 if ss else 2
         
         trk_offs = struct.unpack("<168I", dat[16:0x2b0])
@@ -48,8 +49,8 @@ class SCP:
             # Parse the SCP track header and extract the flux data.
             thdr = dat[trk_off:trk_off+4+12*nr_revs]
             sig, tnr, _, _, s_off = struct.unpack("<3sB3I", thdr[:16])
-            assert sig == b"TRK"
-            assert tnr == trknr
+            error.check(sig == b"TRK", "SCP: Missing track signature")
+            error.check(tnr == trknr, "SCP: Wrong track number in header")
             _, e_nr, e_off = struct.unpack("<3I", thdr[-12:])
             tdat = dat[trk_off+s_off:trk_off+e_off+e_nr*2]
 
