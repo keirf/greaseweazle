@@ -3,6 +3,16 @@
 ** Keir Fraser <keir.xen@gmail.com>
 ************************************
 
+** v0.13 - 25 April 2020
+ - HFE: Read & write support
+ - IPF: Preliminary write support
+   - Requires SPS/CAPS support library. See the wiki.
+   - Weak data not yet supported (RNC "Protect Process" protection, & others)
+   - Write splice is always rotated to the index (affects Speedlock & others)
+   - Also TODO: Verified writes
+ - USB: Use the VID:PID pair assigned to Greaseweazle (1201:4d69)
+ - New prerequisite: 'bitarray' module. See the wiki.
+
 ** v0.12 - 10 March 2020
  - GW Autodetect: General improvements, and now works on Windows 7
  - New read parameter --double-step to double-step drive heads
