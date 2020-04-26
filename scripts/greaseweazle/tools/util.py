@@ -65,7 +65,7 @@ def find_port(old_port=None):
         for x in serial.tools.list_ports.comports():
             if x.location and x.location == old_port.location:
                 return x.device
-        return None
+        raise serial.SerialException('Could not reopen Greaseweazle device')
     # Score each serial port
     best_score, best_port = 0, None
     for x in serial.tools.list_ports.comports():
