@@ -88,7 +88,8 @@ static enum {
     ST_sink_bytes,
 } floppy_state = ST_inactive;
 
-static uint8_t u_buf[8192];
+/* We sometimes cast u_buf to uint32_t[], hence the alignment constraint. */
+static uint8_t u_buf[8192] aligned(4);
 static uint32_t u_cons, u_prod;
 #define U_MASK(x) ((x)&(sizeof(u_buf)-1))
 
@@ -778,29 +779,62 @@ static void floppy_erase(void)
  * SINK/SOURCE
  */
 
-/* Reuse space in the R/W state structure. */
-#define ss_todo rw.ticks_since_flux
+static struct {
+    unsigned int todo;
+    unsigned int min_delta;
+    unsigned int max_delta;
+} ss;
+
+static void sink_source_prep(const struct gw_sink_source_bytes *ssb)
+{
+    ss.min_delta = INT_MAX;
+    ss.max_delta = 0;
+    ss.todo = ssb->nr_bytes;
+}
+
+static void ss_update_deltas(int len)
+{
+    uint32_t *u_times = (uint32_t *)u_buf;
+    time_t delta, now = time_now();
+    unsigned int p = u_prod;
+
+    /* Every four bytes we store a timestamp in a u_buf[]-sized ring buffer.
+     * We then record min/max time taken to overwrite a previous timestamp. */
+    while (len--) {
+        if (p++ & 3)
+            continue;
+        delta = time_diff(u_times[U_MASK(p)>>2], now);
+        u_times[U_MASK(p)>>2] = now;
+        if ((delta > ss.max_delta) && (p >= sizeof(u_buf)))
+            ss.max_delta = delta;
+        if ((delta < ss.min_delta) && (p >= sizeof(u_buf)))
+            ss.min_delta = delta;
+    }
+
+    u_prod = p;
+}
 
 static void source_bytes(void)
 {
     if (!ep_tx_ready(EP_TX))
         return;
 
-    if (ss_todo < USB_FS_MPS) {
+    if (ss.todo < USB_FS_MPS) {
         floppy_state = ST_command_wait;
-        floppy_end_command(rw.packet, ss_todo);
+        floppy_end_command(rw.packet, ss.todo);
         return; /* FINISHED */
     }
 
     usb_write(EP_TX, rw.packet, USB_FS_MPS);
-    ss_todo -= USB_FS_MPS;
+    ss.todo -= USB_FS_MPS;
+    ss_update_deltas(USB_FS_MPS);
 }
 
 static void sink_bytes(void)
 {
     int len;
 
-    if (ss_todo == 0) {
+    if (ss.todo == 0) {
         /* We're done: Wait for space to write the ACK byte. */
         if (!ep_tx_ready(EP_TX))
             return;
@@ -817,7 +851,8 @@ static void sink_bytes(void)
 
     /* Read it and adjust byte counter. */
     usb_read(EP_RX, rw.packet, len);
-    ss_todo = (ss_todo <= len) ? 0 : ss_todo - len;
+    ss.todo = (ss.todo <= len) ? 0 : ss.todo - len;
+    ss_update_deltas(len);
 }
 
 
@@ -833,12 +868,27 @@ static void process_command(void)
     switch (cmd) {
     case CMD_GET_INFO: {
         uint8_t idx = u_buf[2];
-        if ((len != 3) || (idx != 0))
+        if (len != 3)
             goto bad_command;
         memset(&u_buf[2], 0, 32);
-        gw_info.fw_major = fw_major;
-        gw_info.fw_minor = fw_minor;
-        memcpy(&u_buf[2], &gw_info, sizeof(gw_info));
+        switch(idx) {
+        case GETINFO_FIRMWARE: /* gw_info */
+            gw_info.fw_major = fw_major;
+            gw_info.fw_minor = fw_minor;
+            memcpy(&u_buf[2], &gw_info, sizeof(gw_info));
+            break;
+        case GETINFO_BW_STATS: /* gw_bw_stats */ {
+            struct gw_bw_stats bw;
+            bw.min_bw.bytes = sizeof(u_buf);
+            bw.min_bw.usecs = ss.max_delta / time_us(1);
+            bw.max_bw.bytes = sizeof(u_buf);
+            bw.max_bw.usecs = ss.min_delta / time_us(1);
+            memcpy(&u_buf[2], &bw, sizeof(bw));
+            break;
+        }
+        default:
+            goto bad_command;
+        }
         resp_sz += 32;
         break;
     }
@@ -958,22 +1008,15 @@ static void process_command(void)
         u_buf[1] = floppy_erase_prep(&ef);
         goto out;
     }
-    case CMD_SOURCE_BYTES: {
-        struct gw_source_bytes sb;
-        if (len != (2 + sizeof(sb)))
-            goto bad_command;
-        memcpy(&sb, &u_buf[2], len-2);
-        ss_todo = sb.nr_bytes;
-        floppy_state = ST_source_bytes;
-        break;
-    }
+    case CMD_SOURCE_BYTES:
     case CMD_SINK_BYTES: {
-        struct gw_sink_bytes sb;
-        if (len != (2 + sizeof(sb)))
+        struct gw_sink_source_bytes ssb;
+        if (len != (2 + sizeof(ssb)))
             goto bad_command;
-        memcpy(&sb, &u_buf[2], len-2);
-        ss_todo = sb.nr_bytes;
-        floppy_state = ST_sink_bytes;
+        memcpy(&ssb, &u_buf[2], len-2);
+        floppy_state = (cmd == CMD_SOURCE_BYTES)
+            ? ST_source_bytes : ST_sink_bytes;
+        sink_source_prep(&ssb);
         break;
     }
     case CMD_SWITCH_FW_MODE: {

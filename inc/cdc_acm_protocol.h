@@ -55,9 +55,9 @@
 #define CMD_RESET          16
 /* CMD_ERASE_FLUX, length=6. Argument is gw_erase_flux. */
 #define CMD_ERASE_FLUX     17
-/* CMD_SOURCE_BYTES, length=6. Argument is gw_source_bytes. */
+/* CMD_SOURCE_BYTES, length=6. Argument is gw_sink_source_bytes. */
 #define CMD_SOURCE_BYTES   18
-/* CMD_SINK_BYTES, length=6. Argument is gw_sink_bytes. */
+/* CMD_SINK_BYTES, length=6. Argument is gw_sink_source_bytes. */
 #define CMD_SINK_BYTES     19
 #define CMD_MAX            19
 
@@ -100,6 +100,7 @@
  */
 
 /* CMD_GET_INFO, index 0 */
+#define GETINFO_FIRMWARE 0
 struct packed gw_info {
     uint8_t fw_major;
     uint8_t fw_minor;
@@ -107,6 +108,15 @@ struct packed gw_info {
     uint8_t max_cmd;
     uint32_t sample_freq;
     uint16_t hw_type;
+};
+
+/* CMD_GET_INFO, index 1 */
+#define GETINFO_BW_STATS 1
+struct packed gw_bw_stats {
+    struct packed {
+        uint32_t bytes;
+        uint32_t usecs;
+    } min_bw, max_bw;
 };
 
 /* CMD_READ_FLUX */
@@ -124,13 +134,8 @@ struct packed gw_erase_flux {
     uint32_t erase_ticks;
 };
 
-/* CMD_SOURCE_BYTES */
-struct packed gw_source_bytes {
-    uint32_t nr_bytes;
-};
-
-/* CMD_SINK_BYTES */
-struct packed gw_sink_bytes {
+/* CMD_SINK_SOURCE_BYTES */
+struct packed gw_sink_source_bytes {
     uint32_t nr_bytes;
 };
 

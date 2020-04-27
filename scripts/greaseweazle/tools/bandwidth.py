@@ -15,19 +15,25 @@ from greaseweazle.tools import util
 from greaseweazle import usb as USB
 
 def measure_bandwidth(usb, args):
+    print("                 Min   / Mean  / Max")
+
     w_nr = 1000000
     start = timer()
     usb.sink_bytes(w_nr)
     end = timer()
-    w_bw = (w_nr * 8) / ((end-start) * 1000000)
-    print("Average Write Bandwidth: %.3f Mbps" % w_bw)
-
+    av_bw = (w_nr * 8) / ((end-start) * 1000000)
+    min_bw, max_bw = usb.bw_stats()
+    print("Write Bandwidth: %.3f / %.3f / %.3f Mbps"
+          % (min_bw, av_bw, max_bw))
+    
     r_nr = 1000000
     start = timer()
     usb.source_bytes(r_nr)
     end = timer()
-    r_bw = (r_nr * 8) / ((end-start) * 1000000)
-    print("Average Read Bandwidth: %.3f Mbps" % r_bw)
+    av_bw = (r_nr * 8) / ((end-start) * 1000000)
+    min_bw, max_bw = usb.bw_stats()
+    print("Read Bandwidth:  %.3f / %.3f / %.3f Mbps"
+          % (min_bw, av_bw, max_bw))
 
     twobyte_us = 249/72 # Smallest time requiring a 2-byte transmission code
     min_bw = 16 / twobyte_us # Bandwidth (Mbps) to transmit above time

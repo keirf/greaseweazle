@@ -91,6 +91,12 @@ class Ack:
 
 
 
+## Cmd.GetInfo indexes
+class GetInfo:
+    Firmware        = 0
+    BandwidthStats  = 1
+
+
 ## Cmd.{Get,Set}Params indexes
 class Params:
     Delays          = 0
@@ -130,7 +136,7 @@ class Unit:
         self.ser = ser
         self.reset()
         # Copy firmware info to instance variables (see above for definitions).
-        self._send_cmd(struct.pack("3B", Cmd.GetInfo, 3, 0))
+        self._send_cmd(struct.pack("3B", Cmd.GetInfo, 3, GetInfo.Firmware))
         x = struct.unpack("<4BIH22x", self.ser.read(32))
         (self.major, self.minor, self.max_index,
          self.max_cmd, self.sample_freq, self.hw_type) = x
@@ -409,6 +415,18 @@ class Unit:
         self.ser.read(1) # Sync with Greaseweazle
 
 
+    ## bw_stats:
+    ## Get min/max bandwidth for previous source/sink command. Mbps (float).
+    def bw_stats(self):
+        self._send_cmd(struct.pack("3B", Cmd.GetInfo, 3,
+                                   GetInfo.BandwidthStats))
+        min_bytes, min_usecs, max_bytes, max_usecs = struct.unpack(
+            "<4I16x", self.ser.read(32))
+        min_bw = (8 * min_bytes) / min_usecs
+        max_bw = (8 * max_bytes) / max_usecs
+        return min_bw, max_bw
+
+    
     ##
     ## Delay-property public getters and setters:
     ##  select_delay:      Delay (usec) after asserting drive select
