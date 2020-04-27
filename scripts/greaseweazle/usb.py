@@ -36,6 +36,8 @@ class Cmd:
     SetPin          = 15
     Reset           = 16
     EraseFlux       = 17
+    SourceBytes     = 18
+    SinkBytes       = 19
     str = {
         GetInfo: "GetInfo",
         Update: "Update",
@@ -54,7 +56,9 @@ class Cmd:
         SetBusType: "SetBusType",
         SetPin: "SetPin",
         Reset: "Reset",
-        EraseFlux: "EraseFlux"
+        EraseFlux: "EraseFlux",
+        SourceBytes: "SourceBytes",
+        SinkBytes: "SinkBytes"
     }
 
 
@@ -380,6 +384,29 @@ class Unit:
         self._send_cmd(struct.pack("<2BI", Cmd.EraseFlux, 6, int(ticks)))
         self.ser.read(1) # Sync with Greaseweazle
         self._send_cmd(struct.pack("2B", Cmd.GetFluxStatus, 2))
+
+
+    ## source_bytes:
+    ## Command Greaseweazle to source 'nr' garbage bytes.
+    def source_bytes(self, nr):
+        self._send_cmd(struct.pack("<2BI", Cmd.SourceBytes, 6, nr))
+        while nr > 0:
+            self.ser.read(1)
+            waiting = self.ser.in_waiting
+            self.ser.read(waiting)
+            nr -= 1 + waiting
+
+
+    ## sink_bytes:
+    ## Command Greaseweazle to sink 'nr' garbage bytes.
+    def sink_bytes(self, nr):
+        self._send_cmd(struct.pack("<2BI", Cmd.SinkBytes, 6, nr))
+        dat = bytes(1024*1024)
+        while nr > len(dat):
+            self.ser.write(dat)
+            nr -= len(dat)
+        self.ser.write(dat[:nr])
+        self.ser.read(1) # Sync with Greaseweazle
 
 
     ##

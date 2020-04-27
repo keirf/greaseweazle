@@ -38,7 +38,7 @@ For installation instructions please read the wiki:
           % ', '.join(missing_modules))
     sys.exit(1)
 
-actions = [ 'read', 'write', 'delays', 'update', 'pin', 'reset' ]
+actions = [ 'read', 'write', 'delays', 'update', 'pin', 'reset', 'bandwidth' ]
 argv = sys.argv
 
 if len(argv) < 2 or argv[1] not in actions:

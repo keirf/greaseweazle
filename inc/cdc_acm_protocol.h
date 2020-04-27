@@ -55,7 +55,11 @@
 #define CMD_RESET          16
 /* CMD_ERASE_FLUX, length=6. Argument is gw_erase_flux. */
 #define CMD_ERASE_FLUX     17
-#define CMD_MAX            17
+/* CMD_SOURCE_BYTES, length=6. Argument is gw_source_bytes. */
+#define CMD_SOURCE_BYTES   18
+/* CMD_SINK_BYTES, length=6. Argument is gw_sink_bytes. */
+#define CMD_SINK_BYTES     19
+#define CMD_MAX            19
 
 
 /*
@@ -118,6 +122,16 @@ struct packed gw_write_flux {
 /* CMD_ERASE_FLUX */
 struct packed gw_erase_flux {
     uint32_t erase_ticks;
+};
+
+/* CMD_SOURCE_BYTES */
+struct packed gw_source_bytes {
+    uint32_t nr_bytes;
+};
+
+/* CMD_SINK_BYTES */
+struct packed gw_sink_bytes {
+    uint32_t nr_bytes;
 };
 
 /* CMD_{GET,SET}_PARAMS, index 0 */

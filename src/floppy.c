@@ -84,6 +84,8 @@ static enum {
     ST_write_flux,
     ST_write_flux_drain,
     ST_erase_flux,
+    ST_source_bytes,
+    ST_sink_bytes,
 } floppy_state = ST_inactive;
 
 static uint8_t u_buf[8192];
@@ -771,6 +773,54 @@ static void floppy_erase(void)
     floppy_end_command(u_buf, 1);
 }
 
+
+/*
+ * SINK/SOURCE
+ */
+
+/* Reuse space in the R/W state structure. */
+#define ss_todo rw.ticks_since_flux
+
+static void source_bytes(void)
+{
+    if (!ep_tx_ready(EP_TX))
+        return;
+
+    if (ss_todo < USB_FS_MPS) {
+        floppy_state = ST_command_wait;
+        floppy_end_command(rw.packet, ss_todo);
+        return; /* FINISHED */
+    }
+
+    usb_write(EP_TX, rw.packet, USB_FS_MPS);
+    ss_todo -= USB_FS_MPS;
+}
+
+static void sink_bytes(void)
+{
+    int len;
+
+    if (ss_todo == 0) {
+        /* We're done: Wait for space to write the ACK byte. */
+        if (!ep_tx_ready(EP_TX))
+            return;
+        u_buf[0] = ACK_OKAY;
+        floppy_state = ST_command_wait;
+        floppy_end_command(u_buf, 1);
+        return; /* FINISHED */
+    }
+
+    /* Packet ready? */
+    len = ep_rx_ready(EP_RX);
+    if (len < 0)
+        return;
+
+    /* Read it and adjust byte counter. */
+    usb_read(EP_RX, rw.packet, len);
+    ss_todo = (ss_todo <= len) ? 0 : ss_todo - len;
+}
+
+
 static void process_command(void)
 {
     uint8_t cmd = u_buf[0];
@@ -908,6 +958,24 @@ static void process_command(void)
         u_buf[1] = floppy_erase_prep(&ef);
         goto out;
     }
+    case CMD_SOURCE_BYTES: {
+        struct gw_source_bytes sb;
+        if (len != (2 + sizeof(sb)))
+            goto bad_command;
+        memcpy(&sb, &u_buf[2], len-2);
+        ss_todo = sb.nr_bytes;
+        floppy_state = ST_source_bytes;
+        break;
+    }
+    case CMD_SINK_BYTES: {
+        struct gw_sink_bytes sb;
+        if (len != (2 + sizeof(sb)))
+            goto bad_command;
+        memcpy(&sb, &u_buf[2], len-2);
+        ss_todo = sb.nr_bytes;
+        floppy_state = ST_sink_bytes;
+        break;
+    }
     case CMD_SWITCH_FW_MODE: {
         uint8_t mode = u_buf[2];
         if ((len != 3) || (mode & ~1))
@@ -1004,6 +1072,14 @@ void floppy_process(void)
 
     case ST_erase_flux:
         floppy_erase();
+        break;
+
+    case ST_source_bytes:
+        source_bytes();
+        break;
+
+    case ST_sink_bytes:
+        sink_bytes();
         break;
 
     default:
