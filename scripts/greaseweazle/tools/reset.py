@@ -1,4 +1,4 @@
-# greaseweazle/tools/rset.py
+# greaseweazle/tools/reset.py
 #
 # Greaseweazle control script: Reset to power-on defaults.
 #

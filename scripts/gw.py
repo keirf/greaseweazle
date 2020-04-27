@@ -38,13 +38,21 @@ For installation instructions please read the wiki:
           % ', '.join(missing_modules))
     sys.exit(1)
 
-actions = [ 'read', 'write', 'delays', 'update', 'pin', 'reset', 'bandwidth' ]
+actions = [ 'read',
+            'write',
+            'erase',
+            'delays',
+            'update',
+            'pin',
+            'reset',
+            'bandwidth' ]
 argv = sys.argv
 
 if len(argv) < 2 or argv[1] not in actions:
-    print("Usage: %s [action] ..." % (argv[0]))
+    print("Usage: %s [action] [-h] ..." % (argv[0]))
     print("Actions: ", end="")
     print(", ".join(str(x) for x in actions))
+    print("  -h, --help  Show help message for specified action")
     sys.exit(1)
 
 mod = importlib.import_module('greaseweazle.tools.' + argv[1])
