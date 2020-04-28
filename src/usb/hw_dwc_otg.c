@@ -78,6 +78,25 @@ static void write_packet(const void *p, uint8_t ep, int len)
         otg_dfifo[ep].x[0] = *_p++;
 }
 
+static void fifos_init(void)
+{
+    unsigned int i, base, tx_sz, rx_sz, fifo_sz;
+
+    /* F7 OTG: FS 1.25k FIFO RAM, HS 4k FIFO RAM. */
+    fifo_sz = ((conf_port == PORT_FS) ? 0x500 : 0x1000) >> 2;
+    rx_sz = fifo_sz / 2;
+    tx_sz = fifo_sz / conf_nr_ep;
+
+    otg->grxfsiz = rx_sz;
+
+    base = rx_sz;
+    otg->dieptxf0 = (tx_sz << 16) | base;
+    for (i = 1; i < conf_nr_ep; i++) {
+        base += tx_sz;
+        otg->dieptxf[i-1] = (tx_sz << 16) | base;
+    }
+}
+
 void hw_usb_init(void)
 {
     int i;
@@ -181,11 +200,7 @@ void hw_usb_init(void)
                     OTG_GINT_OEPINT |
                     OTG_GINT_RXFLVL);
 
-    /* Set the FIFOs. */
-    otg->grxfsiz = 512 / 4;
-    otg->dieptxf0 = ((128 / 4) << 16) | (512 / 4);
-    for (i = 1; i < conf_nr_ep; i++)
-        otg->dieptxf[i-1] = ((128 / 4) << 16) | ((512+i*128) / 4);
+    fifos_init();
 
     /* HAL_PCD_Start, USB_DevConnect */
     otgd->dctl &= ~OTG_DCTL_SDIS;
