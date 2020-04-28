@@ -10,20 +10,22 @@
 import sys, argparse
 
 from greaseweazle.tools import util
+from greaseweazle import error
 from greaseweazle import usb as USB
+
+
+def open_image(args):
+    image_class = util.get_image_class(args.file)
+    error.check(hasattr(image_class, 'to_file'),
+                "%s: Cannot create %s image files"
+                % (args.file, image_class.__name__))
+    image = image_class.to_file(args.scyl, args.nr_sides)
+    return image
+
 
 # read_to_image:
 # Reads a floppy disk and dumps it into a new image file.
-def read_to_image(usb, args):
-
-    image_class = util.get_image_class(args.file)
-    if not image_class:
-        return
-    if not hasattr(image_class, 'to_file'):
-        print("%s: Cannot create %s image files"
-              % (args.file, image_class.__name__))
-        return
-    image = image_class.to_file(args.scyl, args.nr_sides)
+def read_to_image(usb, args, image):
 
     for cyl in range(args.scyl, args.ecyl+1):
         for side in range(0, args.nr_sides):
@@ -63,7 +65,8 @@ def main(argv):
 
     try:
         usb = util.usb_open(args.device)
-        util.with_drive_selected(read_to_image, usb, args)
+        image = open_image(args)
+        util.with_drive_selected(read_to_image, usb, args, image)
     except USB.CmdError as error:
         print("Command Failed: %s" % error)
 

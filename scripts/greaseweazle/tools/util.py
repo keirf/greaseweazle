@@ -11,6 +11,7 @@ import argparse, os, sys, serial, struct, time
 import serial.tools.list_ports
 
 from greaseweazle import version
+from greaseweazle import error
 from greaseweazle import usb as USB
 from greaseweazle.image.scp import SCP
 from greaseweazle.image.hfe import HFE
@@ -33,18 +34,17 @@ def drive_letter(letter):
 def get_image_class(name):
     image_types = { '.scp': SCP, '.hfe': HFE, '.ipf': IPF }
     _, ext = os.path.splitext(name)
-    if not ext.lower() in image_types:
-        print("%s: Unrecognised file suffix '%s'" % (name, ext))
-        return None
+    error.check(ext.lower() in image_types,
+                "%s: Unrecognised file suffix '%s'" % (name, ext))
     return image_types[ext.lower()]
 
 
-def with_drive_selected(fn, usb, args):
+def with_drive_selected(fn, usb, args, *_args, **_kwargs):
     usb.set_bus_type(args.drive[0])
     try:
         usb.drive_select(args.drive[1])
         usb.drive_motor(args.drive[1], True)
-        fn(usb, args)
+        fn(usb, args, *_args, **_kwargs)
     except KeyboardInterrupt:
         print()
         usb.reset()

@@ -61,7 +61,7 @@ try:
     res = main(argv)
     if res is None:
         res = 0
-except error.Fatal as err:
+except (error.Fatal, FileNotFoundError) as err:
     print("** FATAL ERROR:")
     print(err)
     res = 1

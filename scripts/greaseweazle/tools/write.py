@@ -12,25 +12,27 @@ import sys, argparse
 from greaseweazle.tools import util
 from greaseweazle import usb as USB
 
+
+# Read and parse the image file.
+def open_image(args):
+    image_class = util.get_image_class(args.file)
+    if hasattr(image_class, 'from_filename'):
+        image = image_class.from_filename(args.file)
+    else:
+        with open(args.file, "rb") as f:
+            image = image_class.from_file(f.read())
+    return image
+
+
 # write_from_image:
 # Writes the specified image file to floppy disk.
-def write_from_image(usb, args):
+def write_from_image(usb, args, image):
 
     # @drive_ticks is the time in Greaseweazle ticks between index pulses.
     # We will adjust the flux intervals per track to allow for this.
     flux = usb.read_track(2)
     drive_ticks = (flux.index_list[0] + flux.index_list[1]) / 2
     del flux
-
-    # Read and parse the image file.
-    image_class = util.get_image_class(args.file)
-    if not image_class:
-        return
-    if hasattr(image_class, 'from_filename'):
-        image = image_class.from_filename(args.file)
-    else:
-        with open(args.file, "rb") as f:
-            image = image_class.from_file(f.read())
 
     for cyl in range(args.scyl, args.ecyl+1):
         for side in range(0, args.nr_sides):
@@ -83,7 +85,8 @@ def main(argv):
 
     try:
         usb = util.usb_open(args.device)
-        util.with_drive_selected(write_from_image, usb, args)
+        image = open_image(args)
+        util.with_drive_selected(write_from_image, usb, args, image)
     except USB.CmdError as error:
         print("Command Failed: %s" % error)
 
