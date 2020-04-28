@@ -11,15 +11,16 @@
 
 #include "hw_dwc_otg.h"
 
-#define RX_NR 8
-#define RX_MASK(x) ((x) & (RX_NR-1))
+struct rx_buf {
+    uint32_t data[USB_FS_MPS / 4];
+    uint32_t count;
+} rx_buf0[1], rx_bufn[32];
+
+#define RX_MASK(_ep, _idx) (((_ep)->_idx) & ((_ep)->rx_nr - 1))
 
 static struct ep {
-    struct {
-        uint32_t data[USB_FS_MPS / 4];
-        uint32_t count;
-    } rx[RX_NR];
-    uint16_t rxc, rxp;
+    struct rx_buf *rx;
+    uint16_t rxc, rxp, rx_nr;
     bool_t rx_active, tx_ready;
 } eps[conf_nr_ep];
 
@@ -57,18 +58,18 @@ static bool_t is_high_speed(void)
 
 static void prepare_rx(uint8_t epnr)
 {
+    struct ep *ep = &eps[epnr];
     OTG_DOEP doep = &otg_doep[epnr];
     uint16_t mps = (epnr == 0) ? 64 : (doep->ctl & 0x7ff);
     uint32_t tsiz = doep->tsiz & 0xe0000000;
-    int pktcnt = (epnr == 0) ? 1 : RX_NR;
 
-    tsiz |= OTG_DOEPTSZ_PKTCNT(pktcnt);
-    tsiz |= OTG_DOEPTSZ_XFERSIZ(mps * pktcnt);
+    tsiz |= OTG_DOEPTSZ_PKTCNT(ep->rx_nr);
+    tsiz |= OTG_DOEPTSZ_XFERSIZ(mps * ep->rx_nr);
     doep->tsiz = tsiz;
 
     doep->ctl |= OTG_DOEPCTL_CNAK | OTG_DOEPCTL_EPENA;
 
-    eps[epnr].rx_active = TRUE;
+    ep->rx_active = TRUE;
 }
 
 static void read_packet(void *p, int len)
@@ -237,7 +238,7 @@ void hw_usb_deinit(void)
 int ep_rx_ready(uint8_t epnr)
 {
     struct ep *ep = &eps[epnr];
-    return (ep->rxc != ep->rxp) ? ep->rx[RX_MASK(ep->rxc)].count : -1;
+    return (ep->rxc != ep->rxp) ? ep->rx[RX_MASK(ep, rxc)].count : -1;
 }
 
 bool_t ep_tx_ready(uint8_t epnr)
@@ -248,7 +249,7 @@ bool_t ep_tx_ready(uint8_t epnr)
 void usb_read(uint8_t epnr, void *buf, uint32_t len)
 {
     struct ep *ep = &eps[epnr];
-    memcpy(buf, ep->rx[RX_MASK(ep->rxc++)].data, len);
+    memcpy(buf, ep->rx[RX_MASK(ep, rxc++)].data, len);
     if (!ep->rx_active && (ep->rxc == ep->rxp))
         prepare_rx(epnr);
 }
@@ -275,8 +276,12 @@ void usb_stall(uint8_t epnr)
 
 void usb_configure_ep(uint8_t epnr, uint8_t type, uint32_t size)
 {
+    int i;
+    struct ep *ep;
     bool_t in = !!(epnr & 0x80);
+
     epnr &= 0x7f;
+    ep = &eps[epnr];
 
     if (type == EPT_DBLBUF)
         type = EPT_BULK;
@@ -291,7 +296,7 @@ void usb_configure_ep(uint8_t epnr, uint8_t type, uint32_t size)
                 OTG_DIEPCTL_SD0PID |
                 OTG_DIEPCTL_USBAEP;
         }
-        eps[epnr].tx_ready = TRUE;
+        ep->tx_ready = TRUE;
     }
 
     if (!in) {
@@ -303,7 +308,20 @@ void usb_configure_ep(uint8_t epnr, uint8_t type, uint32_t size)
                 OTG_DIEPCTL_SD0PID |
                 OTG_DOEPCTL_USBAEP;
         }
-        eps[epnr].rxc = eps[epnr].rxp = 0;
+        ep->rxc = ep->rxp = 0;
+        if (epnr == 0) {
+            ep->rx = rx_buf0;
+            ep->rx_nr = ARRAY_SIZE(rx_buf0);
+        } else {
+            /* We have one statically-allocated multi-packet buffer. 
+             * Check we aren't trying to map it to multiple endpoints. */
+            ep->rx = NULL;
+            for (i = 0; i < conf_nr_ep; i++)
+                ASSERT(ep->rx != rx_bufn);
+            ep->rx = rx_bufn;
+            ep->rx_nr = ARRAY_SIZE(rx_bufn);
+        }
+        ep->rxc = ep->rxp = 0;
         prepare_rx(epnr);
     }
 }
@@ -371,8 +389,8 @@ static void handle_rx_transfer(void)
         bcnt = 8;
     case STS_DATA_UPDT:
         ASSERT(ep->rx_active);
-        ASSERT((uint16_t)(ep->rxp - ep->rxc) < RX_NR);
-        rxp = RX_MASK(ep->rxp++);
+        ASSERT((uint16_t)(ep->rxp - ep->rxc) < ep->rx_nr);
+        rxp = RX_MASK(ep, rxp++);
         read_packet(ep->rx[rxp].data, bcnt);
         ep->rx[rxp].count = bcnt;
         break;
