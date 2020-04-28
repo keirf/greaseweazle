@@ -11,6 +11,7 @@ class Flux:
         self.index_list = index_list
         self.list = flux_list
         self.sample_freq = sample_freq
+        self.terminate_at_index = True
 
 
     def __str__(self):
@@ -21,6 +22,10 @@ class Flux:
             s += "Revolution %u: %.2fms\n" % (rev, t*1000/self.sample_freq)
             rev += 1
         return s[:-1]
+
+
+    def flux_for_writeout(self):
+        return self
 
 
     @classmethod

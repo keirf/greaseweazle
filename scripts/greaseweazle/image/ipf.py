@@ -9,7 +9,7 @@ import os, sys
 import platform
 import ctypes as ct
 from bitarray import bitarray
-from greaseweazle.flux import Flux
+from greaseweazle.track import MasterTrack
 from greaseweazle import error
 
 class CapsDateTimeExt(ct.Structure):
@@ -191,10 +191,6 @@ class IPF:
 
         error.check(ti.weakcnt == 0, "Can't yet handle weak data")
 
-        # We don't really have access to the bitrate. It depends on RPM.
-        # So we assume a rotation rate of 300 RPM (5 rev/sec).
-        bitrate = ti.tracklen * 5
-
         timebuf = None
         if ti.timebuf:
             carray_type = ct.c_uint * ti.timelen
@@ -211,13 +207,13 @@ class IPF:
             # Clip the timing info, if necessary.
             timebuf = timebuf[:ti.tracklen]
 
-        # TODO: Place overlap (write splice) at the correct position.
-        if ti.overlap != 0:
-            trackbuf = trackbuf[ti.overlap:] + trackbuf[:ti.overlap]
-            if timebuf:
-                timebuf = timebuf[ti.overlap:] + timebuf[:ti.overlap]
-
-        return Flux.from_bitarray(trackbuf, bitrate, timebuf)
+        # We don't really have access to the bitrate. It depends on RPM.
+        # So we assume a rotation rate of 300 RPM (5 rev/sec).
+        rpm = 300
+                
+        track = MasterTrack(trackbuf, 60/rpm)
+        track.bit_ticks, track.splice = timebuf, ti.overlap
+        return track
 
 
 # Open and initialise the CAPS library.

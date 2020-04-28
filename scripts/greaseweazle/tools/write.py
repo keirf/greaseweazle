@@ -40,10 +40,12 @@ def write_from_image(usb, args, image):
             print("\rWriting Track %u.%u..." % (cyl, side), end="")
             usb.seek(cyl, side)
 
-            flux = image.get_track(cyl, side, writeout=True)
-            if not flux:
+            track = image.get_track(cyl, side, writeout=True)
+            if not track:
                 usb.erase_track(drive_ticks * 1.1)
                 continue
+
+            flux = track.flux_for_writeout()
             
             # @factor adjusts flux times for speed variations between the
             # read-in and write-out drives.
@@ -59,7 +61,7 @@ def write_from_image(usb, args, image):
                 flux_list.append(val)
 
             # Encode the flux times for Greaseweazle, and write them out.
-            usb.write_track(flux_list)
+            usb.write_track(flux_list, flux.terminate_at_index)
 
     print()
 
