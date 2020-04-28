@@ -11,10 +11,16 @@
 
 #include "hw_dwc_otg.h"
 
-static struct {
-    int rx_count;
-    uint32_t rx_data[USB_FS_MPS / 4];
-    bool_t rx_ready, tx_ready;
+#define RX_NR 8
+#define RX_MASK(x) ((x) & (RX_NR-1))
+
+static struct ep {
+    struct {
+        uint32_t data[USB_FS_MPS / 4];
+        uint32_t count;
+    } rx[RX_NR];
+    uint16_t rxc, rxp;
+    bool_t rx_active, tx_ready;
 } eps[conf_nr_ep];
 
 static void core_reset(void)
@@ -49,17 +55,20 @@ static bool_t is_high_speed(void)
     return ((otgd->dsts >> 1) & 3) == 0;
 }
 
-static void prepare_rx(uint8_t ep)
+static void prepare_rx(uint8_t epnr)
 {
-    OTG_DOEP doep = &otg_doep[ep];
-    uint16_t len = (ep == 0) ? 64 : (doep->ctl & 0x7ff);
+    OTG_DOEP doep = &otg_doep[epnr];
+    uint16_t mps = (epnr == 0) ? 64 : (doep->ctl & 0x7ff);
     uint32_t tsiz = doep->tsiz & 0xe0000000;
+    int pktcnt = (epnr == 0) ? 1 : RX_NR;
 
-    tsiz |= OTG_DOEPTSZ_PKTCNT(1);
-    tsiz |= OTG_DOEPTSZ_XFERSIZ(len);
+    tsiz |= OTG_DOEPTSZ_PKTCNT(pktcnt);
+    tsiz |= OTG_DOEPTSZ_XFERSIZ(mps * pktcnt);
     doep->tsiz = tsiz;
 
     doep->ctl |= OTG_DOEPCTL_CNAK | OTG_DOEPCTL_EPENA;
+
+    eps[epnr].rx_active = TRUE;
 }
 
 static void read_packet(void *p, int len)
@@ -70,12 +79,12 @@ static void read_packet(void *p, int len)
         *_p++ = otg_dfifo[0].x[0];
 }
 
-static void write_packet(const void *p, uint8_t ep, int len)
+static void write_packet(const void *p, uint8_t epnr, int len)
 {
     const uint32_t *_p = p;
     unsigned int n = (len + 3) / 4;
     while (n--)
-        otg_dfifo[ep].x[0] = *_p++;
+        otg_dfifo[epnr].x[0] = *_p++;
 }
 
 static void fifos_init(void)
@@ -225,75 +234,77 @@ void hw_usb_deinit(void)
     }
 }
 
-int ep_rx_ready(uint8_t ep)
+int ep_rx_ready(uint8_t epnr)
 {
-    return eps[ep].rx_ready ? eps[ep].rx_count : -1;
+    struct ep *ep = &eps[epnr];
+    return (ep->rxc != ep->rxp) ? ep->rx[RX_MASK(ep->rxc)].count : -1;
 }
 
-bool_t ep_tx_ready(uint8_t ep)
+bool_t ep_tx_ready(uint8_t epnr)
 {
-    return eps[ep].tx_ready;
+    return eps[epnr].tx_ready;
 }
 
-void usb_read(uint8_t ep, void *buf, uint32_t len)
+void usb_read(uint8_t epnr, void *buf, uint32_t len)
 {
-    memcpy(buf, eps[ep].rx_data, len);
-    eps[ep].rx_ready = FALSE;
-    prepare_rx(ep);
+    struct ep *ep = &eps[epnr];
+    memcpy(buf, ep->rx[RX_MASK(ep->rxc++)].data, len);
+    if (!ep->rx_active && (ep->rxc == ep->rxp))
+        prepare_rx(epnr);
 }
 
-void usb_write(uint8_t ep, const void *buf, uint32_t len)
+void usb_write(uint8_t epnr, const void *buf, uint32_t len)
 {
-    OTG_DIEP diep = &otg_diep[ep];
+    OTG_DIEP diep = &otg_diep[epnr];
 
     diep->tsiz = OTG_DIEPTSIZ_PKTCNT(1) | len;
 
 //    if (len != 0)
-//        otgd->diepempmsk |= 1u << ep;
+//        otgd->diepempmsk |= 1u << epnr;
 
     diep->ctl |= OTG_DIEPCTL_CNAK | OTG_DIEPCTL_EPENA;
-    write_packet(buf, ep, len);
-    eps[ep].tx_ready = FALSE;
+    write_packet(buf, epnr, len);
+    eps[epnr].tx_ready = FALSE;
 }
 
-void usb_stall(uint8_t ep)
+void usb_stall(uint8_t epnr)
 {
-    otg_diep[ep].ctl |= OTG_DIEPCTL_STALL;
-    otg_doep[ep].ctl |= OTG_DOEPCTL_STALL;
+    otg_diep[epnr].ctl |= OTG_DIEPCTL_STALL;
+    otg_doep[epnr].ctl |= OTG_DOEPCTL_STALL;
 }
 
-void usb_configure_ep(uint8_t ep, uint8_t type, uint32_t size)
+void usb_configure_ep(uint8_t epnr, uint8_t type, uint32_t size)
 {
-    bool_t in = !!(ep & 0x80);
-    ep &= 0x7f;
+    bool_t in = !!(epnr & 0x80);
+    epnr &= 0x7f;
 
     if (type == EPT_DBLBUF)
         type = EPT_BULK;
 
-    if (in || (ep == 0)) {
-        otgd->daintmsk |= 1u << ep;
-        if (!(otg_diep[ep].ctl & OTG_DIEPCTL_USBAEP)) {
-            otg_diep[ep].ctl |= 
+    if (in || (epnr == 0)) {
+        otgd->daintmsk |= 1u << epnr;
+        if (!(otg_diep[epnr].ctl & OTG_DIEPCTL_USBAEP)) {
+            otg_diep[epnr].ctl |= 
                 OTG_DIEPCTL_MPSIZ(size) |
                 OTG_DIEPCTL_EPTYP(type) |
-                OTG_DIEPCTL_TXFNUM(ep) |
+                OTG_DIEPCTL_TXFNUM(epnr) |
                 OTG_DIEPCTL_SD0PID |
                 OTG_DIEPCTL_USBAEP;
         }
-        eps[ep].tx_ready = TRUE;
+        eps[epnr].tx_ready = TRUE;
     }
 
     if (!in) {
-        otgd->daintmsk |= 1u << (ep + 16);
-        if (!(otg_doep[ep].ctl & OTG_DOEPCTL_USBAEP)) {
-            otg_doep[ep].ctl |= 
+        otgd->daintmsk |= 1u << (epnr + 16);
+        if (!(otg_doep[epnr].ctl & OTG_DOEPCTL_USBAEP)) {
+            otg_doep[epnr].ctl |= 
                 OTG_DOEPCTL_MPSIZ(size) |
                 OTG_DOEPCTL_EPTYP(type) |
                 OTG_DIEPCTL_SD0PID |
                 OTG_DOEPCTL_USBAEP;
         }
-        eps[ep].rx_ready = FALSE;
-        prepare_rx(ep);
+        eps[epnr].rxc = eps[epnr].rxp = 0;
+        prepare_rx(epnr);
     }
 }
 
@@ -351,51 +362,63 @@ static void handle_rx_transfer(void)
 {
     uint32_t grxsts = otg->grxstsp;
     unsigned int bcnt = OTG_RXSTS_BCNT(grxsts);
-    unsigned int ep = OTG_RXSTS_CHNUM(grxsts);
+    unsigned int epnr = OTG_RXSTS_CHNUM(grxsts);
+    unsigned int rxp;
+    struct ep *ep = &eps[epnr];
+
     switch (OTG_RXSTS_PKTSTS(grxsts)) {
     case STS_SETUP_UPDT:
         bcnt = 8;
     case STS_DATA_UPDT:
-        read_packet(eps[ep].rx_data, bcnt);
-        eps[ep].rx_count = bcnt;
+        ASSERT(ep->rx_active);
+        ASSERT((uint16_t)(ep->rxp - ep->rxc) < RX_NR);
+        rxp = RX_MASK(ep->rxp++);
+        read_packet(ep->rx[rxp].data, bcnt);
+        ep->rx[rxp].count = bcnt;
         break;
     default:
         break;
     }
 }
 
-static void handle_oepint(uint8_t ep)
+static void handle_oepint(uint8_t epnr)
 {
-    uint32_t oepint = otg_doep[ep].intsts & otgd->doepmsk;
+    uint32_t oepint = otg_doep[epnr].intsts & otgd->doepmsk;
+    struct ep *ep = &eps[epnr];
 
-    otg_doep[ep].intsts = oepint;
+    otg_doep[epnr].intsts = oepint;
 
     if (oepint & OTG_DOEPMSK_XFRCM) {
-        eps[ep].rx_ready = TRUE;
-        if (ep == 0)
+        ASSERT(ep->rx_active);
+        ep->rx_active = FALSE;
+        if (epnr == 0)
             handle_rx_ep0(FALSE);
     }
 
     if (oepint & OTG_DOEPMSK_STUPM) {
-        eps[ep].rx_ready = TRUE;
-        if (ep == 0)
+        ASSERT(ep->rx_active);
+        ep->rx_active = FALSE;
+        if (epnr == 0)
             handle_rx_ep0(TRUE);
     }
+
+    if (!ep->rx_active && (ep->rxc == ep->rxp))
+        prepare_rx(epnr);
 }
 
-static void handle_iepint(uint8_t ep)
+static void handle_iepint(uint8_t epnr)
 {
-    uint32_t iepint = otg_diep[ep].intsts, iepmsk;
+    uint32_t iepint = otg_diep[epnr].intsts, iepmsk;
 
-    iepmsk = otgd->diepmsk | (((otgd->diepempmsk >> ep) & 1) << 7);
-    iepint = otg_diep[ep].intsts & iepmsk;
+    iepmsk = otgd->diepmsk | (((otgd->diepempmsk >> epnr) & 1) << 7);
+    iepint = otg_diep[epnr].intsts & iepmsk;
 
-    otg_diep[ep].intsts = iepint;
+    otg_diep[epnr].intsts = iepint;
 
     if (iepint & OTG_DIEPINT_XFRC) {
-        otgd->diepempmsk &= ~(1 << ep);
-        eps[ep].tx_ready = TRUE;
-        if (ep == 0)
+        otgd->diepempmsk &= ~(1 << epnr);
+        eps[epnr].tx_ready = TRUE;
+        if (epnr == 0)
             handle_tx_ep0();
     }
 
@@ -410,19 +433,19 @@ void usb_process(void)
 
     if (gintsts & OTG_GINT_OEPINT) {
         uint16_t mask = (otgd->daint & otgd->daintmsk) >> 16;
-        int ep;
-        for (ep = 0; mask != 0; mask >>= 1, ep++) {
+        int epnr;
+        for (epnr = 0; mask != 0; mask >>= 1, epnr++) {
             if (mask & 1)
-                handle_oepint(ep);
+                handle_oepint(epnr);
         }
     }
 
     if (gintsts & OTG_GINT_IEPINT) {
         uint16_t mask = otgd->daint & otgd->daintmsk;
-        int ep;
-        for (ep = 0; mask != 0; mask >>= 1, ep++) {
+        int epnr;
+        for (epnr = 0; mask != 0; mask >>= 1, epnr++) {
             if (mask & 1)
-                handle_iepint(ep);
+                handle_iepint(epnr);
         }
     }
 
