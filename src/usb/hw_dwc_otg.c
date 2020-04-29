@@ -95,7 +95,7 @@ static void fifos_init(void)
     /* F7 OTG: FS 1.25k FIFO RAM, HS 4k FIFO RAM. */
     fifo_sz = ((conf_port == PORT_FS) ? 0x500 : 0x1000) >> 2;
     rx_sz = fifo_sz / 2;
-    tx_sz = fifo_sz / conf_nr_ep;
+    tx_sz = fifo_sz / (2 * conf_nr_ep);
 
     otg->grxfsiz = rx_sz;
 
