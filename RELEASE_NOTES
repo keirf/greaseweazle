@@ -3,6 +3,17 @@
 ** Keir Fraser <keir.xen@gmail.com>
 ************************************
 
+** v0.14 - 29 April 2020
+ - IPF: Full write support (weak data, index misalignment)
+ - New GW commands: bandwidth, erase
+   - bandwidth: Measure USB read/write bandwidth
+   - erase: Erase a disk
+ - F7 USB: Improved bandwidth when writing to disk
+   - Much less likely to see FluxUnderflow failures
+ - update: Fix a bug which could fail to reopen the GW device for update
+ - update: Automatically find the update file if filename not specified
+ - Control script: Tidier notification of errors (no scary backtrace)
+
 ** v0.13 - 25 April 2020
  - HFE: Read & write support
  - IPF: Preliminary write support
