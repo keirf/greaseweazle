@@ -11,7 +11,6 @@
 
 import sys
 import importlib
-from greaseweazle import error
 
 missing_modules = []
 
@@ -61,7 +60,7 @@ try:
     res = main(argv)
     if res is None:
         res = 0
-except (error.Fatal, FileNotFoundError) as err:
+except Exception as err:
     print("** FATAL ERROR:")
     print(err)
     res = 1
