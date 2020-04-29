@@ -175,21 +175,20 @@ class IPF:
         trackbuf.frombytes(bytes(carray))
         trackbuf = trackbuf[:ti.tracklen]
 
-        # Write splice is at trackbuf[ti.overlap]. Index is at trackbuf[0].
         #for i in range(ti.sectorcnt):
         #    si = CapsSectorInfo()
         #    res = self.lib.CAPSGetInfo(ct.byref(si), self.iid,
         #                               cyl, head, 1, i)
         #    error.check(res == 0, "Couldn't get sector info")
-        #    # Data is at trackbuf[si.datastart:si.datastart + si.datasize]
-        #for i in range(ti.weakcnt):
-        #    wi = CapsDataInfo()
-        #    res = self.lib.CAPSGetInfo(ct.byref(wi), self.iid,
-        #                               cyl, head, 2, i)
-        #    error.check(res == 0, "Couldn't get weak data info")
-        #    # Weak data at trackbuf[wi.start:wi.start + wi.size]
+        #    range.append((si.datastart, si.datasize))
 
-        error.check(ti.weakcnt == 0, "Can't yet handle weak data")
+        weak = []
+        for i in range(ti.weakcnt):
+            wi = CapsDataInfo()
+            res = self.lib.CAPSGetInfo(ct.byref(wi), self.iid,
+                                       cyl, head, 2, i)
+            error.check(res == 0, "Couldn't get weak data info")
+            weak.append((wi.start, wi.size))
 
         timebuf = None
         if ti.timebuf:
@@ -211,8 +210,12 @@ class IPF:
         # So we assume a rotation rate of 300 RPM (5 rev/sec).
         rpm = 300
                 
-        track = MasterTrack(trackbuf, 60/rpm)
-        track.bit_ticks, track.splice = timebuf, ti.overlap
+        track = MasterTrack(
+            bits = trackbuf,
+            time_per_rev = 60/rpm,
+            bit_ticks = timebuf,
+            splice = ti.overlap,
+            weak = weak)
         return track
 
 
