@@ -8,7 +8,7 @@
 import struct
 
 from greaseweazle import error
-from greaseweazle.flux import Flux
+from greaseweazle.track import MasterTrack
 from greaseweazle.bitcell import Bitcell
 from bitarray import bitarray
 
@@ -70,8 +70,10 @@ class HFE:
         bitlen, rawbytes = self.track_list[off]
         tdat = bitarray(endian='little')
         tdat.frombytes(rawbytes)
-        tdat = tdat[:bitlen]
-        return Flux.from_bitarray(tdat, self.bitrate * 2000)
+        track = MasterTrack(
+            bits = tdat[:bitlen],
+            time_per_rev = bitlen / (2000*self.bitrate))
+        return track
 
 
     def append_track(self, flux):
