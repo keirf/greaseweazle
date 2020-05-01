@@ -60,6 +60,8 @@ try:
     res = main(argv)
     if res is None:
         res = 0
+except (IndexError, AssertionError):
+    raise
 except Exception as err:
     print("** FATAL ERROR:")
     print(err)
