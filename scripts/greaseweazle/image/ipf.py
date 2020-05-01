@@ -175,12 +175,15 @@ class IPF:
         trackbuf.frombytes(bytes(carray))
         trackbuf = trackbuf[:ti.tracklen]
 
-        #for i in range(ti.sectorcnt):
-        #    si = CapsSectorInfo()
-        #    res = self.lib.CAPSGetInfo(ct.byref(si), self.iid,
-        #                               cyl, head, 1, i)
-        #    error.check(res == 0, "Couldn't get sector info")
-        #    range.append((si.datastart, si.datasize))
+        data = []
+        for i in range(ti.sectorcnt):
+            si = CapsSectorInfo()
+            res = self.lib.CAPSGetInfo(ct.byref(si), self.iid,
+                                       cyl, head, 1, i)
+            error.check(res == 0, "Couldn't get sector info")
+            # Adjust the range start to be splice- rather than index-relative
+            data.append(((si.datastart - ti.overlap) % ti.tracklen,
+                         si.datasize))
 
         weak = []
         for i in range(ti.weakcnt):
@@ -188,7 +191,8 @@ class IPF:
             res = self.lib.CAPSGetInfo(ct.byref(wi), self.iid,
                                        cyl, head, 2, i)
             error.check(res == 0, "Couldn't get weak data info")
-            weak.append((wi.start, wi.size))
+            # Adjust the range start to be splice- rather than index-relative
+            weak.append(((wi.start - ti.overlap) % ti.tracklen, wi.size))
 
         timebuf = None
         if ti.timebuf:
@@ -206,6 +210,12 @@ class IPF:
             # Clip the timing info, if necessary.
             timebuf = timebuf[:ti.tracklen]
 
+        # Rotate the track to start at the splice rather than the index.
+        if ti.overlap:
+            trackbuf = trackbuf[ti.overlap:] + trackbuf[:ti.overlap]
+            if timebuf:
+                timebuf = timebuf[ti.overlap:] + timebuf[:ti.overlap]
+            
         # We don't really have access to the bitrate. It depends on RPM.
         # So we assume a rotation rate of 300 RPM (5 rev/sec).
         rpm = 300

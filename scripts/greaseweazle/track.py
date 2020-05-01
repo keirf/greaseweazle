@@ -16,10 +16,10 @@ class MasterTrack:
     def bitrate(self):
         return len(self.bits) / self.time_per_rev
 
-    # bits: Track bitcell data (bitarray)
+    # bits: Track bitcell data, aligned to the write splice (bitarray)
     # time_per_rev: Time per revolution, in seconds (float)
     # bit_ticks: Per-bitcell time values, in unitless 'ticks'
-    # splice: Location of the track splice, in bitcells, after the index.
+    # splice: Location of the track splice, in bitcells, after the index
     # weak: List of (start, length) weak ranges
     def __init__(self, bits, time_per_rev, bit_ticks=None, splice=0, weak=[]):
         self.bits = bits
@@ -29,7 +29,7 @@ class MasterTrack:
         self.weak = weak
 
     def __str__(self):
-        s = "\nMaster Track: splice at %d\n" % self.splice
+        s = "\nMaster Track: splice @ %d\n" % self.splice
         s += (" %d bits, %.1f kbit/s"
               % (len(self.bits), self.bitrate))
         if self.bit_ticks:
@@ -57,19 +57,20 @@ class MasterTrack:
         # Weak regions need special processing for correct flux representation.
         for s,n in self.weak:
             e = s + n
-            assert s+n <= bitlen
-            if n < 2:
-                continue
+            assert 0 < s < e < bitlen
+            pattern = bitarray(endian="big")
             if n < 400:
                 # Short weak regions are written with no flux transitions.
-                bits[s:e] = bitarray([0]) * n
+                # Actually we insert a flux transition every 32 bitcells, else
+                # we risk triggering Greaseweazle's No Flux Area generator.
+                pattern.frombytes(b"\x80\x00\x00\x00")
+                bits[s:e] = (pattern * (n//32+1))[:n]
             else:
                 # Long weak regions we present a fuzzy clock bit in an
                 # otherwise normal byte (16 bits MFM). The byte may be
                 # interpreted as
                 # MFM 0001001010100101 = 12A5 = byte 0x43, or
                 # MFM 0001001010010101 = 1295 = byte 0x47
-                pattern = bitarray(endian="big")
                 pattern.frombytes(b"\x12\xA5")
                 bits[s:e] = (pattern * (n//16+1))[:n]
                 for i in range(0, n-10, 16):
@@ -78,11 +79,16 @@ class MasterTrack:
             # To prevent corrupting a preceding sync word by effectively
             # starting the weak region early, we start with a 1 if we just
             # clocked out a 0.
-            bits[s] = not (bits[-1] if s == 0 else bits[s-1])
+            bits[s] = not bits[s-1]
             # Similarly modify the last bit of the weak region.
-            bits[e-1] = not(bits[e-2] or bits[e%bitlen])
-        
-        splice_at_index = self.splice < 4 or bitlen - self.splice < 4
+            bits[e-1] = not(bits[e-2] or bits[e])
+
+        # Rotate data to start at the index (writes are always aligned there).
+        index = -self.splice % bitlen
+        if index != 0:
+            bits = bits[index:] + bits[:index]
+            bit_ticks = bit_ticks[index:] + bit_ticks[:index]
+        splice_at_index = index < 4 or bitlen - index < 4
 
         if splice_at_index:
             # Splice is at the index (or within a few bitcells of it).
@@ -90,14 +96,11 @@ class MasterTrack:
             # drive motor spins slower than expected and we need more filler
             # to get us to the index pulse (where the write will terminate).
             # Thus if the drive spins slow, the track gets a longer footer.
-            pos = bitlen-4 if self.splice < 4 else self.splice-4
-            tick_pattern = bit_ticks[pos-32:pos]
-            fill_pattern = bits[pos-32:pos]
+            pos = (self.splice - 4) % bitlen
             # We stretch by 10 percent, which is way more than enough.
-            for i in range(bitlen // (10*32)):
-                bit_ticks[pos:pos+32] = tick_pattern
-                bits[pos:pos+32] = fill_pattern
-                pos += 32
+            rep = bitlen // (10 * 32)
+            bit_ticks = bit_ticks[:pos] + bit_ticks[pos-32:pos] * rep
+            bits = bits[:pos] + bits[pos-32:pos] * rep
         else:
             # Splice is not at the index. We will write more than one
             # revolution, and terminate the second revolution at the splice.
