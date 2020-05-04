@@ -89,9 +89,10 @@ static enum {
 } floppy_state = ST_inactive;
 
 /* We sometimes cast u_buf to uint32_t[], hence the alignment constraint. */
-static uint8_t u_buf[8192] aligned(4);
+#define U_BUF_SZ 8192
+static uint8_t u_buf[U_BUF_SZ] aligned(4);
 static uint32_t u_cons, u_prod;
-#define U_MASK(x) ((x)&(sizeof(u_buf)-1))
+#define U_MASK(x) ((x)&(U_BUF_SZ-1))
 
 static void step_one_out(void)
 {
@@ -401,7 +402,7 @@ static uint8_t floppy_read_prep(const struct gw_read_flux *rf)
 static void make_read_packet(unsigned int n)
 {
     unsigned int c = U_MASK(u_cons);
-    unsigned int l = ARRAY_SIZE(u_buf) - c;
+    unsigned int l = U_BUF_SZ - c;
     if (l < n) {
         memcpy(rw.packet, &u_buf[c], l);
         memcpy(&rw.packet[l], u_buf, n-l);
@@ -421,7 +422,7 @@ static void floppy_read(void)
         rdata_encode_flux();
         avail = (uint32_t)(u_prod - u_cons);
 
-        if (avail > sizeof(u_buf)) {
+        if (avail > U_BUF_SZ) {
 
             /* Overflow */
             printk("OVERFLOW %u %u %u %u\n", u_cons, u_prod,
@@ -573,11 +574,11 @@ static void floppy_process_write_packet(void)
     }
 
     if (rw.packet_ready) {
-        unsigned int avail = ARRAY_SIZE(u_buf) - (uint32_t)(u_prod - u_cons);
+        unsigned int avail = U_BUF_SZ - (uint32_t)(u_prod - u_cons);
         unsigned int n = rw.packet_len;
         if (avail >= n) {
             unsigned int p = U_MASK(u_prod);
-            unsigned int l = ARRAY_SIZE(u_buf) - p;
+            unsigned int l = U_BUF_SZ - p;
             if (l < n) {
                 memcpy(&u_buf[p], rw.packet, l);
                 memcpy(u_buf, &rw.packet[l], n-l);
@@ -629,7 +630,7 @@ static void floppy_write_wait_data(void)
                       ? rw.write_finished
                       : (u_buf[U_MASK(u_prod-1)] == 0));
     if (((dma.prod != (ARRAY_SIZE(dma.buf)-1)) 
-         || ((uint32_t)(u_prod - u_cons) < (ARRAY_SIZE(u_buf) - 512)))
+         || ((uint32_t)(u_prod - u_cons) < (U_BUF_SZ - 512)))
         && !write_finished)
         return;
 
@@ -805,9 +806,9 @@ static void ss_update_deltas(int len)
             continue;
         delta = time_diff(u_times[U_MASK(p)>>2], now);
         u_times[U_MASK(p)>>2] = now;
-        if ((delta > ss.max_delta) && (p >= sizeof(u_buf)))
+        if ((delta > ss.max_delta) && (p >= U_BUF_SZ))
             ss.max_delta = delta;
-        if ((delta < ss.min_delta) && (p >= sizeof(u_buf)))
+        if ((delta < ss.min_delta) && (p >= U_BUF_SZ))
             ss.min_delta = delta;
     }
 
@@ -879,9 +880,9 @@ static void process_command(void)
             break;
         case GETINFO_BW_STATS: /* gw_bw_stats */ {
             struct gw_bw_stats bw;
-            bw.min_bw.bytes = sizeof(u_buf);
+            bw.min_bw.bytes = U_BUF_SZ;
             bw.min_bw.usecs = ss.max_delta / time_us(1);
-            bw.max_bw.bytes = sizeof(u_buf);
+            bw.max_bw.bytes = U_BUF_SZ;
             bw.max_bw.usecs = ss.min_delta / time_us(1);
             memcpy(&u_buf[2], &bw, sizeof(bw));
             break;
@@ -1074,7 +1075,7 @@ void floppy_process(void)
     case ST_command_wait:
 
         len = ep_rx_ready(EP_RX);
-        if ((len >= 0) && (len < (sizeof(u_buf)-u_prod))) {
+        if ((len >= 0) && (len < (U_BUF_SZ-u_prod))) {
             usb_read(EP_RX, &u_buf[u_prod], len);
             u_prod += len;
         }
