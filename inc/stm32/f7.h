@@ -9,6 +9,8 @@
  * See the file COPYING for more details, or visit <http://unlicense.org>.
  */
 
+#define CORTEX_M7 1
+
 /* C pointer types */
 #define CPUFEAT volatile struct cpufeat * const
 #define CACHE volatile struct cache * const
@@ -83,8 +85,6 @@ static SER_ID ser_id = (uint32_t *)0x1ff07a10;
 void peripheral_clock_delay(void);
 
 void gpio_set_af(GPIO gpio, unsigned int pin, unsigned int af);
-
-void dcache_disable(void);
 
 #define section_ext_ram __attribute__((section(".ext_ram")))
 

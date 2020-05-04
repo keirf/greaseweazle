@@ -162,6 +162,28 @@ static always_inline unsigned long __cmpxchg(
 /* Cortex initialisation */
 void cortex_init(void);
 
+#if defined(CORTEX_M7)
+
+/* Cache operations */
+void icache_invalidate_all(void);
+void icache_enable(void);
+void dcache_invalidate_all(void);
+void dcache_clear_and_invalidate_all(void);
+void dcache_enable(void);
+void dcache_disable(void);
+
+#elif defined(CORTEX_M3)
+
+/* No caches in Cortex M3 */
+#define icache_invalidate_all() ((void)0)
+#define icache_enable() ((void)0)
+#define dcache_invalidate_all() ((void)0)
+#define dcache_clear_and_invalidate_all() ((void)0)
+#define dcache_enable() ((void)0)
+#define dcache_disable() ((void)0)
+
+#endif
+
 /*
  * Local variables:
  * mode: C

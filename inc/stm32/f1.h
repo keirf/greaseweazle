@@ -9,6 +9,8 @@
  * See the file COPYING for more details, or visit <http://unlicense.org>.
  */
 
+#define CORTEX_M3 1
+
 /* C pointer types */
 #define BKP volatile struct bkp * const
 #define AFIO volatile struct afio * const

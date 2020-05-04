@@ -122,6 +122,66 @@ void system_reset(void)
     for (;;) ;
 }
 
+#if defined(CORTEX_M7)
+
+void icache_invalidate_all(void)
+{
+    cpu_sync(); 
+    cache->iciallu = 0;
+    cpu_sync(); 
+}
+
+void icache_enable(void)
+{
+    icache_invalidate_all();
+    scb->ccr |= SCB_CCR_IC;
+    cpu_sync(); 
+}
+
+static void _dcache_op_all(volatile uint32_t *opreg)
+{
+    uint32_t ccsidr;
+    unsigned int sets, ways;
+
+    cpufeat->csselr = 0; /* L1 DCache */
+    cpu_sync();
+    ccsidr = cpufeat->ccsidr;
+    sets = CCSIDR_SETS(ccsidr);
+    do {
+        ways = CCSIDR_WAYS(ccsidr);
+        do {
+            *opreg = DCISW_SET(sets) | DCISW_WAY(ways);
+        } while (ways--);
+    } while (sets--);
+    cpu_sync();
+}
+
+void dcache_invalidate_all(void)
+{
+    _dcache_op_all(&cache->dcisw);
+}
+
+void dcache_clear_and_invalidate_all(void)
+{
+    _dcache_op_all(&cache->dccisw);
+}
+
+void dcache_enable(void)
+{
+    dcache_invalidate_all();
+    scb->ccr |= SCB_CCR_DC;
+    cpu_sync();
+}
+
+void dcache_disable(void)
+{
+    scb->ccr &= ~SCB_CCR_DC;
+    cpu_sync();
+    dcache_clear_and_invalidate_all();
+}
+
+#endif
+
 /*
  * Local variables:
  * mode: C
