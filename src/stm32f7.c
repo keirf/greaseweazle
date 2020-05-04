@@ -66,6 +66,31 @@ static void icache_enable(void)
     cpu_sync(); 
 }
 
+static void dcache_invalidate_all(void)
+{
+    uint32_t ccsidr;
+    unsigned int sets, ways;
+
+    cpufeat->csselr = 0; /* L1 DCache */
+    cpu_sync();
+    ccsidr = cpufeat->ccsidr;
+    sets = CCSIDR_SETS(ccsidr);
+    do {
+        ways = CCSIDR_WAYS(ccsidr);
+        do {
+            cache->dcisw = DCISW_SET(sets) | DCISW_WAY(ways);
+        } while (ways--);
+    } while (sets--);
+    cpu_sync();
+}
+
+static void dcache_enable(void)
+{
+    dcache_invalidate_all();
+    scb->ccr |= SCB_CCR_DC;
+    cpu_sync();
+}
+
 void peripheral_clock_delay(void)
 {
     delay_ticks(2);
@@ -94,6 +119,7 @@ void stm32_init(void)
     cortex_init();
     clock_init();
     icache_enable();
+    dcache_enable();
     peripheral_init();
     cpu_sync();
 }

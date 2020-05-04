@@ -18,6 +18,18 @@ struct dbg {
 
 #define DBG_BASE 0xe0042000
 
+struct cpufeat {
+    uint32_t clidr;      /* 00: Cache level ID */
+    uint32_t ctr;        /* 04: Cache type */
+    uint32_t ccsidr;     /* 08: Cache size ID */
+    uint32_t csselr;     /* 10: Cache size selection */
+};
+
+#define CCSIDR_SETS(x) (((x)>>13)&0x7fffu)
+#define CCSIDR_WAYS(x) (((x)>> 3)& 0x3ffu)
+
+#define CPUFEAT_BASE 0xe000ed78
+
 struct cache {
     uint32_t iciallu;    /* 00: ICache invalidate all to PoU */
     uint32_t _unused0;
@@ -31,6 +43,9 @@ struct cache {
     uint32_t dccisw;     /* 24: DCache clean & invalidate by set/way */
     uint32_t bpiall;
 };
+
+#define DCISW_WAY(x)  ((x)<<30)
+#define DCISW_SET(x)  ((x)<< 5)
 
 #define CACHE_BASE 0xe000ef50    
 
