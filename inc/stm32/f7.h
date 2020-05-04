@@ -84,6 +84,8 @@ void peripheral_clock_delay(void);
 
 void gpio_set_af(GPIO gpio, unsigned int pin, unsigned int af);
 
+#define section_ext_ram __attribute__((section(".ext_ram")))
+
 /*
  * Local variables:
  * mode: C

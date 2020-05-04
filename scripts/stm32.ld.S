@@ -3,10 +3,13 @@ ENTRY(vector_table)
 MEMORY
 {
   FLASH (rx)      : ORIGIN = FLASH_BASE, LENGTH = FLASH_LEN
-  RAM (rwx)       : ORIGIN = RAM_BASE, LENGTH = RAM_LEN
+#if STM32F == 1
+  RAM (rwx)       : ORIGIN = 0x20000000, LENGTH = 20K
+#elif STM32F == 7
+  RAM (rwx)       : ORIGIN = 0x20000000, LENGTH = 64K
+  EXT_RAM (rwx)   : ORIGIN = 0x20010000, LENGTH = 192K
+#endif
 }
-REGION_ALIAS("RO", FLASH);
-REGION_ALIAS("RW", RAM);
 
 SECTIONS
 {
@@ -21,7 +24,7 @@ SECTIONS
     KEEP (*(.fini))
     . = ALIGN(4);
     _etext = .;
-  } >RO
+  } >FLASH
 
   .data : AT (_etext) {
     . = ALIGN(4);
@@ -31,7 +34,7 @@ SECTIONS
     . = ALIGN(4);
     _edat = .;
     _ldat = LOADADDR(.data);
-  } >RW
+  } >RAM
 
   .bss : {
     . = ALIGN(8);
@@ -46,7 +49,17 @@ SECTIONS
     *(.bss*)
     . = ALIGN(4);
     _ebss = .;
-  } >RW
+  } >RAM
+
+#if STM32F == 7
+  .ext_ram (NOLOAD) : {
+    . = ALIGN(8);
+    _ext_ram_start = .;
+    *(.ext_ram)
+    . = ALIGN(4);
+    _ext_ram_end = .;
+  } >EXT_RAM
+#endif
 
   /DISCARD/ : {
     *(.eh_frame)

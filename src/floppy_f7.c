@@ -61,6 +61,10 @@ typedef uint32_t timcnt_t;
 #define irq_index 8
 void IRQ_8(void) __attribute__((alias("IRQ_INDEX_changed"))); /* EXTI2 */
 
+/* We sometimes cast u_buf to uint32_t[], hence the alignment constraint. */
+#define U_BUF_SZ (128*1024)
+static uint8_t u_buf[U_BUF_SZ] aligned(4) section_ext_ram;
+
 static void floppy_mcu_init(void)
 {
     /* Enable clock for Timer 2. */

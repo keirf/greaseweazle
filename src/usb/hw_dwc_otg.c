@@ -16,7 +16,7 @@ static bool_t is_hs;
 static struct rx_buf {
     uint32_t data[USB_HS_MPS / 4];
     uint32_t count;
-} rx_buf0[1], rx_bufn[32];
+} rx_buf0[1], rx_bufn[32] section_ext_ram;
 
 #define RX_MASK(_ep, _idx) (((_ep)->_idx) & ((_ep)->rx_nr - 1))
 

@@ -88,9 +88,6 @@ static enum {
     ST_sink_bytes,
 } floppy_state = ST_inactive;
 
-/* We sometimes cast u_buf to uint32_t[], hence the alignment constraint. */
-#define U_BUF_SZ 8192
-static uint8_t u_buf[U_BUF_SZ] aligned(4);
 static uint32_t u_cons, u_prod;
 #define U_MASK(x) ((x)&(U_BUF_SZ-1))
 
