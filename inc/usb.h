@@ -44,6 +44,9 @@ bool_t ep_tx_ready(uint8_t ep);
  * REQUIRES: ep_tx_ready(@ep) == TRUE */
 void usb_write(uint8_t ep, const void *buf, uint32_t len);
 
+/* Is the USB enumerated at High Speed? */
+bool_t usb_is_highspeed(void);
+
 /*
  * Local variables:
  * mode: C

@@ -83,7 +83,6 @@ void usb_setaddr(uint8_t addr);
 void hw_usb_init(void);
 void hw_usb_deinit(void);
 bool_t hw_has_highspeed(void);
-bool_t hw_is_highspeed(void);
 
 #define WARN printk
 

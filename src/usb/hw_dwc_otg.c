@@ -31,7 +31,7 @@ bool_t hw_has_highspeed(void)
     return conf_iface == IFACE_HS_EMBEDDED;
 }
 
-bool_t hw_is_highspeed(void)
+bool_t usb_is_highspeed(void)
 {
     return is_hs;
 }

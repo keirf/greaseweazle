@@ -27,7 +27,7 @@ bool_t hw_has_highspeed(void)
     return FALSE;
 }
 
-bool_t hw_is_highspeed(void)
+bool_t usb_is_highspeed(void)
 {
     return FALSE;
 }

@@ -49,7 +49,7 @@ static bool_t handle_control_request(void)
                 memcpy(ep0.data, device_qualifier, ep0.data_len);
             }
         } else if ((type == DESC_CONFIGURATION) && (idx == 0)) {
-            if (hw_is_highspeed()) {
+            if (usb_is_highspeed()) {
                 ep0.data_len = config_hs_descriptor[2]; /* wTotalLength */
                 memcpy(ep0.data, config_hs_descriptor, ep0.data_len);
             } else {

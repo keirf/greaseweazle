@@ -615,9 +615,14 @@ static uint8_t floppy_write_prep(const struct gw_write_flux *wf)
 static void floppy_write_wait_data(void)
 {
     bool_t write_finished;
+    unsigned int u_buf_threshold;
 
     floppy_process_write_packet();
     wdata_decode_flux();
+
+    /* We don't wait for the massive F7 u_buf[] to fill at Full Speed. */
+    u_buf_threshold = ((U_BUF_SZ > 16384) && !usb_is_highspeed())
+        ? 16384 - 512 : U_BUF_SZ - 512;
 
     /* Wait for DMA and input buffers to fill, or write stream to end. We must
      * take care because, since we are not yet draining the DMA buffer, the
@@ -627,7 +632,7 @@ static void floppy_write_wait_data(void)
                       ? rw.write_finished
                       : (u_buf[U_MASK(u_prod-1)] == 0));
     if (((dma.prod != (ARRAY_SIZE(dma.buf)-1)) 
-         || ((uint32_t)(u_prod - u_cons) < (U_BUF_SZ - 512)))
+         || ((uint32_t)(u_prod - u_cons) < u_buf_threshold))
         && !write_finished)
         return;
 
