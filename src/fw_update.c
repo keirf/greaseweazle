@@ -158,6 +158,7 @@ static void process_command(void)
         update_prep(u_len);
         break;
     }
+#if STM32F == 7
     case CMD_SWITCH_FW_MODE: {
         uint8_t mode = u_buf[2];
         if ((len != 3) || (mode & ~1))
@@ -169,6 +170,7 @@ static void process_command(void)
         }
         break;
     }
+#endif
     default:
         goto bad_command;
     }

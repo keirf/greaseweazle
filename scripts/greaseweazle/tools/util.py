@@ -149,7 +149,11 @@ def usb_open(devicename, is_update=False):
 
     if is_update and not usb.update_mode:
         if usb.hw_type == 7:
-            return usb_reopen(usb, is_update)
+            usb = usb_reopen(usb, is_update)
+            error.check(usb.update_mode, """\
+Greaseweazle F7 did not change to Firmware Update Mode as requested.
+If the problem persists, install the Update Jumper (across RX/TX).""")
+            return usb
         print("Greaseweazle is in Normal Mode:")
         print(" To \"update\" you must install the Update Jumper")
         sys.exit(1)
