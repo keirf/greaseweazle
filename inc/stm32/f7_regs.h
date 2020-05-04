@@ -18,6 +18,22 @@ struct dbg {
 
 #define DBG_BASE 0xe0042000
 
+struct cache {
+    uint32_t iciallu;    /* 00: ICache invalidate all to PoU */
+    uint32_t _unused0;
+    uint32_t icimvau;    /* 08: ICache invalidate by address to PoU */
+    uint32_t dcimvac;    /* 0C: DCache invalidate by address to PoC */
+    uint32_t dcisw;      /* 10: DCache invalidate by set/way */
+    uint32_t dccmvau;    /* 14: DCache clean by adress to PoU */
+    uint32_t dccmvac;    /* 18: DCache clean by address to PoC */
+    uint32_t dccsw;      /* 1C: DCache clean by set/way */
+    uint32_t dccimvac;   /* 20: DCache clean & invalidate by address to PoC */
+    uint32_t dccisw;     /* 24: DCache clean & invalidate by set/way */
+    uint32_t bpiall;
+};
+
+#define CACHE_BASE 0xe000ef50    
+
 /* Flash memory interface */
 struct flash {
     uint32_t acr;      /* 00: Flash access control */

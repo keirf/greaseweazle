@@ -45,12 +45,15 @@ struct scb {
     uint32_t bfar;     /* 38: Bus fault address */
 };
 
-#define SCB_CCR_STKALIGN       (1u<<9)
-#define SCB_CCR_BFHFNMIGN      (1u<<8)
-#define SCB_CCR_DIV_0_TRP      (1u<<4)
-#define SCB_CCR_UNALIGN_TRP    (1u<<3)
-#define SCB_CCR_USERSETMPEND   (1u<<1)
-#define SCB_CCR_NONBASETHRDENA (1u<<0)
+#define SCB_CCR_BP             (1u<<18)
+#define SCB_CCR_IC             (1u<<17)
+#define SCB_CCR_DC             (1u<<16)
+#define SCB_CCR_STKALIGN       (1u<< 9)
+#define SCB_CCR_BFHFNMIGN      (1u<< 8)
+#define SCB_CCR_DIV_0_TRP      (1u<< 4)
+#define SCB_CCR_UNALIGN_TRP    (1u<< 3)
+#define SCB_CCR_USERSETMPEND   (1u<< 1)
+#define SCB_CCR_NONBASETHRDENA (1u<< 0)
 
 #define SCB_SHCSR_USGFAULTENA    (1u<<18)
 #define SCB_SHCSR_BUSFAULTENA    (1u<<17)

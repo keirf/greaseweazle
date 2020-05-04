@@ -52,6 +52,20 @@ static void clock_init(void)
     stk->ctrl = STK_CTRL_ENABLE;
 }
 
+static void icache_invalidate_all(void)
+{
+    cpu_sync(); 
+    cache->iciallu = 0;
+    cpu_sync(); 
+}
+
+static void icache_enable(void)
+{
+    icache_invalidate_all();
+    scb->ccr |= SCB_CCR_IC;
+    cpu_sync(); 
+}
+
 void peripheral_clock_delay(void)
 {
     delay_ticks(2);
@@ -79,6 +93,7 @@ void stm32_init(void)
 {
     cortex_init();
     clock_init();
+    icache_enable();
     peripheral_init();
     cpu_sync();
 }

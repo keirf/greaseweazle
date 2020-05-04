@@ -10,6 +10,7 @@
  */
 
 /* C pointer types */
+#define CACHE volatile struct cache * const
 #define SYSCFG volatile struct syscfg * const
 #define DMA_STR volatile struct dma_str * const
 #define HSPHYC volatile struct hsphyc * const
@@ -19,6 +20,7 @@ static STK stk = (struct stk *)STK_BASE;
 static SCB scb = (struct scb *)SCB_BASE;
 static NVIC nvic = (struct nvic *)NVIC_BASE;
 static DBG dbg = (struct dbg *)DBG_BASE;
+static CACHE cache = (struct cache *)CACHE_BASE;
 static FLASH flash = (struct flash *)FLASH_BASE;
 static PWR pwr = (struct pwr *)PWR_BASE;
 static RCC rcc = (struct rcc *)RCC_BASE;
