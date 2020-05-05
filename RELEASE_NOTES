@@ -3,6 +3,15 @@
 ** Keir Fraser <keir.xen@gmail.com>
 ************************************
 
+** v0.15 - 5 May 2020
+ - Host tool improvements:
+   - IPF: More robust conversion to raw flux for writeout
+   - HFE: Fix crash when writing out HFE from third party tools
+   - F7 Firmware improvements:
+     - Preparation for High Speed USB (future board using 730Z8 MCU)
+     - Enable Instruction and Data caches (10x execution speedup)
+     - Various improvements to bandwidth as reported by 'gw.py bandwidth'
+     
 ** v0.14 - 29 April 2020
  - IPF: Full write support (weak data, index misalignment)
  - New GW commands: bandwidth, erase
