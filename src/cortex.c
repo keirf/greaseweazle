@@ -77,10 +77,18 @@ static void exception_init(void)
     scb->shpr3 = 0xff<<16;
 }
 
+static void sysclk_init(void)
+{
+    /* Enable SysTick counter. */
+    stk->load = STK_MASK;
+    stk->ctrl = STK_CTRL_ENABLE;
+}
+
 void cortex_init(void)
 {
     exception_init();
     cpu_sync();
+    sysclk_init();
 }
 
 void delay_ticks(unsigned int ticks)

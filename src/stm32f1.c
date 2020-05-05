@@ -37,10 +37,6 @@ static void clock_init(void)
 
     /* Internal oscillator no longer needed. */
     rcc->cr &= ~RCC_CR_HSION;
-
-    /* Enable SysTick counter at 72/8=9MHz. */
-    stk->load = STK_MASK;
-    stk->ctrl = STK_CTRL_ENABLE;
 }
 
 static void gpio_init(GPIO gpio)
