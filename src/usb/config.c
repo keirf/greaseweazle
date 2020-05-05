@@ -39,7 +39,7 @@ const uint8_t config_fs_descriptor[] aligned(2) = {
     0x01, /* 5 bConfigurationValue */
     0x00, /* 6 iConfiguration - index of string */
     0x80, /* 7 bmAttributes - Bus powered */
-    0xC8, /* 8 bMaxPower - 400mA */
+    0xFA, /* 8 bMaxPower - 500mA */
 /* CDC Communication interface */
     0x09, /* 0 bLength */
     DESC_INTERFACE, /* 1 bDescriptorType - Interface */
@@ -114,7 +114,7 @@ const uint8_t config_hs_descriptor[] aligned(2) = {
     0x01, /* 5 bConfigurationValue */
     0x00, /* 6 iConfiguration - index of string */
     0x80, /* 7 bmAttributes - Bus powered */
-    0xC8, /* 8 bMaxPower - 400mA */
+    0xFA, /* 8 bMaxPower - 500mA */
 /* CDC Communication interface */
     0x09, /* 0 bLength */
     DESC_INTERFACE, /* 1 bDescriptorType - Interface */
