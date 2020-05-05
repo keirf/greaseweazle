@@ -93,11 +93,20 @@ static void prepare_rx(uint8_t epnr)
 {
     struct ep *ep = &eps[epnr];
     OTG_DOEP doep = &otg_doep[epnr];
-    uint16_t mps = (epnr == 0) ? EP0_MPS : (doep->ctl & 0x7ff);
-    uint32_t tsiz = doep->tsiz & 0xe0000000;
+    uint16_t mps, nr;
+    uint32_t tsiz;
 
-    tsiz |= OTG_DOEPTSZ_PKTCNT(ep->rx_nr);
-    tsiz |= OTG_DOEPTSZ_XFERSIZ(mps * ep->rx_nr);
+    if (ep->rx_active)
+        return;
+    nr = ep->rxp - ep->rxc;
+    nr = ep->rx_nr - nr;
+    if (nr <= ep->rx_nr/2)
+        return;
+
+    mps = (epnr == 0) ? EP0_MPS : (doep->ctl & 0x7ff);
+    tsiz = doep->tsiz & 0xe0000000;
+    tsiz |= OTG_DOEPTSZ_PKTCNT(nr);
+    tsiz |= OTG_DOEPTSZ_XFERSIZ(mps * nr);
     doep->tsiz = tsiz;
 
     doep->ctl |= OTG_DOEPCTL_CNAK | OTG_DOEPCTL_EPENA;
@@ -295,8 +304,7 @@ void usb_read(uint8_t epnr, void *buf, uint32_t len)
 {
     struct ep *ep = &eps[epnr];
     memcpy(buf, ep->rx[RX_MASK(ep, rxc++)].data, len);
-    if (!ep->rx_active && (ep->rxc == ep->rxp))
-        prepare_rx(epnr);
+    prepare_rx(epnr);
 }
 
 void usb_write(uint8_t epnr, const void *buf, uint32_t len)
@@ -367,6 +375,7 @@ void usb_configure_ep(uint8_t epnr, uint8_t type, uint32_t size)
             ep->rx_nr = ARRAY_SIZE(rx_bufn);
         }
         ep->rxc = ep->rxp = 0;
+        ep->rx_active = FALSE;
         prepare_rx(epnr);
     }
 }
@@ -465,8 +474,7 @@ static void handle_oepint(uint8_t epnr)
             handle_rx_ep0(TRUE);
     }
 
-    if (!ep->rx_active && (ep->rxc == ep->rxp))
-        prepare_rx(epnr);
+    prepare_rx(epnr);
 }
 
 static void handle_iepint(uint8_t epnr)
