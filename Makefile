@@ -2,32 +2,42 @@
 export FW_MAJOR := 0
 export FW_MINOR := 15
 
+TARGETS := all blinky clean dist mrproper ocd flash start serial
+.PHONY: $(TARGETS)
+
+ifneq ($(RULES_MK),y)
+
+export ROOT := $(CURDIR)
+export stm32
+export debug
+export VERBOSE
+
+$(TARGETS):
+	$(MAKE) -f $(ROOT)/Rules.mk $@
+
+else
+
 PROJ = Greaseweazle
 VER := v$(FW_MAJOR).$(FW_MINOR)
 
 SUBDIRS += src bootloader blinky_test
 
-.PHONY: all blinky clean dist mrproper flash start serial
+all: scripts/greaseweazle/version.py
+	$(MAKE) -C src -f $(ROOT)/Rules.mk $(PROJ).elf $(PROJ).bin $(PROJ).hex
+	bootloader=y $(MAKE) -C bootloader -f $(ROOT)/Rules.mk \
+		Bootloader.elf Bootloader.bin Bootloader.hex
+	srec_cat bootloader/Bootloader.hex -Intel src/$(PROJ).hex -Intel \
+	-o $(PROJ)-$(VER).hex -Intel
+	$(PYTHON) ./scripts/mk_update.py src/$(PROJ).bin $(PROJ)-$(VER).upd $(stm32)
 
-ifneq ($(RULES_MK),y)
-export ROOT := $(CURDIR)
+blinky:
+	debug=y stm32=f1 $(MAKE) -C blinky_test -f $(ROOT)/Rules.mk \
+		Blinky.elf Blinky.bin Blinky.hex
 
-ifeq ($(OS), Windows_NT)
-	export PYTHON = python
-	ZIP = C:/Program Files/7-Zip/7z.exe a
-else
-	export PYTHON = python3
-	ZIP = zip -r
-endif
-
-all blinky:
-	$(MAKE) -f $(ROOT)/Rules.mk $@
-
-clean:
+clean::
 	rm -f *.hex *.upd scripts/greaseweazle/*.pyc
 	rm -f scripts/greaseweazle/version.py
 	find . -name __pycache__ | xargs rm -rf
-	$(MAKE) -f $(ROOT)/Rules.mk $@
 
 dist:
 	rm -rf $(PROJ)-*
@@ -60,25 +70,9 @@ dist:
 mrproper: clean
 	rm -rf $(PROJ)-*
 
-else
-
-blinky:
-	debug=y stm32=$(stm32) $(MAKE) -C blinky_test -f $(ROOT)/Rules.mk \
-		Blinky.elf Blinky.bin Blinky.hex
-
-all: scripts/greaseweazle/version.py
-	$(MAKE) -C src -f $(ROOT)/Rules.mk $(PROJ).elf $(PROJ).bin $(PROJ).hex
-	bootloader=y stm32=$(stm32) $(MAKE) -C bootloader -f $(ROOT)/Rules.mk \
-		Bootloader.elf Bootloader.bin Bootloader.hex
-	srec_cat bootloader/Bootloader.hex -Intel src/$(PROJ).hex -Intel \
-	-o $(PROJ)-$(VER).hex -Intel
-	$(PYTHON) ./scripts/mk_update.py src/$(PROJ).bin $(PROJ)-$(VER).upd $(stm32)
-
 scripts/greaseweazle/version.py: Makefile
 	echo "major = $(FW_MAJOR)" >$@
 	echo "minor = $(FW_MINOR)" >>$@
-
-endif
 
 BAUD=115200
 DEV=/dev/ttyUSB0
@@ -95,3 +89,5 @@ start:
 
 serial:
 	sudo miniterm.py $(DEV) 3000000
+
+endif
