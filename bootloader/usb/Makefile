@@ -1,4 +1,4 @@
-RPATH = ../../src/usb
+RPATH = $(ROOT)/src/usb
 
 OBJS += config.o
 OBJS += core.o
