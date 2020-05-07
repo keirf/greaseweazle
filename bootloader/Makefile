@@ -1,4 +1,4 @@
-RPATH = ../src
+RPATH = $(ROOT)/src
 
 OBJS += board.o
 OBJS += build_info.o

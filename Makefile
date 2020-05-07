@@ -12,6 +12,14 @@ SUBDIRS += src bootloader blinky_test
 ifneq ($(RULES_MK),y)
 export ROOT := $(CURDIR)
 
+ifeq ($(OS), Windows_NT)
+	export PYTHON = python
+	ZIP = C:/Program Files/7-Zip/7z.exe a
+else
+	export PYTHON = python3
+	ZIP = zip -r
+endif
+
 all blinky:
 	$(MAKE) -f $(ROOT)/Rules.mk $@
 
@@ -47,7 +55,7 @@ dist:
 	cp -a $(PROJ)-$(VER).hex $(PROJ)-$(VER)/$(PROJ)-F7-$(VER).hex
 	cat $(PROJ)-$(VER).upd >>$(PROJ)-$(VER)/$(PROJ)-$(VER).upd
 	$(MAKE) clean
-	zip -r $(PROJ)-$(VER).zip $(PROJ)-$(VER)
+	$(ZIP) $(PROJ)-$(VER).zip $(PROJ)-$(VER)
 
 mrproper: clean
 	rm -rf $(PROJ)-*
@@ -55,12 +63,12 @@ mrproper: clean
 else
 
 blinky:
-	debug=y $(MAKE) -C blinky_test -f $(ROOT)/Rules.mk \
+	debug=y stm32=$(stm32) $(MAKE) -C blinky_test -f $(ROOT)/Rules.mk \
 		Blinky.elf Blinky.bin Blinky.hex
 
 all: scripts/greaseweazle/version.py
 	$(MAKE) -C src -f $(ROOT)/Rules.mk $(PROJ).elf $(PROJ).bin $(PROJ).hex
-	bootloader=y $(MAKE) -C bootloader -f $(ROOT)/Rules.mk \
+	bootloader=y stm32=$(stm32) $(MAKE) -C bootloader -f $(ROOT)/Rules.mk \
 		Bootloader.elf Bootloader.bin Bootloader.hex
 	srec_cat bootloader/Bootloader.hex -Intel src/$(PROJ).hex -Intel \
 	-o $(PROJ)-$(VER).hex -Intel
@@ -76,7 +84,7 @@ BAUD=115200
 DEV=/dev/ttyUSB0
 
 ocd: all
-	python3 scripts/telnet.py localhost 4444 \
+	$(PYTHON) scripts/telnet.py localhost 4444 \
 	"reset init ; flash write_image erase `pwd`/$(PROJ)-$(VER).hex ; reset"
 
 flash: all

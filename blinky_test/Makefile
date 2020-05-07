@@ -1,4 +1,4 @@
-RPATH = ../src
+RPATH = $(ROOT)/src
 
 OBJS += vectors.o
 OBJS += cortex.o
