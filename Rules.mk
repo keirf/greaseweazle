@@ -5,7 +5,7 @@ LD = $(TOOL_PREFIX)ld
 
 ifeq ($(OS), Windows_NT)
 PYTHON = python
-ZIP = C:/Program Files/7-Zip/7z.exe a
+ZIP = "C:/Program Files/7-Zip/7z.exe" a
 else
 PYTHON = python3
 ZIP = zip -r
