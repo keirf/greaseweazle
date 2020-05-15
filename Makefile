@@ -25,7 +25,8 @@ all: scripts/greaseweazle/version.py
 		Bootloader.elf Bootloader.bin Bootloader.hex
 	srec_cat bootloader/Bootloader.hex -Intel src/$(PROJ).hex -Intel \
 	-o $(PROJ)-$(VER).hex -Intel
-	$(PYTHON) ./scripts/mk_update.py src/$(PROJ).bin $(PROJ)-$(VER).upd $(stm32)
+	$(PYTHON) ./scripts/mk_update.py bootloader/Bootloader.bin \
+		src/$(PROJ).bin $(PROJ)-$(VER).upd $(stm32)
 
 blinky:
 	$(MAKE) debug=y stm32=f1 -C blinky_test -f $(ROOT)/Rules.mk \

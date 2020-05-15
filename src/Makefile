@@ -1,5 +1,6 @@
 OBJS += board.o
 OBJS += build_info.o
+OBJS += crc.o
 OBJS += vectors.o
 OBJS += main.o
 OBJS += string.o
@@ -9,6 +10,7 @@ OBJS += time.o
 OBJS += timer.o
 OBJS += util.o
 OBJS += floppy.o
+OBJS += fpec_$(stm32).o
 
 OBJS-$(debug) += console.o
 

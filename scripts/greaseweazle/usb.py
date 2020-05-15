@@ -250,6 +250,16 @@ class Unit:
         return ack
 
 
+    ## update_bootloader:
+    ## Update Greaseweazle with the given new bootloader.
+    def update_bootloader(self, dat):
+        self._send_cmd(struct.pack("<2B2I", Cmd.Update, 10,
+                                   len(dat), 0xdeafbee3))
+        self.ser.write(dat)
+        (ack,) = struct.unpack("B", self.ser.read(1))
+        return ack
+
+
     ## _decode_flux:
     ## Decode the Greaseweazle data stream into a list of flux samples.
     def _decode_flux(self, dat):

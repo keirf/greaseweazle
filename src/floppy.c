@@ -86,6 +86,7 @@ static enum {
     ST_erase_flux,
     ST_source_bytes,
     ST_sink_bytes,
+    ST_update_bootloader,
 } floppy_state = ST_inactive;
 
 static uint32_t u_cons, u_prod;
@@ -859,6 +860,65 @@ static void sink_bytes(void)
 }
 
 
+/*
+ * BOOTLOADER UPDATE
+ */
+
+#define BL_START 0x08000000
+#define BL_END   ((uint32_t)_stext)
+#define BL_SIZE  (BL_END - BL_START)
+
+static struct {
+    uint32_t len;
+    uint32_t cur;
+} update;
+
+static void erase_old_bootloader(void)
+{
+    uint32_t p;
+    for (p = BL_START; p < BL_END; p += FLASH_PAGE_SIZE)
+        fpec_page_erase(p);
+}
+
+static void update_prep(uint32_t len)
+{
+    fpec_init();
+    erase_old_bootloader();
+
+    floppy_state = ST_update_bootloader;
+    update.cur = 0;
+    update.len = len;
+
+    printk("Update Bootloader: %u bytes\n", len);
+}
+
+static void update_continue(void)
+{
+    int len;
+
+    if ((len = ep_rx_ready(EP_RX)) >= 0) {
+        usb_read(EP_RX, &u_buf[u_prod], len);
+        u_prod += len;
+    }
+
+    if ((len = u_prod) >= 2) {
+        int nr = len & ~1;
+        fpec_write(u_buf, nr, BL_START + update.cur);
+        update.cur += nr;
+        u_prod -= nr;
+        memcpy(u_buf, &u_buf[nr], u_prod);
+    }
+
+    if ((update.cur >= update.len) && ep_tx_ready(EP_TX)) {
+        uint16_t crc = crc16_ccitt((void *)BL_START, update.len, 0xffff);
+        printk("Final CRC: %04x (%s)\n", crc, crc ? "FAIL" : "OK");
+        u_buf[0] = !!crc;
+        floppy_state = ST_command_wait;
+        floppy_end_command(u_buf, 1);
+    }
+}
+
+
 static void process_command(void)
 {
     uint8_t cmd = u_buf[0];
@@ -893,6 +953,16 @@ static void process_command(void)
             goto bad_command;
         }
         resp_sz += 32;
+        break;
+    }
+    case CMD_UPDATE: {
+        uint32_t u_len = *(uint32_t *)&u_buf[2];
+        uint32_t signature = *(uint32_t *)&u_buf[6];
+        if (len != 10) goto bad_command;
+        if (u_len & 3) goto bad_command;
+        if (u_len > BL_SIZE) goto bad_command;
+        if (signature != 0xdeafbee3) goto bad_command;
+        update_prep(u_len);
         break;
     }
     case CMD_SEEK: {
@@ -1129,6 +1199,10 @@ void floppy_process(void)
 
     case ST_sink_bytes:
         sink_bytes();
+        break;
+
+    case ST_update_bootloader:
+        update_continue();
         break;
 
     default:

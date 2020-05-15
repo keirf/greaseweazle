@@ -1,4 +1,4 @@
-# mk_update.py
+# mk_update.py <bootloader> <main_firmware> <output> <stm_type>
 #
 # Convert a raw firmware binary into an update file for our bootloader.
 #
@@ -9,7 +9,7 @@
 #   Payload:
 #     N bytes: <raw binary data>
 #   Footer:
-#     2 bytes: 'GW'
+#     2 bytes: 'GW' or 'BL'
 #     2 bytes: major, minor
 #     2 bytes: <hw_type>
 #     2 bytes: CRC16-CCITT, seed 0xFFFF (big endian, excludes Catalogue Header)
@@ -24,22 +24,27 @@ import re, struct, sys
 
 from greaseweazle import version
 
-def main(argv):
-    in_f = open(argv[1], "rb")
-    out_f = open(argv[2], "wb")
-    hw_type = int(re.match("f(\d)", argv[3]).group(1))
-    in_dat = in_f.read()
-    in_len = len(in_dat)
-    assert (in_len & 3) == 0, "input is not longword padded"
+def mk_cat_entry(dat, hw_type, sig):
+    max_kb = { 1: { b'BL':  8, b'GW': 56 },
+               7: { b'BL': 16, b'GW': 48 } }
+    dlen = len(dat)
+    assert (dlen & 3) == 0, "input is not longword padded"
+    assert dlen <= max_kb[hw_type][sig]*1024, "input is too long"
+    header = struct.pack("<2H", dlen + 8, hw_type)
+    footer = struct.pack("<2s2BH", sig, version.major, version.minor, hw_type)
     crc16 = crcmod.predefined.Crc('crc-ccitt-false')
-    out_f.write(struct.pack("<2H", in_len + 8, hw_type))
-    out_f.write(in_dat)
-    crc16.update(in_dat)
-    in_dat = struct.pack("<2s2BH", b'GW', version.major, version.minor, hw_type)
-    out_f.write(in_dat)
-    crc16.update(in_dat)
-    in_dat = struct.pack(">H", crc16.crcValue)
-    out_f.write(in_dat)
+    crc16.update(dat)
+    crc16.update(footer)
+    footer += struct.pack(">H", crc16.crcValue)
+    return header + dat + footer
+
+def main(argv):
+    out_f = open(argv[3], "wb")
+    hw_type = int(re.match("f(\d)", argv[4]).group(1))
+    with open(argv[2], "rb") as gw_f:
+        out_f.write(mk_cat_entry(gw_f.read(), hw_type, b'GW'))
+    with open(argv[1], "rb") as bl_f:
+        out_f.write(mk_cat_entry(bl_f.read(), hw_type, b'BL'))
 
 if __name__ == "__main__":
     main(sys.argv)

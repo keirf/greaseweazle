@@ -19,6 +19,9 @@
 /* [BOOTLOADER] CMD_UPDATE, length=6, <update_len>. 
  * Host follows with <update_len> bytes.
  * Bootloader finally returns a status byte, 0 on success. */
+/* [MAIN FIRMWARE] CMD_UPDATE, length=10, <update_len>, 0xdeafbee3.
+ * Host follows with <update_len> bytes.
+ * Main firmware finally returns a status byte, 0 on success. */
 #define CMD_UPDATE          1
 /* CMD_SEEK, length=3, cyl#. Seek to cyl# on selected drive. */
 #define CMD_SEEK            2

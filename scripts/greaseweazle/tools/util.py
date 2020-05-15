@@ -140,7 +140,7 @@ def usb_open(devicename, is_update=False):
             if not usb.update_mode:
                 return usb
         print("Greaseweazle is in Firmware Update Mode:")
-        print(" The only available action is \"update <update_file>\"")
+        print(" The only available action is \"update\" of main firmware")
         if usb.update_jumpered:
             print(" Remove the Update Jumper for normal operation")
         else:
