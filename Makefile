@@ -1,6 +1,6 @@
 
 export FW_MAJOR := 0
-export FW_MINOR := 15
+export FW_MINOR := 16
 
 TARGETS := all blinky clean dist mrproper ocd flash start serial
 .PHONY: $(TARGETS)

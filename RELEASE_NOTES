@@ -3,6 +3,15 @@
 ** Keir Fraser <keir.xen@gmail.com>
 ************************************
 
+** v0.16 - 15 May 2020
+ - F7 Firmware: Enable over-drive voltage mode
+   - Required for reliable 216MHz operation (see datasheet)
+ - Bootloader update:
+   - 'gw.py update --bootloader' updates the bootloader
+   - Not normally required
+   - Failure may brick the Weazle and require full reflash: Take care!
+ - Update build system to work with Windows MinGW environment
+
 ** v0.15 - 5 May 2020
  - Host tool improvements:
    - IPF: More robust conversion to raw flux for writeout
