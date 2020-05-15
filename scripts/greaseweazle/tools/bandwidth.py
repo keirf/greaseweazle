@@ -7,7 +7,7 @@
 # This is free and unencumbered software released into the public domain.
 # See the file COPYING for more details, or visit <http://unlicense.org>.
 
-import sys, argparse
+import sys
 
 from timeit import default_timer as timer
 
@@ -41,7 +41,7 @@ def measure_bandwidth(usb, args):
 
 def main(argv):
 
-    parser = argparse.ArgumentParser(formatter_class=util.CmdlineHelpFormatter)
+    parser = util.ArgumentParser()
     parser.add_argument("device", nargs="?", default="auto",
                         help="serial device")
     parser.prog += ' ' + argv[1]

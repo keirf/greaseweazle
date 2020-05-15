@@ -7,7 +7,7 @@
 # This is free and unencumbered software released into the public domain.
 # See the file COPYING for more details, or visit <http://unlicense.org>.
 
-import sys, argparse
+import sys
 
 from greaseweazle.tools import util
 from greaseweazle import usb as USB
@@ -68,7 +68,7 @@ def write_from_image(usb, args, image):
 
 def main(argv):
 
-    parser = argparse.ArgumentParser(formatter_class=util.CmdlineHelpFormatter)
+    parser = util.ArgumentParser()
     parser.add_argument("--drive", type=util.drive_letter, default='A',
                         help="drive to write (A,B,0,1,2)")
     parser.add_argument("--scyl", type=int, default=0,

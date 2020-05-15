@@ -31,6 +31,11 @@ class CmdlineHelpFormatter(argparse.ArgumentDefaultsHelpFormatter):
         return help + ' (default: %(default)s)'
 
 
+class ArgumentParser(argparse.ArgumentParser):
+    def __init__(self, formatter_class=CmdlineHelpFormatter, *args, **kwargs):
+        return super().__init__(formatter_class=formatter_class,
+                                *args, **kwargs)
+
 def drive_letter(letter):
     types = {
         'A': (USB.BusType.IBMPC, 0),

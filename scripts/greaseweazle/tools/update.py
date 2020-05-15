@@ -7,7 +7,7 @@
 # This is free and unencumbered software released into the public domain.
 # See the file COPYING for more details, or visit <http://unlicense.org>.
 
-import sys, argparse, serial, struct, os
+import sys, serial, struct, os
 import crcmod.predefined
 
 from greaseweazle.tools import util
@@ -86,7 +86,7 @@ def update_firmware(usb, args):
 
 def main(argv):
 
-    parser = argparse.ArgumentParser(formatter_class=util.CmdlineHelpFormatter)
+    parser = util.ArgumentParser(allow_abbrev=False)
     parser.add_argument("file", nargs="?", default="auto",
                         help="update filename")
     parser.add_argument("device", nargs="?", default="auto",
@@ -96,9 +96,8 @@ def main(argv):
     parser.prog += ' ' + argv[1]
     args = parser.parse_args(argv[2:])
 
-    usb = util.usb_open(args.device, is_update=not args.bootloader)
-
     try:
+        usb = util.usb_open(args.device, is_update=not args.bootloader)
         update_firmware(usb, args)
     except USB.CmdError as error:
         print("Command Failed: %s" % error)
