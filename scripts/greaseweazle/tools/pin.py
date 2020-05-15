@@ -20,8 +20,7 @@ def level(letter):
 
 def main(argv):
 
-    parser = argparse.ArgumentParser(
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser = argparse.ArgumentParser(formatter_class=util.CmdlineHelpFormatter)
     parser.add_argument("pin", type=int,
                         help="pin number")
     parser.add_argument("level", type=level,

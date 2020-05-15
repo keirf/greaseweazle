@@ -41,8 +41,7 @@ def measure_bandwidth(usb, args):
 
 def main(argv):
 
-    parser = argparse.ArgumentParser(
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser = argparse.ArgumentParser(formatter_class=util.CmdlineHelpFormatter)
     parser.add_argument("device", nargs="?", default="auto",
                         help="serial device")
     parser.prog += ' ' + argv[1]

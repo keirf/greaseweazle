@@ -31,8 +31,7 @@ def erase(usb, args):
 
 def main(argv):
 
-    parser = argparse.ArgumentParser(
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser = argparse.ArgumentParser(formatter_class=util.CmdlineHelpFormatter)
     parser.add_argument("--drive", type=util.drive_letter, default='A',
                         help="drive to write (A,B,0,1,2)")
     parser.add_argument("--scyl", type=int, default=0,

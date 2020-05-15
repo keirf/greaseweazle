@@ -42,8 +42,7 @@ def read_to_image(usb, args, image):
 
 def main(argv):
 
-    parser = argparse.ArgumentParser(
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser = argparse.ArgumentParser(formatter_class=util.CmdlineHelpFormatter)
     parser.add_argument("--drive", type=util.drive_letter, default='A',
                         help="drive to read (A,B,0,1,2)")
     parser.add_argument("--revs", type=int, default=3,

@@ -14,8 +14,7 @@ from greaseweazle import usb as USB
 
 def main(argv):
 
-    parser = argparse.ArgumentParser(
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser = argparse.ArgumentParser(formatter_class=util.CmdlineHelpFormatter)
     parser.add_argument("--select", type=int,
                         help="delay after drive select (usecs)")
     parser.add_argument("--step", type=int,

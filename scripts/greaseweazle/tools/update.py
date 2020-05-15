@@ -86,14 +86,13 @@ def update_firmware(usb, args):
 
 def main(argv):
 
-    parser = argparse.ArgumentParser(
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser = argparse.ArgumentParser(formatter_class=util.CmdlineHelpFormatter)
     parser.add_argument("file", nargs="?", default="auto",
                         help="update filename")
     parser.add_argument("device", nargs="?", default="auto",
                         help="serial device")
     parser.add_argument("--bootloader", action="store_true",
-                        help="update the bootloader (WARNING: Use with caution!)")
+                        help="update the bootloader (use with caution!)")
     parser.prog += ' ' + argv[1]
     args = parser.parse_args(argv[2:])
 

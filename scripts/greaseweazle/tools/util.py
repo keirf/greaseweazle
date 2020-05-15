@@ -18,6 +18,19 @@ from greaseweazle.image.hfe import HFE
 from greaseweazle.image.ipf import IPF
 
 
+class CmdlineHelpFormatter(argparse.ArgumentDefaultsHelpFormatter):
+    def _get_help_string(self, action):
+        help = action.help
+        if '%no_default' in help:
+            return help.replace('%no_default', '')
+        if ('%(default)' in help
+            or action.default is None
+            or action.default is False
+            or action.default is argparse.SUPPRESS):
+            return help
+        return help + ' (default: %(default)s)'
+
+
 def drive_letter(letter):
     types = {
         'A': (USB.BusType.IBMPC, 0),
