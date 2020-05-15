@@ -76,16 +76,12 @@ static void board_id_init(void)
 
 static void clock_init(void)
 {
-    /* Flash controller: reads require 7 wait states at 216MHz. */
-    flash->acr = FLASH_ACR_ARTEN | FLASH_ACR_PRFTEN | FLASH_ACR_LATENCY(7);
-
-    /* Bus divisors. */
-    rcc->cfgr = (RCC_CFGR_PPRE2(4) | /* APB2 = 216MHz/2 = 108MHz  */
-                 RCC_CFGR_PPRE1(5) | /* APB1 = 216MHz/4 = 54MHz */
-                 RCC_CFGR_HPRE(0));  /* AHB  = 216MHz/1 = 216MHz */
-
-    /* Timers run from Host Clock (216MHz). */
-    rcc->dckcfgr1 = RCC_DCKCFGR1_TIMPRE;
+    /* Disable all peripheral clocks except the essentials before enabling 
+     * Over-drive mode (see note in RM0431, p102). We still need access to RAM
+     * and to the power interface itself. */
+    rcc->ahb1enr = RCC_AHB1ENR_DTCMRAMEN;
+    rcc->apb1enr = RCC_APB1ENR_PWREN;
+    early_delay_us(2);
 
     /* Start up the external oscillator. */
     rcc->cr |= RCC_CR_HSEON;
@@ -99,8 +95,29 @@ static void clock_init(void)
                     RCC_PLLCFGR_PLLP(0) |    /* SYSCLK = 432MHz/2 = 216MHz */
                     RCC_PLLCFGR_PLLQ(9));    /* USB    = 432MHz/9 = 48MHz */
 
-    /* Enable and stabilise the PLL. */
+    /* Enable the PLL. */
     rcc->cr |= RCC_CR_PLLON;
+
+    /* Enable Over-drive (required for 216MHz operation). */
+    pwr->cr1 |= PWR_CR1_ODEN;
+    while (!(pwr->csr1 & PWR_CSR1_ODRDY))
+        cpu_relax();
+    pwr->cr1 |= PWR_CR1_ODSWEN;
+    while (!(pwr->csr1 & PWR_CSR1_ODSWRDY))
+        cpu_relax();
+    
+    /* Flash controller: reads require 7 wait states at 216MHz. */
+    flash->acr = FLASH_ACR_ARTEN | FLASH_ACR_PRFTEN | FLASH_ACR_LATENCY(7);
+
+    /* Bus divisors. */
+    rcc->cfgr = (RCC_CFGR_PPRE2(4) | /* APB2 = 216MHz/2 = 108MHz  */
+                 RCC_CFGR_PPRE1(5) | /* APB1 = 216MHz/4 = 54MHz */
+                 RCC_CFGR_HPRE(0));  /* AHB  = 216MHz/1 = 216MHz */
+
+    /* Timers run from Host Clock (216MHz). */
+    rcc->dckcfgr1 = RCC_DCKCFGR1_TIMPRE;
+
+    /* Wait for the PLL to stabilise. */
     while (!(rcc->cr & RCC_CR_PLLRDY))
         cpu_relax();
 
@@ -120,14 +137,14 @@ void peripheral_clock_delay(void)
 
 static void peripheral_init(void)
 {
-    /* Enable basic GPIO clocks, DTCM RAM, and DMA. */
-    rcc->ahb1enr = (RCC_AHB1ENR_DMA2EN |
-                    RCC_AHB1ENR_DMA1EN |
-                    RCC_AHB1ENR_DTCMRAMEN |
-                    RCC_AHB1ENR_GPIOCEN |
-                    RCC_AHB1ENR_GPIOBEN | 
-                    RCC_AHB1ENR_GPIOAEN);
-    rcc->apb2enr = (RCC_APB2ENR_SYSCFGEN);
+    /* Enable basic GPIO clocks, DTCM RAM, DMA, and EXTICR. */
+    rcc->ahb1enr |= (RCC_AHB1ENR_DMA2EN |
+                     RCC_AHB1ENR_DMA1EN |
+                     RCC_AHB1ENR_DTCMRAMEN |
+                     RCC_AHB1ENR_GPIOCEN |
+                     RCC_AHB1ENR_GPIOBEN | 
+                     RCC_AHB1ENR_GPIOAEN);
+    rcc->apb2enr |= (RCC_APB2ENR_SYSCFGEN);
     peripheral_clock_delay();
 
     /* Release JTAG pins. */

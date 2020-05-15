@@ -96,7 +96,30 @@ struct pwr {
     uint32_t csr2;     /* 0C: Power control/status #2 */
 };
 
+#define PWR_CR1_UDEN(x)      ((x)<<18)
+#define PWR_CR1_ODSWEN       (1u<<17)
+#define PWR_CR1_ODEN         (1u<<16)
+#define PWR_CR1_VOS(x)       ((x)<<14)
+#define PWR_CR1_ADCDC1       (1u<<13)
+#define PWR_CR1_MRUDS        (1u<<11)
+#define PWR_CR1_LPUDS        (1u<<10)
+#define PWR_CR1_FPDS         (1u<< 9)
 #define PWR_CR1_DBP          (1u<< 8)
+#define PWR_CR1_PLS(x)       ((x)<<5)
+#define PWR_CR1_PVDE         (1u<< 4)
+#define PWR_CR1_CSBF         (1u<< 3)
+#define PWR_CR1_PDDS         (1u<< 1)
+#define PWR_CR1_LPDS         (1u<< 0)
+
+#define PWR_CSR1_ODSWRDY     (1u<<17)
+#define PWR_CSR1_ODRDY       (1u<<16)
+#define PWR_CSR1_VOSRDY      (1u<<14)
+#define PWR_CSR1_BRE         (1u<< 9)
+#define PWR_CSR1_EIWUP       (1u<< 8)
+#define PWR_CSR1_BRR         (1u<< 3)
+#define PWR_CSR1_PVDO        (1u<< 2)
+#define PWR_CSR1_SBF         (1u<< 1)
+#define PWR_CSR1_WUIF        (1u<< 0)
 
 #define PWR_BASE 0x40007000
 
