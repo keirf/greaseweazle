@@ -44,7 +44,8 @@ actions = [ 'read',
             'update',
             'pin',
             'reset',
-            'bandwidth' ]
+            'bandwidth',
+            'step' ]
 argv = sys.argv
 
 if len(argv) < 2 or argv[1] not in actions:

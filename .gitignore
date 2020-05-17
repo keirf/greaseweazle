@@ -16,3 +16,4 @@
 *.pyc
 scripts/greaseweazle/version.py
 Greaseweazle-*
+.idea/
