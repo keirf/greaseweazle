@@ -23,11 +23,11 @@ def main(argv):
 
     parser = util.ArgumentParser()
     parser.add_argument("--drive", type=util.drive_letter, default='A',
-                        help="drive to write (A,B,0,1,2)")
+                        help="drive to step (A,B,0,1,2)")
     parser.add_argument("--scyl", type=int, default=0,
-                        help="first cylinder to write")
+                        help="first cylinder in step range")
     parser.add_argument("--ecyl", type=int, default=81,
-                        help="last cylinder to write")
+                        help="last cylinder in step range")
     parser.add_argument("--repeat", type=int, default=0,
                         help="times to repeat (0 = forever)")
     parser.add_argument("device", nargs="?", default="auto",
