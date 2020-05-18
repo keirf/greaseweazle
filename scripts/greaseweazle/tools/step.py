@@ -38,8 +38,6 @@ def main(argv):
     parser = util.ArgumentParser()
     parser.add_argument("--drive", type=util.drive_letter, default='A',
                         help="drive to step (A,B,0,1,2)")
-    parser.add_argument("--scyl", type=int, default=0,
-                        help="first cylinder in step range")
     parser.add_argument("--ecyl", type=int, default=81,
                         help="last cylinder in step range")
     parser.add_argument("--repeat", type=int, default=0,
@@ -50,6 +48,7 @@ def main(argv):
                         help="serial device")
     parser.prog += ' ' + argv[1]
     args = parser.parse_args(argv[2:])
+    args.scyl = 0
     args.repeat = args.repeat if args.repeat else -1
 
     try:
