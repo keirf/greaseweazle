@@ -14,8 +14,13 @@ from greaseweazle.tools import util
 from greaseweazle import usb as USB
 
 def step(usb, args):
+    usb.seek(args.scyl, 0)
     while args.repeat != 0:
+        if args.wait:
+            input('Press enter for next step.')
         usb.seek(args.ecyl, 0)
+        if args.wait:
+            input('Press enter for next step.')
         usb.seek(args.scyl, 0)
         args.repeat -= 1
 
@@ -30,6 +35,8 @@ def main(argv):
                         help="last cylinder in step range")
     parser.add_argument("--repeat", type=int, default=0,
                         help="times to repeat (0 = forever)")
+    parser.add_argument("--wait", action='store_true',
+                        help="wait for input between step cycles")
     parser.add_argument("device", nargs="?", default="auto",
                         help="serial device")
     parser.prog += ' ' + argv[1]
