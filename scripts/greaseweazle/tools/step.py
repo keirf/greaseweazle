@@ -17,10 +17,10 @@ def step(usb, args):
     usb.seek(args.scyl, 0)
     while args.repeat != 0:
         if args.wait:
-            input('Press enter for next step.')
+            input('Press enter to seek to track {:d}.'.format(args.ecyl))
         usb.seek(args.ecyl, 0)
         if args.wait:
-            input('Press enter for next step.')
+            input('Press enter to seek to track {:d}.'.format(args.scyl))
         usb.seek(args.scyl, 0)
         args.repeat -= 1
 
