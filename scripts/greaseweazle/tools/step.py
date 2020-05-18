@@ -12,16 +12,25 @@ import sys
 
 from greaseweazle.tools import util
 from greaseweazle import usb as USB
+from greaseweazle.usb import CmdError, Ack
+
+
+def seek_with_catch_notrk0(usb, cyl, wait):
+    if wait:
+        input('Press enter to seek to track {:d}.'.format(cyl))
+    try:
+        usb.seek(cyl, 0)
+    except CmdError as e:
+        if e.args[1] == Ack.NoTrk0:
+            print(e, '- is the head stuck?')
+        else:
+            raise e
+
 
 def step(usb, args):
-    usb.seek(args.scyl, 0)
     while args.repeat != 0:
-        if args.wait:
-            input('Press enter to seek to track {:d}.'.format(args.ecyl))
-        usb.seek(args.ecyl, 0)
-        if args.wait:
-            input('Press enter to seek to track {:d}.'.format(args.scyl))
-        usb.seek(args.scyl, 0)
+        seek_with_catch_notrk0(usb, args.ecyl, args.wait)
+        seek_with_catch_notrk0(usb, args.scyl, args.wait)
         args.repeat -= 1
 
 def main(argv):
