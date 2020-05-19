@@ -49,9 +49,11 @@ argv = sys.argv
 
 if len(argv) < 2 or argv[1] not in actions:
     print("Usage: %s [action] [-h] ..." % (argv[0]))
-    print("Actions: ", end="")
-    print(", ".join(str(x) for x in actions))
     print("  -h, --help  Show help message for specified action")
+    print("Actions:")
+    for a in actions:
+        mod = importlib.import_module('greaseweazle.tools.' + a)
+        print('  %-12s%s' % (a, mod.__dict__['description']))
     sys.exit(1)
 
 mod = importlib.import_module('greaseweazle.tools.' + argv[1])

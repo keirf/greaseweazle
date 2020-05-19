@@ -7,6 +7,8 @@
 # This is free and unencumbered software released into the public domain.
 # See the file COPYING for more details, or visit <http://unlicense.org>.
 
+description = "Update the Greaseweazle device firmware to current version."
+
 import sys, serial, struct, os
 import crcmod.predefined
 
@@ -93,6 +95,7 @@ def main(argv):
                         help="serial device")
     parser.add_argument("--bootloader", action="store_true",
                         help="update the bootloader (use with caution!)")
+    parser.description = description
     parser.prog += ' ' + argv[1]
     args = parser.parse_args(argv[2:])
 

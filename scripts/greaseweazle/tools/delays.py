@@ -7,6 +7,9 @@
 # This is free and unencumbered software released into the public domain.
 # See the file COPYING for more details, or visit <http://unlicense.org>.
 
+description = "Display (and optionally modify) Greaseweazle \
+drive-delay parameters."
+
 import sys
 
 from greaseweazle.tools import util
@@ -27,6 +30,7 @@ def main(argv):
                         help="quiescent time until auto deselect (msecs)")
     parser.add_argument("device", nargs="?", default="auto",
                         help="serial device")
+    parser.description = description
     parser.prog += ' ' + argv[1]
     args = parser.parse_args(argv[2:])
 

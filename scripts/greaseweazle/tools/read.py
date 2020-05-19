@@ -7,6 +7,8 @@
 # This is free and unencumbered software released into the public domain.
 # See the file COPYING for more details, or visit <http://unlicense.org>.
 
+description = "Read a disk to the specified image file."
+
 import sys
 
 from greaseweazle.tools import util
@@ -58,6 +60,7 @@ def main(argv):
     parser.add_argument("file", help="output filename")
     parser.add_argument("device", nargs="?", default="auto",
                         help="serial device")
+    parser.description = description
     parser.prog += ' ' + argv[1]
     args = parser.parse_args(argv[2:])
     args.nr_sides = 1 if args.single_sided else 2

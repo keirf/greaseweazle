@@ -7,6 +7,8 @@
 # This is free and unencumbered software released into the public domain.
 # See the file COPYING for more details, or visit <http://unlicense.org>.
 
+description = "Report the available USB bandwidth for the Greaseweazle device."
+
 import sys
 
 from timeit import default_timer as timer
@@ -44,6 +46,7 @@ def main(argv):
     parser = util.ArgumentParser()
     parser.add_argument("device", nargs="?", default="auto",
                         help="serial device")
+    parser.description = description
     parser.prog += ' ' + argv[1]
     args = parser.parse_args(argv[2:])
 
