@@ -72,7 +72,7 @@ windist:
 	cp -a scripts/setup.py $(PROJ)-$(VER)/scripts
 	cd $(PROJ)-$(VER)/scripts && $(PYTHON) setup.py build
 	cp -a $(PROJ)-$(VER)/scripts/build/exe.win*/* $(PROJ)-$(VER)/
-	rm -rf $(PROJ)-$(VER)/scripts $(PROJ)-$(VER)/*.py
+	rm -rf $(PROJ)-$(VER)/scripts $(PROJ)-$(VER)/*.py $(PROJ)-$(VER)/gw
 	$(ZIP) $(PROJ)-$(VER)-win.zip $(PROJ)-$(VER)
 
 mrproper: clean
