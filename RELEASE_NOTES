@@ -3,6 +3,13 @@
 ** Keir Fraser <keir.xen@gmail.com>
 ************************************
 
+** v0.17 - 19 May 2020
+ - Windows: New self-contained executable distribution
+   - No need to install Python, or module dependencies
+ - Mac, Linux: Main script is directly executable
+   - No need to manually invoke the Python interpreter
+ - GW host tool: Help-text description for each available action
+
 ** v0.16 - 15 May 2020
  - F7 Firmware: Enable over-drive voltage mode
    - Required for reliable 216MHz operation (see datasheet)

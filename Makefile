@@ -1,6 +1,6 @@
 
 export FW_MAJOR := 0
-export FW_MINOR := 16
+export FW_MINOR := 17
 
 TARGETS := all blinky clean dist windist mrproper ocd flash start serial
 .PHONY: $(TARGETS)
@@ -49,7 +49,7 @@ dist:
 	cp -a blinky_test/Blinky.hex $(PROJ)-$(VER)/alt/Blinky_Test-$(VER).hex
 	cp -a COPYING $(PROJ)-$(VER)/
 	cp -a README.md $(PROJ)-$(VER)/
-	cp -a gw.py $(PROJ)-$(VER)/
+	cp -a gw $(PROJ)-$(VER)/
 	cp -a scripts/49-greaseweazle.rules $(PROJ)-$(VER)/scripts/
 	cp -a scripts/gw.py $(PROJ)-$(VER)/scripts/
 	cp -a scripts/greaseweazle/*.py $(PROJ)-$(VER)/scripts/greaseweazle/
