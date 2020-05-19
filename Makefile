@@ -2,7 +2,7 @@
 export FW_MAJOR := 0
 export FW_MINOR := 16
 
-TARGETS := all blinky clean dist mrproper ocd flash start serial
+TARGETS := all blinky clean dist windist mrproper ocd flash start serial
 .PHONY: $(TARGETS)
 
 ifneq ($(RULES_MK),y)
@@ -64,6 +64,16 @@ dist:
 	cat $(PROJ)-$(VER).upd >>$(PROJ)-$(VER)/$(PROJ)-$(VER).upd
 	$(MAKE) clean
 	$(ZIP) $(PROJ)-$(VER).zip $(PROJ)-$(VER)
+
+windist:
+	rm -rf $(PROJ)-*
+	wget https://github.com/keirf/Greaseweazle/releases/download/$(VER)/$(PROJ)-$(VER).zip
+	$(UNZIP) $(PROJ)-$(VER).zip
+	cp -a scripts/setup.py $(PROJ)-$(VER)/scripts
+	cd $(PROJ)-$(VER)/scripts && $(PYTHON) setup.py build
+	cp -a $(PROJ)-$(VER)/scripts/build/exe.win*/* $(PROJ)-$(VER)/
+	rm -rf $(PROJ)-$(VER)/scripts $(PROJ)-$(VER)/*.py
+	$(ZIP) $(PROJ)-$(VER)-win.zip $(PROJ)-$(VER)
 
 mrproper: clean
 	rm -rf $(PROJ)-*
