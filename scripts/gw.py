@@ -37,7 +37,8 @@ For installation instructions please read the wiki:
           % ', '.join(missing_modules))
     sys.exit(1)
 
-actions = [ 'read',
+actions = [ 'info',
+            'read',
             'write',
             'erase',
             'delays',

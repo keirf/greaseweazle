@@ -139,13 +139,16 @@ def usb_reopen(usb, is_update):
     raise serial.SerialException('Could not reopen port after mode switch')
 
 
-def usb_open(devicename, is_update=False):
+def usb_open(devicename, is_update=False, mode_check=True):
 
     if devicename == "auto":
         devicename = find_port()
     
     usb = USB.Unit(serial.Serial(devicename))
     usb.port_info = port_info(devicename)
+
+    if not mode_check:
+        return usb
 
     print("** %s v%u.%u [F%u], Host Tools v%u.%u"
           % (("Greaseweazle", "Bootloader")[usb.update_mode],
