@@ -9,8 +9,6 @@
  * See the file COPYING for more details, or visit <http://unlicense.org>.
  */
 
-uint8_t board_id;
-
 #define early_delay_ms(ms) (delay_ticks((ms)*2000))
 #define early_delay_us(ms) (delay_ticks((ms)*2))
 
@@ -69,8 +67,8 @@ static void board_id_init(void)
     }
 
     /* Panic if the ID is unrecognised. */
-    board_id = id;
-    if (board_id != 0)
+    gw_info.hw_submodel = id;
+    if (id != 0)
         early_fatal(2);
 }
 

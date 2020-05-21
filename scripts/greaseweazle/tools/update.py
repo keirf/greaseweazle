@@ -38,9 +38,9 @@ def update_firmware(usb, args):
 
     # Search the catalogue for a match on our Weazle's hardware type.
     while dat:
-        upd_len, hw_type = struct.unpack("<2H", dat[:4])
+        upd_len, hw_model = struct.unpack("<2H", dat[:4])
         upd_type, = struct.unpack("2s", dat[upd_len-4:upd_len-2])
-        if hw_type == usb.hw_type and upd_type == req_type:
+        if hw_model == usb.hw_model and upd_type == req_type:
             # Match: Pull out the embedded update file.
             dat = dat[4:upd_len+4]
             break
@@ -48,12 +48,12 @@ def update_firmware(usb, args):
         dat = dat[upd_len+4:]
 
     if not dat:
-        print("%s: No match for hardware type %x" % (filename, usb.hw_type))
+        print("%s: No match for hardware type %x" % (filename, usb.hw_model))
         return
 
     # Check the matching update file's footer.
-    sig, maj, min, hw_type = struct.unpack("<2s2BH", dat[-8:-2])
-    if len(dat) & 3 != 0 or sig != req_type or hw_type != usb.hw_type:
+    sig, maj, min, hw_model = struct.unpack("<2s2BH", dat[-8:-2])
+    if len(dat) & 3 != 0 or sig != req_type or hw_model != usb.hw_model:
         print("%s: Bad update file" % (filename))
         return
     crc16 = crcmod.predefined.Crc('crc-ccitt-false')
@@ -80,7 +80,7 @@ def update_firmware(usb, args):
             return
         print("Done.")
     
-        if usb.hw_type == 7:
+        if usb.hw_model == 7:
             util.usb_reopen(usb, is_update=False)
         else:
             print("** Disconnect Greaseweazle and remove the Programming Jumper.")

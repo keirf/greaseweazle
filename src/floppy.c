@@ -244,10 +244,10 @@ void floppy_init(void)
     _set_bus_type(BUS_NONE);
 }
 
-static struct gw_info gw_info = {
+struct gw_info gw_info = {
     .max_index = 15, .max_cmd = CMD_MAX,
     .sample_freq = 72000000u,
-    .hw_type = STM32F
+    .hw_model = STM32F
 };
 
 static void auto_off_arm(void)

@@ -110,8 +110,10 @@ struct packed gw_info {
     uint8_t max_index;
     uint8_t max_cmd;
     uint32_t sample_freq;
-    uint16_t hw_type;
+    uint8_t hw_model, hw_submodel;
+    uint8_t usb_speed;
 };
+extern struct gw_info gw_info;
 
 /* CMD_GET_INFO, index 1 */
 #define GETINFO_BW_STATS 1

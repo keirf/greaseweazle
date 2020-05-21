@@ -137,12 +137,13 @@ class Unit:
         self.reset()
         # Copy firmware info to instance variables (see above for definitions).
         self._send_cmd(struct.pack("3B", Cmd.GetInfo, 3, GetInfo.Firmware))
-        x = struct.unpack("<4BIH22x", self.ser.read(32))
+        x = struct.unpack("<4BI3B21x", self.ser.read(32))
         (self.major, self.minor, self.max_index,
-         self.max_cmd, self.sample_freq, self.hw_type) = x
+         self.max_cmd, self.sample_freq, self.hw_model,
+         self.hw_submodel, self.usb_speed) = x
         # Old firmware doesn't report HW type but runs on STM32F1 only.
-        if self.hw_type == 0:
-            self.hw_type = 1
+        if self.hw_model == 0:
+            self.hw_model = 1
         # Check whether firmware is in update mode: limited command set if so.
         self.update_mode = (self.max_index == 0)
         if self.update_mode:

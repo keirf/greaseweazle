@@ -152,11 +152,11 @@ def usb_open(devicename, is_update=False, mode_check=True):
 
     print("** %s v%u.%u [F%u], Host Tools v%u.%u"
           % (("Greaseweazle", "Bootloader")[usb.update_mode],
-             usb.major, usb.minor, usb.hw_type,
+             usb.major, usb.minor, usb.hw_model,
              version.major, version.minor))
 
     if usb.update_mode and not is_update:
-        if usb.hw_type == 7 and not usb.update_jumpered:
+        if usb.hw_model == 7 and not usb.update_jumpered:
             usb = usb_reopen(usb, is_update)
             if not usb.update_mode:
                 return usb
@@ -169,7 +169,7 @@ def usb_open(devicename, is_update=False, mode_check=True):
         sys.exit(1)
 
     if is_update and not usb.update_mode:
-        if usb.hw_type == 7:
+        if usb.hw_model == 7:
             usb = usb_reopen(usb, is_update)
             error.check(usb.update_mode, """\
 Greaseweazle F7 did not change to Firmware Update Mode as requested.
@@ -182,7 +182,7 @@ If the problem persists, install the Update Jumper (across RX/TX).""")
     if not usb.update_mode and usb.update_needed:
         print("Firmware is out of date: Require v%u.%u"
               % (version.major, version.minor))
-        if usb.hw_type == 7:
+        if usb.hw_model == 7:
             print("Run \"update <update_file>\"")
         else:
             print("Install the Update Jumper and \"update <update_file>\"")

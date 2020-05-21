@@ -37,10 +37,10 @@ static uint32_t u_prod;
 
 static bool_t upd_strapped;
 
-static struct gw_info gw_info = {
+struct gw_info gw_info = {
     /* Max Index == 0 signals that this is the Bootloader. */
     .max_index = 0, .max_cmd = CMD_MAX,
-    .hw_type = STM32F
+    .hw_model = STM32F
 };
 
 static void blink_init(void)
