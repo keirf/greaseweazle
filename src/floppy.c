@@ -221,7 +221,6 @@ void floppy_init(void)
     floppy_mcu_init();
 
     /* Output pins, unbuffered. */
-    configure_pin(densel, GPO_bus);
     configure_pin(dir,    GPO_bus);
     configure_pin(step,   GPO_bus);
     configure_pin(wgate,  GPO_bus);
@@ -1058,19 +1057,15 @@ static void process_command(void)
         uint8_t level = u_buf[3];
         if ((len != 4) || (level & ~1))
             goto bad_command;
-        if (pin != 2) {
-            u_buf[1] = ACK_BAD_PIN;
-            goto out;
-        }
-        gpio_write_pin(gpio_densel, pin_densel, level);
-        break;
+        u_buf[1] = set_user_pin(pin, level);
+        goto out;
     }
     case CMD_RESET: {
         if (len != 2)
             goto bad_command;
         delay_params = factory_delay_params;
         _set_bus_type(BUS_NONE);
-        write_pin(densel, FALSE);
+        reset_user_pins();
         break;
     }
     case CMD_ERASE_FLUX: {

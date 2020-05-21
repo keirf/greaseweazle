@@ -82,6 +82,9 @@ static void floppy_mcu_init(void)
     /* Configure SELECT/MOTOR lines. */
     configure_pin(sel, GPO_bus);
     configure_pin(mot, GPO_bus);
+
+    /* Configure user-modifiable lines. */
+    configure_pin(densel, GPO_bus);
 }
 
 static void rdata_prep(void)
@@ -174,6 +177,19 @@ static void reset_bus(void)
 {
     write_pin(sel, FALSE);
     write_pin(mot, FALSE);
+}
+
+static uint8_t set_user_pin(unsigned int pin, unsigned int level)
+{
+    if (pin != 2)
+        return ACK_BAD_PIN;
+    gpio_write_pin(gpio_densel, pin_densel, level);
+    return ACK_OKAY;
+}
+
+static void reset_user_pins(void)
+{
+    write_pin(densel, FALSE);
 }
 
 /*

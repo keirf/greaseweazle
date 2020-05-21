@@ -12,8 +12,12 @@
 #define O_FALSE 1
 #define O_TRUE  0
 
-#define GPO_bus GPO_opendrain(IOSPD_LOW,O_FALSE)
-#define AFO_bus AFO_opendrain(IOSPD_LOW)
+#define GPO_bus_pp GPO_pushpull(IOSPD_LOW,O_FALSE)
+#define AFO_bus_pp AFO_pushpull(IOSPD_LOW)
+#define GPO_bus_od GPO_opendrain(IOSPD_LOW,O_FALSE)
+#define AFO_bus_od AFO_opendrain(IOSPD_LOW)
+static unsigned int GPO_bus;
+static unsigned int AFO_bus;
 #define GPI_bus GPI_floating
 
 /* Input pins */
@@ -25,8 +29,6 @@
 #define pin_wrprot  1 /* PA1 */
 
 /* Output pins. */
-#define gpio_densel gpiob
-#define pin_densel 12 /* PB12 */
 #define gpio_pin10 gpiob
 #define pin_pin10  1  /* PB1 */
 #define gpio_pin12 gpiob
@@ -65,8 +67,54 @@ void IRQ_8(void) __attribute__((alias("IRQ_INDEX_changed"))); /* EXTI2 */
 #define U_BUF_SZ (128*1024)
 static uint8_t u_buf[U_BUF_SZ] aligned(4) section_ext_ram;
 
+enum { _A = 1, _B, _C, _D, _E, _F, _G, _H, _I };
+enum { _OD = 0, _PP };
+struct user_pin {
+    uint8_t pin_id;
+    uint8_t gpio_bank;
+    uint8_t gpio_pin;
+    bool_t  push_pull;
+};
+
+const static struct user_pin _user_pins_F7SM_basic[] = {
+    { 2, _B, 12, _OD },
+    { 0,  0,  0, _OD } };
+const static struct user_pin _user_pins_F7SM_ambertronic_f7_plus[] = {
+    { 2, _B, 12, _OD }, /* board bug: B12 isn't buffered */
+    { 4, _C,  6, _PP },
+    { 0,  0,  0, _PP } };
+const static struct user_pin _user_pins_F7SM_ultra730[] = {
+    { 2, _B, 12, _PP },
+    { 4, _E, 15, _PP },
+    { 6, _E, 14, _PP },
+    { 0,  0,  0, _PP } };
+const static struct user_pin *user_pins, *_user_pins[] = {
+    [F7SM_basic]               = _user_pins_F7SM_basic,
+    [F7SM_ambertronic_f7_plus] = _user_pins_F7SM_ambertronic_f7_plus,
+    [F7SM_ultra730]            = _user_pins_F7SM_ultra730
+};
+
+static GPIO gpio_from_id(uint8_t id)
+{
+    switch (id) {
+    case _A: return gpioa;
+    case _B: return gpiob;
+    case _C: return gpioc;
+    case _D: return gpiod;
+    case _E: return gpioe;
+    case _F: return gpiof;
+    case _G: return gpiog;
+    case _H: return gpioh;
+    case _I: return gpioi;
+    }
+    ASSERT(0);
+    return NULL;
+}
+
 static void floppy_mcu_init(void)
 {
+    const struct user_pin *upin;
+
     /* Enable clock for Timer 2. */
     rcc->apb1enr |= RCC_APB1ENR_TIM2EN;
     peripheral_clock_delay();
@@ -75,6 +123,17 @@ static void floppy_mcu_init(void)
     gpio_set_af(gpio_rdata, pin_rdata, 1);
     gpio_set_af(gpio_wdata, pin_wdata, 1);
     configure_pin(rdata, AFI(PUPD_none));
+
+    /* Configure user-modifiable pins. */
+    user_pins = _user_pins[gw_info.hw_submodel];
+    for (upin = user_pins; upin->gpio_bank != 0; upin++) {
+        gpio_configure_pin(gpio_from_id(upin->gpio_bank), upin->gpio_pin,
+                           upin->push_pull ? GPO_bus_pp : GPO_bus_od);
+    }
+
+    /* Configure the standard output types. */
+    GPO_bus = upin->push_pull ? GPO_bus_pp : GPO_bus_od;
+    AFO_bus = upin->push_pull ? AFO_bus_pp : AFO_bus_od;
 
     /* Configure SELECT/MOTOR lines. */
     configure_pin(pin10, GPO_bus);
@@ -244,6 +303,29 @@ static void reset_bus(void)
     write_pin(pin12, FALSE);
     write_pin(pin14, FALSE);
     write_pin(pin16, FALSE);
+}
+
+static uint8_t set_user_pin(unsigned int pin, unsigned int level)
+{
+    const struct user_pin *upin;
+
+    for (upin = user_pins; upin->gpio_bank != 0; upin++) {
+        if (upin->pin_id == pin)
+            goto found;
+    }
+    return ACK_BAD_PIN;
+
+found:
+    gpio_write_pin(gpio_from_id(upin->gpio_bank), upin->gpio_pin, level);
+    return ACK_OKAY;
+}
+
+static void reset_user_pins(void)
+{
+    const struct user_pin *upin;
+
+    for (upin = user_pins; upin->gpio_bank != 0; upin++)
+        gpio_write_pin(gpio_from_id(upin->gpio_bank), upin->gpio_pin, O_FALSE);
 }
 
 /*
