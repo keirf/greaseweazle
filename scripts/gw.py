@@ -48,6 +48,11 @@ actions = [ 'info',
             'bandwidth' ]
 argv = sys.argv
 
+backtrace = False
+if len(argv) > 1 and argv[1] == '--bt':
+    backtrace = True
+    argv = [argv[0]] + argv[2:]
+
 if len(argv) < 2 or argv[1] not in actions:
     print("Usage: %s [action] [-h] ..." % (argv[0]))
     print("  -h, --help  Show help message for specified action")
@@ -63,9 +68,10 @@ try:
     res = main(argv)
     if res is None:
         res = 0
-except (IndexError, AssertionError):
+except (IndexError, AssertionError, TypeError, KeyError):
     raise
 except Exception as err:
+    if backtrace: raise
     print("** FATAL ERROR:")
     print(err)
     res = 1
