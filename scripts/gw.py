@@ -70,6 +70,9 @@ try:
         res = 0
 except (IndexError, AssertionError, TypeError, KeyError):
     raise
+except KeyboardInterrupt:
+    if backtrace: raise
+    res = 1
 except Exception as err:
     if backtrace: raise
     print("** FATAL ERROR:")

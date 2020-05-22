@@ -68,6 +68,7 @@ def with_drive_selected(fn, usb, args, *_args, **_kwargs):
         usb.reset()
         usb.ser.close()
         usb.ser.open()
+        raise
     finally:
         usb.drive_motor(args.drive[1], False)
         usb.drive_deselect()
