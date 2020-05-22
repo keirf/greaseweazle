@@ -15,8 +15,9 @@ from greaseweazle.tools import util
 from greaseweazle import usb as USB
 from greaseweazle import version
 
-submodel_id = { 1: { 0: 'Basic USB-FS' },
-                7: { 0: 'Basic USB-FS' } }
+submodel_id = { 1: { 0: 'Basic' },
+                7: { 0: 'Basic',
+                     1: 'AmberTronic F7 Plus' } }
 
 speed_id = { 0: 'Full Speed (12 Mbit/s)',
              1: 'High Speed (480 Mbit/s)' }

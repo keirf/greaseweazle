@@ -68,7 +68,7 @@ static void board_id_init(void)
 
     /* Panic if the ID is unrecognised. */
     gw_info.hw_submodel = id;
-    if (id != 0)
+    if (id > 1)
         early_fatal(2);
 }
 
