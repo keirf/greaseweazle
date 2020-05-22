@@ -68,12 +68,14 @@ static void board_id_init(void)
 
     /* Panic if the ID is unrecognised. */
     gw_info.hw_submodel = id;
-    if (id > 1)
+    if (id > 2)
         early_fatal(2);
 }
 
 static void clock_init(void)
 {
+    unsigned int hse = (gw_info.hw_submodel == F7SM_ultra730) ? 16 : 8;
+
     /* Disable all peripheral clocks except the essentials before enabling 
      * Over-drive mode (see note in RM0431, p102). We still need access to RAM
      * and to the power interface itself. */
@@ -87,8 +89,8 @@ static void clock_init(void)
         cpu_relax();
 
     /* Main PLL. */
-    rcc->pllcfgr = (RCC_PLLCFGR_PLLSRC_HSE | /* PLLSrc = HSE = 8MHz */
-                    RCC_PLLCFGR_PLLM(4) |    /* PLL In = HSE/4 = 2MHz */
+    rcc->pllcfgr = (RCC_PLLCFGR_PLLSRC_HSE | /* PLLSrc = HSE */
+                    RCC_PLLCFGR_PLLM(hse/2) |/* PLL In = HSE/(HSE/2) = 2MHz */
                     RCC_PLLCFGR_PLLN(216) |  /* PLLVCO = 2MHz*216 = 432MHz */
                     RCC_PLLCFGR_PLLP(0) |    /* SYSCLK = 432MHz/2 = 216MHz */
                     RCC_PLLCFGR_PLLQ(9));    /* USB    = 432MHz/9 = 48MHz */

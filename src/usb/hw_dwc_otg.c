@@ -11,6 +11,7 @@
 
 #include "hw_dwc_otg.h"
 
+static int conf_iface;
 static bool_t is_hs;
 
 static struct rx_buf {
@@ -49,8 +50,8 @@ static void hsphyc_init(void)
     hsphyc->ldo |= HSPHYC_LDO_ENABLE;
     do { delay_us(1); } while (!(hsphyc->ldo & HSPHYC_LDO_STATUS));
 
-    /* HSE must be 25MHz! SEL(3) for 16MHz. */
-    hsphyc->pll1 |= HSPHYC_PLL1_SEL(5);
+    /* This is correct only for HSE = 16Mhz. */
+    hsphyc->pll1 |= HSPHYC_PLL1_SEL(3);
 
     /* Magic values from the LL driver. We can probably discard them. */
     hsphyc->tune |= (HSPHYC_TUNE_HSDRVCHKITRIM(7) |
@@ -152,6 +153,16 @@ static void fifos_init(void)
 void hw_usb_init(void)
 {
     int i;
+
+    /* Determine which PHY we use based on hardware submodel ID. */
+    switch (gw_info.hw_submodel) {
+    case F7SM_ultra730:
+        conf_iface = IFACE_HS_EMBEDDED;
+        break;
+    default:
+        conf_iface = IFACE_FS;
+        break;
+    }
 
     /*
      * HAL_PCD_MspInit

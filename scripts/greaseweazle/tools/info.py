@@ -17,7 +17,8 @@ from greaseweazle import version
 
 submodel_id = { 1: { 0: 'Basic' },
                 7: { 0: 'Basic',
-                     1: 'AmberTronic F7 Plus' } }
+                     1: 'AmberTronic F7 Plus',
+                     2: 'Ultra730' } }
 
 speed_id = { 0: 'Full Speed (12 Mbit/s)',
              1: 'High Speed (480 Mbit/s)' }
