@@ -64,7 +64,7 @@ class SCP:
         if off >= len(self.track_list):
             return None
         tdh, dat = self.track_list[off]
-        if not dat:
+        if dat is None:
             return None
         tdh = tdh[4:]
 
@@ -172,7 +172,7 @@ class SCP:
         trk_offs = bytearray()
         trk_dat = bytearray()
         for tdh, dat in self.track_list:
-            if not dat:
+            if dat is None:
                 trk_offs += struct.pack("<I", 0)
             else:
                 trk_offs += struct.pack("<I", 0x2b0 + len(trk_dat))
