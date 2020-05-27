@@ -142,7 +142,7 @@ def usb_reopen(usb, is_update):
 
 def usb_open(devicename, is_update=False, mode_check=True):
 
-    if devicename == "auto":
+    if devicename is None:
         devicename = find_port()
     
     usb = USB.Unit(serial.Serial(devicename))

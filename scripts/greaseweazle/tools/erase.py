@@ -42,8 +42,7 @@ def main(argv):
                         help="last cylinder to write")
     parser.add_argument("--single-sided", action="store_true",
                         help="single-sided write")
-    parser.add_argument("device", nargs="?", default="auto",
-                        help="serial device")
+    parser.add_argument("device", nargs="?", help="serial device")
     parser.description = description
     parser.prog += ' ' + argv[1]
     args = parser.parse_args(argv[2:])

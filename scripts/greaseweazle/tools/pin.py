@@ -27,8 +27,7 @@ def main(argv):
                         help="pin number")
     parser.add_argument("level", type=level,
                         help="pin level (H,L)")
-    parser.add_argument("device", nargs="?", default="auto",
-                        help="serial device")
+    parser.add_argument("device", nargs="?", help="serial device")
     parser.description = description
     parser.prog += ' ' + argv[1]
     args = parser.parse_args(argv[2:])

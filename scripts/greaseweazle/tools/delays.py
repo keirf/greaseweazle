@@ -28,8 +28,7 @@ def main(argv):
                         help="delay after motor on (msecs)")
     parser.add_argument("--auto-off", type=int,
                         help="quiescent time until auto deselect (msecs)")
-    parser.add_argument("device", nargs="?", default="auto",
-                        help="serial device")
+    parser.add_argument("device", nargs="?", help="serial device")
     parser.description = description
     parser.prog += ' ' + argv[1]
     args = parser.parse_args(argv[2:])

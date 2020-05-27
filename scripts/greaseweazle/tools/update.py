@@ -23,7 +23,7 @@ def update_firmware(usb, args):
     req_type = b'BL' if args.bootloader else b'GW'
 
     filename = args.file
-    if filename == "auto":
+    if filename is None:
         # Get the absolute path to the root Greaseweazle folder.
         path = os.path.dirname(os.path.abspath(__file__))
         for _ in range(3):
@@ -89,10 +89,8 @@ def update_firmware(usb, args):
 def main(argv):
 
     parser = util.ArgumentParser(allow_abbrev=False)
-    parser.add_argument("file", nargs="?", default="auto",
-                        help="update filename")
-    parser.add_argument("device", nargs="?", default="auto",
-                        help="serial device")
+    parser.add_argument("file", nargs="?", help="update filename")
+    parser.add_argument("device", nargs="?", help="serial device")
     parser.add_argument("--bootloader", action="store_true",
                         help="update the bootloader (use with caution!)")
     parser.description = description

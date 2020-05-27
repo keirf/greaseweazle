@@ -95,8 +95,7 @@ def main(argv):
     parser.add_argument("--rpm", type=int, nargs="?",
                         help="normalise to RPM")
     parser.add_argument("file", help="output filename")
-    parser.add_argument("device", nargs="?", default="auto",
-                        help="serial device")
+    parser.add_argument("device", nargs="?", help="serial device")
     parser.description = description
     parser.prog += ' ' + argv[1]
     args = parser.parse_args(argv[2:])
