@@ -14,6 +14,7 @@ import sys
 from greaseweazle.tools import util
 from greaseweazle import error
 from greaseweazle import usb as USB
+from greaseweazle.flux import Flux
 
 
 def open_image(args):
@@ -22,7 +23,36 @@ def open_image(args):
                 "%s: Cannot create %s image files"
                 % (args.file, image_class.__name__))
     image = image_class.to_file(args.scyl, args.nr_sides)
+    if args.rate is not None:
+        image.bitrate = args.rate
     return image
+
+
+# normalise_to_rpm:
+# Adjust all revolutions in Flux object to have specified rotation speed.
+def normalise_rpm(flux, rpm):
+
+    index_list, freq = flux.index_list, flux.sample_freq
+    
+    norm_to_index = 60/rpm * flux.sample_freq
+    norm_flux = []
+
+    to_index, index_list = index_list[0], index_list[1:]
+    factor = norm_to_index / to_index
+    
+    for x in flux.list:
+        to_index -= x
+        if to_index >= 0:
+            norm_flux.append(x*factor)
+            continue
+        if not index_list:
+            break
+        n_to_index, index_list = index_list[0], index_list[1:]
+        n_factor = norm_to_index / n_to_index
+        norm_flux.append((x+to_index)*factor - to_index*n_factor)
+        to_index, factor = n_to_index, n_factor
+
+    return Flux([norm_to_index]*len(flux.index_list), norm_flux, freq)
 
 
 # read_to_image:
@@ -33,7 +63,10 @@ def read_to_image(usb, args, image):
         for side in range(0, args.nr_sides):
             print("\rReading Track %u.%u..." % (cyl, side), end="")
             usb.seek((cyl, cyl*2)[args.double_step], side)
-            image.append_track(usb.read_track(args.revs))
+            flux = usb.read_track(args.revs)
+            if args.rpm is not None:
+                flux = normalise_rpm(flux, args.rpm)
+            image.append_track(flux)
 
     print()
 
@@ -57,6 +90,10 @@ def main(argv):
                         help="single-sided read")
     parser.add_argument("--double-step", action="store_true",
                         help="double-step drive heads")
+    parser.add_argument("--rate", type=int, nargs="?",
+                        help="data rate (kbit/s)")
+    parser.add_argument("--rpm", type=int, nargs="?",
+                        help="normalise to RPM")
     parser.add_argument("file", help="output filename")
     parser.add_argument("device", nargs="?", default="auto",
                         help="serial device")
