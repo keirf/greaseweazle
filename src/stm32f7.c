@@ -74,7 +74,7 @@ static void board_id_init(void)
 
 static void clock_init(void)
 {
-    unsigned int hse = (gw_info.hw_submodel == F7SM_ultra730) ? 16 : 8;
+    unsigned int hse = (gw_info.hw_submodel == F7SM_lightning) ? 16 : 8;
 
     /* Disable all peripheral clocks except the essentials before enabling 
      * Over-drive mode (see note in RM0431, p102). We still need access to RAM

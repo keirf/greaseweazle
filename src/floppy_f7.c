@@ -83,7 +83,7 @@ const static struct user_pin _user_pins_F7SM_ambertronic_f7_plus[] = {
     { 2, _B, 12, _OD }, /* board bug: B12 isn't buffered */
     { 4, _C,  6, _PP },
     { 0,  0,  0, _PP } };
-const static struct user_pin _user_pins_F7SM_ultra730[] = {
+const static struct user_pin _user_pins_F7SM_lightning[] = {
     { 2, _B, 12, _PP },
     { 4, _E, 15, _PP },
     { 6, _E, 14, _PP },
@@ -91,7 +91,7 @@ const static struct user_pin _user_pins_F7SM_ultra730[] = {
 const static struct user_pin *user_pins, *_user_pins[] = {
     [F7SM_basic]               = _user_pins_F7SM_basic,
     [F7SM_ambertronic_f7_plus] = _user_pins_F7SM_ambertronic_f7_plus,
-    [F7SM_ultra730]            = _user_pins_F7SM_ultra730
+    [F7SM_lightning]           = _user_pins_F7SM_lightning
 };
 
 static GPIO gpio_from_id(uint8_t id)

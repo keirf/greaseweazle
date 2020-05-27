@@ -91,7 +91,7 @@ void gpio_set_af(GPIO gpio, unsigned int pin, unsigned int af);
 enum {
     F7SM_basic = 0,
     F7SM_ambertronic_f7_plus = 1,
-    F7SM_ultra730 = 2
+    F7SM_lightning = 2
 };
 
 /*

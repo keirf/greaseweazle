@@ -156,7 +156,7 @@ void hw_usb_init(void)
 
     /* Determine which PHY we use based on hardware submodel ID. */
     switch (gw_info.hw_submodel) {
-    case F7SM_ultra730:
+    case F7SM_lightning:
         conf_iface = IFACE_HS_EMBEDDED;
         break;
     default:
