@@ -15,10 +15,10 @@ from greaseweazle.tools import util
 from greaseweazle import usb as USB
 from greaseweazle import version
 
-submodel_id = { 1: { 0: 'Basic' },
-                7: { 0: 'Basic',
-                     1: 'AmberTronic F7 Plus',
-                     2: 'Ultra730' } }
+model_id = { 1: { 0: 'F1' },
+             7: { 0: 'F7',
+                  1: 'AmberTronic F7 Plus',
+                  2: 'F7 Lightning' } }
 
 speed_id = { 0: 'Full Speed (12 Mbit/s)',
              1: 'High Speed (480 Mbit/s)' }
@@ -51,12 +51,10 @@ def main(argv):
         print_info_line('Device', port.device, tab=2)
 
     try:
-        submodel = submodel_id[usb.hw_model][usb.hw_submodel]
+        model = model_id[usb.hw_model][usb.hw_submodel]
     except KeyError:
-        submodel = 'Unknown'
-    submodel = '%02X (%s)' % (usb.hw_submodel, submodel)
-    print_info_line('Model', 'F%d' % usb.hw_model, tab=2)
-    print_info_line('Submodel', submodel, tab=2)
+        model = 'Unknown (0x%02X%02X)' % (usb.hw_model, usb.hw_submodel)
+    print_info_line('Model', model, tab=2)
 
     fwver = 'v%d.%d' % (usb.major, usb.minor)
     if usb.update_mode:
