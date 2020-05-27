@@ -5,7 +5,7 @@
 # This is free and unencumbered software released into the public domain.
 # See the file COPYING for more details, or visit <http://unlicense.org>.
 
-import binascii
+import binascii, itertools
 from bitarray import bitarray
 
 class Bitcell:
@@ -42,7 +42,9 @@ class Bitcell:
         to_index = index_list[0] / freq
         index_list = index_list[1:]
 
-        for x in flux.list:
+        # Make sure there's enough time in the flux list to cover all
+        # revolutions by appending a "large enough" final flux value.
+        for x in itertools.chain(flux.list, [sum(flux.index_list)]):
 
             # Gather enough ticks to generate at least one bitcell.
             ticks += x / freq
