@@ -16,35 +16,35 @@ class SCP:
     sample_freq = 40000000
 
     def __init__(self, start_cyl, nr_sides):
-        self.start_cyl = start_cyl
         self.nr_sides = nr_sides
         self.nr_revs = None
-        self.track_list = []
+        self.track_list = [(None,None)] * (start_cyl*2)
 
 
     @classmethod
     def to_file(cls, start_cyl, nr_sides):
-        hfe = cls(start_cyl, nr_sides)
-        return hfe
+        scp = cls(start_cyl, nr_sides)
+        return scp
 
 
     @classmethod
     def from_file(cls, dat):
 
         header = struct.unpack("<3s9BI", dat[0:16])
-        (sig, _, _, nr_revs, s_trk, e_trk, flags, _, ss, _, _) = header
+        (sig, _, _, nr_revs, _, _, flags, _, _, _, _) = header
         error.check(sig == b"SCP", "SCP: Bad signature")
-        nr_sides = 1 if ss else 2
         
         trk_offs = struct.unpack("<168I", dat[16:0x2b0])
 
-        scp = cls(s_trk // nr_sides, nr_sides)
+        scp = cls(0, 2)
         scp.nr_revs = nr_revs
 
-        for trknr in range(s_trk, e_trk+1):
+        for trknr in range(len(trk_offs)):
+            
             trk_off = trk_offs[trknr]
             if trk_off == 0:
                 scp.track_list.append((None, None))
+                continue
 
             # Parse the SCP track header and extract the flux data.
             thdr = dat[trk_off:trk_off+4+12*nr_revs]
@@ -60,9 +60,7 @@ class SCP:
 
 
     def get_track(self, cyl, side, writeout=False):
-        if side >= self.nr_sides or cyl < self.start_cyl:
-            return None
-        off = (cyl - self.start_cyl) * self.nr_sides + side
+        off = cyl*2 + side
         if off >= len(self.track_list):
             return None
         tdh, dat = self.track_list[off]
@@ -94,12 +92,17 @@ class SCP:
             val = 0
 
         return Flux(index_list, flux_list, SCP.sample_freq)
-    
-        
+
+
     # append_track:
     # Converts a Flux object into a Supercard Pro Track and appends it to
     # the current image-in-progress.
     def append_track(self, flux):
+
+        def _append(self, tdh, dat):
+            self.track_list.append((tdh, dat))
+            if self.nr_sides == 1:
+                self.track_list.append((None, None))
 
         nr_revs = len(flux.index_list)
         if not self.nr_revs:
@@ -109,7 +112,7 @@ class SCP:
         
         factor = SCP.sample_freq / flux.sample_freq
 
-        trknr = self.start_cyl * self.nr_sides + len(self.track_list)
+        trknr = len(self.track_list)
         tdh = struct.pack("<3sB", b"TRK", trknr)
         dat = bytearray()
 
@@ -131,7 +134,7 @@ class SCP:
                 rev += 1
                 if rev >= nr_revs:
                     # We're done: We simply discard any surplus flux samples
-                    self.track_list.append((tdh, dat))
+                    _append(self, tdh, dat)
                     return
                 to_index += flux.index_list[rev]
 
@@ -158,18 +161,22 @@ class SCP:
             len_at_index = len(dat)
             rev += 1
 
-        self.track_list.append((tdh, dat))
+        _append(self, tdh, dat)
 
 
     def get_image(self):
-        s_trk = self.start_cyl * self.nr_sides
-        e_trk = s_trk + len(self.track_list) - 1
+        # Track start/end seem to be cylinder numbers for single-sided images.
+        single_sided = 1 if self.nr_sides == 1 else 0
+        e_trk = len(self.track_list) // (2 if single_sided else 1) - 1
         # Generate the TLUT and concatenate all the tracks together.
-        trk_offs = bytearray(s_trk * 4)
+        trk_offs = bytearray()
         trk_dat = bytearray()
         for tdh, dat in self.track_list:
-            trk_offs += struct.pack("<I", 0x2b0 + len(trk_dat))
-            trk_dat += tdh + dat
+            if not dat:
+                trk_offs += struct.pack("<I", 0)
+            else:
+                trk_offs += struct.pack("<I", 0x2b0 + len(trk_dat))
+                trk_dat += tdh + dat
         trk_offs += bytes(0x2a0 - len(trk_offs))
         # Calculate checksum over all data (except 16-byte image header).
         csum = 0
@@ -182,10 +189,10 @@ class SCP:
                              b"SCP",    # Signature
                              0,         # Version
                              0x80,      # DiskType = Other
-                             self.nr_revs, s_trk, e_trk,
+                             self.nr_revs, 0, e_trk,
                              0x01,      # Flags = Index
                              0,         # 16-bit cell width
-                             1 if self.nr_sides == 1 else 0,
+                             single_sided,
                              0,         # 25ns capture
                              csum & 0xffffffff)
         # Concatenate it all together and send it back.
