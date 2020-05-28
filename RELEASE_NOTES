@@ -3,6 +3,20 @@
 ** Keir Fraser <keir.xen@gmail.com>
 ************************************
 
+** v0.18 - 28 May 2020
+ - gw read: New parameters --rate and --rpm
+   - rate: Bitcell data rate in kbit/s (eg 250=DD 500=HD)
+     - Used only for HFE images right now, where default is DD (250)
+   - rpm: Normalise track timings to the given RPM value
+     - This occurs before any other conversion or analysis
+ - gw info: New command to display information about the Greaseweazle setup
+ - gw bandwidth: Improved stats output
+ - SCP: Fix single-sided image handling according to latest SCP spec.
+   - Operates correctly with latest beta version of HxC software
+ - F7: Support new board designs
+   - AmberTronic F7 Plus: Kryoflux form factor, output buffers, 12v supply
+   - F7 Lightning: High Speed USB, output buffers
+
 ** v0.17 - 19 May 2020
  - Windows: New self-contained executable distribution
    - No need to install Python, or module dependencies
