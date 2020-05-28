@@ -32,7 +32,7 @@ static enum {
     ST_update,
 } state = ST_inactive;
 
-static uint8_t u_buf[256];
+static uint8_t u_buf[2048] aligned(4);
 static uint32_t u_prod;
 
 static bool_t upd_strapped;
