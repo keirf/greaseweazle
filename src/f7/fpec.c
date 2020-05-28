@@ -1,5 +1,5 @@
 /*
- * fpec_f7.c
+ * f7/fpec.c
  * 
  * STM32F73x Flash Memory Program/Erase Controller (FPEC).
  * 

@@ -1,5 +1,5 @@
 /*
- * floppy_f7.c
+ * f7/floppy.c
  * 
  * Floppy interface control: STM32F730x8.
  * 

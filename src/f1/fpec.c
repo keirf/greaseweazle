@@ -1,5 +1,5 @@
 /*
- * fpec_f1.c
+ * f1/fpec.c
  * 
  * STM32F10x Flash Memory Program/Erase Controller (FPEC).
  * 

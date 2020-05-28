@@ -1,5 +1,5 @@
 /*
- * floppy_f1.c
+ * f1/floppy.c
  * 
  * Floppy interface control: STM32F103C8.
  * 
