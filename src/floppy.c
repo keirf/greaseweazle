@@ -44,9 +44,9 @@ static const struct gw_delay factory_delay_params = {
 };
 
 #if STM32F == 1
-#include "floppy_f1.c"
+#include "f1/floppy.c"
 #elif STM32F == 7
-#include "floppy_f7.c"
+#include "f7/floppy.c"
 #endif
 
 static struct index {
