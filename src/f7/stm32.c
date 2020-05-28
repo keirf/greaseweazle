@@ -9,72 +9,11 @@
  * See the file COPYING for more details, or visit <http://unlicense.org>.
  */
 
-#define early_delay_ms(ms) (delay_ticks((ms)*2000))
 #define early_delay_us(ms) (delay_ticks((ms)*2))
-
-/* Blink the activity LED to indicate fatal error. */
-static void early_fatal(int blinks) __attribute__((noreturn));
-static void early_fatal(int blinks)
-{
-    int i;
-    rcc->ahb1enr |= RCC_AHB1ENR_GPIOBEN;
-    delay_ticks(10);
-    gpio_configure_pin(gpiob, 13, GPO_pushpull(IOSPD_LOW, HIGH));
-    for (;;) {
-        for (i = 0; i < blinks; i++) {
-            gpio_write_pin(gpiob, 13, LOW);
-            early_delay_ms(150);
-            gpio_write_pin(gpiob, 13, HIGH);
-            early_delay_ms(150);
-        }
-        early_delay_ms(2000);
-    }
-}
-
-static void board_id_init(void)
-{
-    uint16_t low, high;
-    uint8_t id = 0;
-    int i;
-
-    rcc->ahb1enr |= RCC_AHB1ENR_GPIOCEN;
-    early_delay_us(2);
-
-    /* Pull PC[15:13] low, and check which are tied HIGH. */
-    for (i = 0; i < 3; i++)
-        gpio_configure_pin(gpioc, 13+i, GPI_pull_down);
-    early_delay_us(10);
-    high = (gpioc->idr >> 13) & 7;
-
-    /* Pull PC[15:13] high, and check which are tied LOW. */
-    for (i = 0; i < 3; i++)
-        gpio_configure_pin(gpioc, 13+i, GPI_pull_up);
-    early_delay_us(10);
-    low = (~gpioc->idr >> 13) & 7;
-
-    /* Each PCx pin defines a 'trit': 0=float, 1=low, 2=high. 
-     * We build a 3^3 ID space from the resulting three-trit ID. */
-    for (i = 0; i < 3; i++) {
-        id *= 3;
-        switch ((high>>1&2) | (low>>2&1)) {
-        case 0: break;          /* float = 0 */
-        case 1: id += 1; break; /* LOW   = 1 */
-        case 2: id += 2; break; /* HIGH  = 2 */
-        case 3: early_fatal(1); /* cannot be tied HIGH *and* LOW! */
-        }
-        high <<= 1;
-        low <<= 1;
-    }
-
-    /* Panic if the ID is unrecognised. */
-    gw_info.hw_submodel = id;
-    if (id > 2)
-        early_fatal(2);
-}
 
 static void clock_init(void)
 {
-    unsigned int hse = (gw_info.hw_submodel == F7SM_lightning) ? 16 : 8;
+    unsigned int hse = board_config->hse_mhz;
 
     /* Disable all peripheral clocks except the essentials before enabling 
      * Over-drive mode (see note in RM0431, p102). We still need access to RAM
@@ -156,7 +95,7 @@ static void peripheral_init(void)
 void stm32_init(void)
 {
     cortex_init();
-    board_id_init();
+    identify_board_config();
     clock_init();
     icache_enable();
     dcache_enable();

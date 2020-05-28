@@ -94,6 +94,24 @@ enum {
     F7SM_lightning = 2
 };
 
+struct user_pin {
+    uint8_t pin_id;
+    uint8_t gpio_bank;
+    uint8_t gpio_pin;
+    bool_t  push_pull;
+};
+
+struct board_config {
+    uint8_t hse_mhz;
+    bool_t hs_usb;
+    const struct user_pin *user_pins;
+};
+
+extern const struct board_config *board_config;
+void identify_board_config(void);
+
+GPIO gpio_from_id(uint8_t id);
+
 /*
  * Local variables:
  * mode: C

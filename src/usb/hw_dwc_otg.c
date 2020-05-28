@@ -155,14 +155,7 @@ void hw_usb_init(void)
     int i;
 
     /* Determine which PHY we use based on hardware submodel ID. */
-    switch (gw_info.hw_submodel) {
-    case F7SM_lightning:
-        conf_iface = IFACE_HS_EMBEDDED;
-        break;
-    default:
-        conf_iface = IFACE_FS;
-        break;
-    }
+    conf_iface = board_config->hs_usb ? IFACE_HS_EMBEDDED : IFACE_FS;
 
     /*
      * HAL_PCD_MspInit

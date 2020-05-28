@@ -12,29 +12,134 @@
 #define gpio_led gpiob
 #define pin_led 13
 
+enum { _A = 0, _B, _C, _D, _E, _F, _G, _H, _I };
+enum { _OD = 0, _PP };
+
+GPIO gpio_from_id(uint8_t id)
+{
+    switch (id) {
+    case _A: return gpioa;
+    case _B: return gpiob;
+    case _C: return gpioc;
+    case _D: return gpiod;
+    case _E: return gpioe;
+    case _F: return gpiof;
+    case _G: return gpiog;
+    case _H: return gpioh;
+    case _I: return gpioi;
+    }
+    ASSERT(0);
+    return NULL;
+}
+
+const static struct user_pin _user_pins_F7SM_basic[] = {
+    { 2, _B, 12, _OD },
+    { 0,  0,  0, _OD } };
+const static struct user_pin _user_pins_F7SM_ambertronic_f7_plus[] = {
+    { 2, _B, 12, _OD }, /* board bug: B12 isn't buffered */
+    { 4, _C,  6, _PP },
+    { 0,  0,  0, _PP } };
+const static struct user_pin _user_pins_F7SM_lightning[] = {
+    { 2, _B, 12, _PP },
+    { 4, _E, 15, _PP },
+    { 6, _E, 14, _PP },
+    { 0,  0,  0, _PP } };
+const static struct board_config _board_config[] = {
+    [F7SM_basic] = {
+        .hse_mhz   = 8,
+        .hs_usb    = FALSE,
+        .user_pins = _user_pins_F7SM_basic },
+    [F7SM_ambertronic_f7_plus] = {
+        .hse_mhz   = 8,
+        .hs_usb    = FALSE,
+        .user_pins = _user_pins_F7SM_ambertronic_f7_plus },
+    [F7SM_lightning] = {
+        .hse_mhz   = 16,
+        .hs_usb    = TRUE,
+        .user_pins = _user_pins_F7SM_lightning },
+};
+const struct board_config *board_config;
+
+#define early_delay_ms(ms) (delay_ticks((ms)*2000))
+#define early_delay_us(ms) (delay_ticks((ms)*2))
+
+/* Blink the activity LED to indicate fatal error. */
+static void early_fatal(int blinks) __attribute__((noreturn));
+static void early_fatal(int blinks)
+{
+    int i;
+    rcc->ahb1enr |= RCC_AHB1ENR_GPIOBEN;
+    delay_ticks(10);
+    gpio_configure_pin(gpiob, 13, GPO_pushpull(IOSPD_LOW, HIGH));
+    for (;;) {
+        for (i = 0; i < blinks; i++) {
+            gpio_write_pin(gpiob, 13, LOW);
+            early_delay_ms(150);
+            gpio_write_pin(gpiob, 13, HIGH);
+            early_delay_ms(150);
+        }
+        early_delay_ms(2000);
+    }
+}
+
+void identify_board_config(void)
+{
+    uint16_t low, high;
+    uint8_t id = 0;
+    int i;
+
+    rcc->ahb1enr |= RCC_AHB1ENR_GPIOCEN;
+    early_delay_us(2);
+
+    /* Pull PC[15:13] low, and check which are tied HIGH. */
+    for (i = 0; i < 3; i++)
+        gpio_configure_pin(gpioc, 13+i, GPI_pull_down);
+    early_delay_us(10);
+    high = (gpioc->idr >> 13) & 7;
+
+    /* Pull PC[15:13] high, and check which are tied LOW. */
+    for (i = 0; i < 3; i++)
+        gpio_configure_pin(gpioc, 13+i, GPI_pull_up);
+    early_delay_us(10);
+    low = (~gpioc->idr >> 13) & 7;
+
+    /* Each PCx pin defines a 'trit': 0=float, 1=low, 2=high. 
+     * We build a 3^3 ID space from the resulting three-trit ID. */
+    for (i = 0; i < 3; i++) {
+        id *= 3;
+        switch ((high>>1&2) | (low>>2&1)) {
+        case 0: break;          /* float = 0 */
+        case 1: id += 1; break; /* LOW   = 1 */
+        case 2: id += 2; break; /* HIGH  = 2 */
+        case 3: early_fatal(1); /* cannot be tied HIGH *and* LOW! */
+        }
+        high <<= 1;
+        low <<= 1;
+    }
+
+    /* Panic if the ID is unrecognised. */
+    if (id >= ARRAY_SIZE(_board_config))
+        early_fatal(2);
+
+    gw_info.hw_submodel = id;
+    board_config = &_board_config[id];
+}
+
 static void mcu_board_init(void)
 {
-    uint16_t a = 0x9930; /* PA4-5,8,11-12,15 */
-    uint16_t b = 0x23f8; /* PB3-9,13 */
-    uint16_t c = 0xffe7; /* PC0-2,5-15 */
-    uint16_t d = 0xffff; /* PD0-15 */
-    uint16_t e = 0xffff; /* PE0-15 */
-    uint16_t f = 0xffff; /* PF0-15 */
-    uint16_t g = 0xffff; /* PG0-15 */
-    uint16_t h = 0xffff; /* PH0-15 */
-    uint16_t i = 0xffff; /* PI0-15 */
+    uint16_t pu[] = {
+        [_A] = 0x9930, /* PA4-5,8,11-12,15 */
+        [_B] = 0x23f8, /* PB3-9,13 */
+        [_C] = 0xffe7, /* PC0-2,5-15 */
+        [_D] = 0xffff, /* PD0-15 */
+        [_E] = 0xffff, /* PE0-15 */
+        [_F] = 0xffff, /* PF0-15 */
+        [_G] = 0xffff, /* PG0-15 */
+        [_H] = 0xffff, /* PH0-15 */
+        [_I] = 0xffff, /* PI0-15 */
+    };
     uint32_t ahb1enr = rcc->ahb1enr;
-
-    switch (gw_info.hw_submodel) {
-    case F7SM_basic:
-        break;
-    case F7SM_ambertronic_f7_plus:
-        break;
-    case F7SM_lightning:
-        /* Uses PE12 and PE13 for extra drive outputs. */
-        ahb1enr |= RCC_AHB1ENR_GPIOEEN;
-        break;
-    }
+    const struct user_pin *upin;
 
     /* Enable all GPIO bank register clocks to configure unused pins. */
     rcc->ahb1enr |= (RCC_AHB1ENR_GPIOAEN |
@@ -48,15 +153,22 @@ static void mcu_board_init(void)
                      RCC_AHB1ENR_GPIOIEN);
     peripheral_clock_delay();
 
-    gpio_pull_up_pins(gpioa, a);
-    gpio_pull_up_pins(gpiob, b);
-    gpio_pull_up_pins(gpioc, c);
-    gpio_pull_up_pins(gpiod, d);
-    gpio_pull_up_pins(gpioe, e);
-    gpio_pull_up_pins(gpiof, f);
-    gpio_pull_up_pins(gpiog, g);
-    gpio_pull_up_pins(gpioh, h);
-    gpio_pull_up_pins(gpioi, i);
+    /* Keep clock enabled for all banks containing user-modifiable pins. 
+     * Also do not default these pins to pull-up mode. */
+    for (upin = board_config->user_pins; upin->pin_id != 0; upin++) {
+        ahb1enr |= 1u << upin->gpio_bank;
+        pu[upin->gpio_bank] &= ~(1u << upin->gpio_pin);
+    }
+
+    gpio_pull_up_pins(gpioa, pu[_A]);
+    gpio_pull_up_pins(gpiob, pu[_B]);
+    gpio_pull_up_pins(gpioc, pu[_C]);
+    gpio_pull_up_pins(gpiod, pu[_D]);
+    gpio_pull_up_pins(gpioe, pu[_E]);
+    gpio_pull_up_pins(gpiof, pu[_F]);
+    gpio_pull_up_pins(gpiog, pu[_G]);
+    gpio_pull_up_pins(gpioh, pu[_H]);
+    gpio_pull_up_pins(gpioi, pu[_I]);
 
     /* Unused GPIO banks can have their clocks disabled again. They will 
      * statically hold their configuration state. */
