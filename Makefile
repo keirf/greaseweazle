@@ -25,8 +25,8 @@ all: scripts/greaseweazle/version.py
 		Bootloader.elf Bootloader.bin Bootloader.hex
 	srec_cat bootloader/Bootloader.hex -Intel src/$(PROJ).hex -Intel \
 	-o $(PROJ)-$(VER).hex -Intel
-	$(PYTHON) ./scripts/mk_update.py bootloader/Bootloader.bin \
-		src/$(PROJ).bin $(PROJ)-$(VER).upd $(stm32)
+	$(PYTHON) ./scripts/mk_update.py new $(PROJ)-$(VER).upd \
+		bootloader/Bootloader.bin src/$(PROJ).bin $(stm32)
 
 blinky:
 	$(MAKE) debug=y stm32=f1 -C blinky_test -f $(ROOT)/Rules.mk \
@@ -61,7 +61,8 @@ dist:
 	$(MAKE) clean
 	$(MAKE) stm32=f7 all
 	cp -a $(PROJ)-$(VER).hex $(PROJ)-$(VER)/$(PROJ)-F7-$(VER).hex
-	cat $(PROJ)-$(VER).upd >>$(PROJ)-$(VER)/$(PROJ)-$(VER).upd
+	$(PYTHON) ./scripts/mk_update.py cat $(PROJ)-$(VER)/$(PROJ)-$(VER).upd \
+		$(PROJ)-$(VER)/$(PROJ)-$(VER).upd $(PROJ)-$(VER).upd
 	$(MAKE) clean
 	$(ZIP) $(PROJ)-$(VER).zip $(PROJ)-$(VER)
 

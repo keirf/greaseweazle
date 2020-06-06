@@ -32,9 +32,18 @@ def update_firmware(usb, args):
         filename = os.path.join(path, "Greaseweazle-v%d.%d.upd"
                                 % (version.major, version.minor))
     
-    # Read the entire update catalogue.
+    # Read and verify the entire update catalogue.
     with open(filename, "rb") as f:
         dat = f.read()
+    if struct.unpack('4s', dat[:4])[0] != b'GWUP':
+        print('%s: Not an UPD file' % (filename))
+        return
+    crc32 = crcmod.predefined.Crc('crc-32-mpeg')
+    crc32.update(dat)
+    if crc32.crcValue != 0:
+        print('%s: UPD file is corrupt' % (filename))
+        return
+    dat = dat[4:-4]
 
     # Search the catalogue for a match on our Weazle's hardware type.
     while dat:
@@ -48,7 +57,7 @@ def update_firmware(usb, args):
         dat = dat[upd_len+4:]
 
     if not dat:
-        print("%s: No match for hardware type %x" % (filename, usb.hw_model))
+        print("%s: No match for F%u hardware" % (filename, usb.hw_model))
         return
 
     # Check the matching update file's footer.

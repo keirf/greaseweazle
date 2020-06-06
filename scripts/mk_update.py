@@ -1,8 +1,12 @@
-# mk_update.py <bootloader> <main_firmware> <output> <stm_model>
+# mk_update.py new <output> <bootloader> <main_firmware> <stm_model>
+# mk_update.py cat <output> <update_file>*
+# mk_update.py verify <update_file>*
 #
 # Convert a raw firmware binary into an update file for our bootloader.
 #
 # Update Format (Little endian, unless otherwise stated):
+#   File Header:
+#     4 bytes: 'GWUP'
 #   Catalogue Header:
 #     2 bytes: <length> (excludes Catalogue Header)
 #     2 bytes: <hw_model>
@@ -13,6 +17,8 @@
 #     2 bytes: major, minor
 #     2 bytes: <hw_model>
 #     2 bytes: CRC16-CCITT, seed 0xFFFF (big endian, excludes Catalogue Header)
+#   File Footer:
+#     4 bytes: CRC32 (MPEG-2, big endian)
 #
 # Written & released by Keir Fraser <keir.xen@gmail.com>
 #
@@ -38,13 +44,62 @@ def mk_cat_entry(dat, hw_model, sig):
     footer += struct.pack(">H", crc16.crcValue)
     return header + dat + footer
 
+def new_upd(argv):
+    dat = b'GWUP'
+    hw_model = int(re.match("f(\d)", argv[2]).group(1))
+    with open(argv[1], "rb") as gw_f:
+        dat += mk_cat_entry(gw_f.read(), hw_model, b'GW')
+    with open(argv[0], "rb") as bl_f:
+        dat += mk_cat_entry(bl_f.read(), hw_model, b'BL')
+    return dat
+
+def cat_upd(argv):
+    dat = b'GWUP'
+    for fname in argv:
+        with open(fname, "rb") as f:
+            d = f.read()
+        assert struct.unpack('4s', d[:4])[0] == b'GWUP'
+        crc32 = crcmod.predefined.Crc('crc-32-mpeg')
+        crc32.update(d)
+        assert crc32.crcValue == 0
+        dat += d[4:-4]
+    return dat
+    
+def verify_upd(argv):
+    dat = b'GWUP'
+    for fname in argv:
+        with open(fname, "rb") as f:
+            d = f.read()
+        assert struct.unpack('4s', d[:4])[0] == b'GWUP'
+        crc32 = crcmod.predefined.Crc('crc-32-mpeg')
+        crc32.update(d)
+        assert crc32.crcValue == 0
+        d = d[4:-4]
+        while d:
+            upd_len, hw_model = struct.unpack("<2H", d[:4])
+            upd_type, = struct.unpack("2s", d[upd_len-4:upd_len-2])
+            crc16 = crcmod.predefined.Crc('crc-ccitt-false')
+            crc16.update(d[4:upd_len+4])
+            assert crc16.crcValue == 0
+            print('F%u %s' % (hw_model, {b'BL': 'Boot',
+                                         b'GW': 'Main'}[upd_type]))
+            d = d[upd_len+4:]
+    
 def main(argv):
-    out_f = open(argv[3], "wb")
-    hw_model = int(re.match("f(\d)", argv[4]).group(1))
-    with open(argv[2], "rb") as gw_f:
-        out_f.write(mk_cat_entry(gw_f.read(), hw_model, b'GW'))
-    with open(argv[1], "rb") as bl_f:
-        out_f.write(mk_cat_entry(bl_f.read(), hw_model, b'BL'))
+    if argv[1] == 'new':
+        dat = new_upd(argv[3:])
+    elif argv[1] == 'cat':
+        dat = cat_upd(argv[3:])
+    elif argv[1] == 'verify':
+        verify_upd(argv[2:])
+        return
+    else:
+        assert False
+    crc32 = crcmod.predefined.Crc('crc-32-mpeg')
+    crc32.update(dat)
+    dat += struct.pack(">I", crc32.crcValue)
+    with open(argv[2], "wb") as out_f:
+        out_f.write(dat)
 
 if __name__ == "__main__":
     main(sys.argv)
