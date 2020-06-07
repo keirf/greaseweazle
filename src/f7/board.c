@@ -32,7 +32,7 @@ GPIO gpio_from_id(uint8_t id)
     return NULL;
 }
 
-const static struct user_pin _user_pins_F7SM_basic[] = {
+const static struct user_pin _user_pins_F7SM_basic_v1[] = {
     { 2, _B, 12, _OD },
     { 0,  0,  0, _OD } };
 const static struct user_pin _user_pins_F7SM_ambertronic_f7_plus[] = {
@@ -44,11 +44,16 @@ const static struct user_pin _user_pins_F7SM_lightning[] = {
     { 4, _E, 15, _PP },
     { 6, _E, 14, _PP },
     { 0,  0,  0, _PP } };
+const static struct user_pin _user_pins_F7SM_basic_v2[] = {
+    { 2, _B, 12, _OD },
+    { 4, _C,  8, _OD },
+    { 6, _C,  7, _OD },
+    { 0,  0,  0, _OD } };
 const static struct board_config _board_config[] = {
-    [F7SM_basic] = {
+    [F7SM_basic_v1] = {
         .hse_mhz   = 8,
         .hs_usb    = FALSE,
-        .user_pins = _user_pins_F7SM_basic },
+        .user_pins = _user_pins_F7SM_basic_v1 },
     [F7SM_ambertronic_f7_plus] = {
         .hse_mhz   = 8,
         .hs_usb    = FALSE,
@@ -57,6 +62,10 @@ const static struct board_config _board_config[] = {
         .hse_mhz   = 16,
         .hs_usb    = TRUE,
         .user_pins = _user_pins_F7SM_lightning },
+    [F7SM_basic_v2] = {
+        .hse_mhz   = 8,
+        .hs_usb    = FALSE,
+        .user_pins = _user_pins_F7SM_basic_v2 },
 };
 const struct board_config *board_config;
 

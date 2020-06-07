@@ -89,9 +89,10 @@ void gpio_set_af(GPIO gpio, unsigned int pin, unsigned int af);
 #define section_ext_ram __attribute__((section(".ext_ram")))
 
 enum {
-    F7SM_basic = 0,
-    F7SM_ambertronic_f7_plus = 1,
-    F7SM_lightning = 2
+    F7SM_basic_v1 = 0,
+    F7SM_ambertronic_f7_plus,
+    F7SM_lightning,
+    F7SM_basic_v2,
 };
 
 struct user_pin {

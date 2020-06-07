@@ -16,9 +16,10 @@ from greaseweazle import usb as USB
 from greaseweazle import version
 
 model_id = { 1: { 0: 'F1' },
-             7: { 0: 'F7',
+             7: { 0: 'F7 (version 1)',
                   1: 'AmberTronic F7 Plus',
-                  2: 'F7 Lightning' } }
+                  2: 'F7 Lightning',
+                  3: 'F7 (version 2)' } }
 
 speed_id = { 0: 'Full Speed (12 Mbit/s)',
              1: 'High Speed (480 Mbit/s)' }
