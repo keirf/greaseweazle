@@ -165,9 +165,7 @@ class SCP:
 
 
     def get_image(self):
-        # Track start/end seem to be cylinder numbers for single-sided images.
         single_sided = 1 if self.nr_sides == 1 else 0
-        e_trk = len(self.track_list) // (2 if single_sided else 1) - 1
         # Generate the TLUT and concatenate all the tracks together.
         trk_offs = bytearray()
         trk_dat = bytearray()
@@ -189,7 +187,7 @@ class SCP:
                              b"SCP",    # Signature
                              0,         # Version
                              0x80,      # DiskType = Other
-                             self.nr_revs, 0, e_trk,
+                             self.nr_revs, 0, len(self.track_list) - 1,
                              0x01,      # Flags = Index
                              0,         # 16-bit cell width
                              single_sided,
