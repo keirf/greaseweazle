@@ -31,6 +31,8 @@ def main(argv):
 
     parser = util.ArgumentParser()
     parser.add_argument("device", nargs="?", help="serial device")
+    parser.add_argument("--bootloader", action="store_true",
+                        help="display bootloader info (F7 only)")
     parser.description = description
     parser.prog += ' ' + argv[1]
     args = parser.parse_args(argv[2:])
@@ -45,6 +47,9 @@ def main(argv):
         print('  Not found')
         sys.exit(0)
 
+    if usb.hw_model == 7 and usb.update_mode != args.bootloader:
+        usb = util.usb_reopen(usb, args.bootloader)
+        
     port = usb.port_info
 
     if port.device:
@@ -69,6 +74,9 @@ def main(argv):
     except KeyError:
         speed = 'Unknown (0x%02X)' % usb.usb_speed
     print_info_line('USB Rate', speed, tab=2)
+
+    if usb.hw_model == 7 and usb.update_mode:
+        usb = util.usb_reopen(usb, False)
 
 
 if __name__ == "__main__":
