@@ -3,6 +3,11 @@
 ** Keir Fraser <keir.xen@gmail.com>
 ************************************
 
+** v0.19 - 8 June 2020
+ - F7 v2: Support for the new board design
+ - gw update: Signature and CRC validation checks
+ - gw read: Fix end-track field in single-sided SCP images
+
 ** v0.18 - 28 May 2020
  - gw read: New parameters --rate and --rpm
    - rate: Bitcell data rate in kbit/s (eg 250=DD 500=HD)
