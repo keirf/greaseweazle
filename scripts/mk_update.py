@@ -64,26 +64,29 @@ def cat_upd(argv):
         assert crc32.crcValue == 0
         dat += d[4:-4]
     return dat
-    
+
+def _verify_upd(d):
+    assert struct.unpack('4s', d[:4])[0] == b'GWUP'
+    crc32 = crcmod.predefined.Crc('crc-32-mpeg')
+    crc32.update(d)
+    assert crc32.crcValue == 0
+    d = d[4:-4]
+    while d:
+        upd_len, hw_model = struct.unpack("<2H", d[:4])
+        upd_type, major, minor = struct.unpack("2s2B", d[upd_len-4:upd_len])
+        crc16 = crcmod.predefined.Crc('crc-ccitt-false')
+        crc16.update(d[4:upd_len+4])
+        assert crc16.crcValue == 0
+        print('F%u %s v%u.%u' % (hw_model,
+                                 {b'BL': 'Boot', b'GW': 'Main'}[upd_type],
+                                 major, minor))
+        d = d[upd_len+4:]
+
 def verify_upd(argv):
-    dat = b'GWUP'
     for fname in argv:
         with open(fname, "rb") as f:
             d = f.read()
-        assert struct.unpack('4s', d[:4])[0] == b'GWUP'
-        crc32 = crcmod.predefined.Crc('crc-32-mpeg')
-        crc32.update(d)
-        assert crc32.crcValue == 0
-        d = d[4:-4]
-        while d:
-            upd_len, hw_model = struct.unpack("<2H", d[:4])
-            upd_type, = struct.unpack("2s", d[upd_len-4:upd_len-2])
-            crc16 = crcmod.predefined.Crc('crc-ccitt-false')
-            crc16.update(d[4:upd_len+4])
-            assert crc16.crcValue == 0
-            print('F%u %s' % (hw_model, {b'BL': 'Boot',
-                                         b'GW': 'Main'}[upd_type]))
-            d = d[upd_len+4:]
+        _verify_upd(d)
     
 def main(argv):
     if argv[1] == 'new':

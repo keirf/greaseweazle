@@ -36,7 +36,7 @@ def update_firmware(usb, args):
     with open(filename, "rb") as f:
         dat = f.read()
     if struct.unpack('4s', dat[:4])[0] != b'GWUP':
-        print('%s: Not an UPD file' % (filename))
+        print('%s: Not a valid UPD file' % (filename))
         return
     crc32 = crcmod.predefined.Crc('crc-32-mpeg')
     crc32.update(dat)
@@ -48,8 +48,9 @@ def update_firmware(usb, args):
     # Search the catalogue for a match on our Weazle's hardware type.
     while dat:
         upd_len, hw_model = struct.unpack("<2H", dat[:4])
-        upd_type, = struct.unpack("2s", dat[upd_len-4:upd_len-2])
-        if hw_model == usb.hw_model and upd_type == req_type:
+        upd_type, major, minor = struct.unpack("2s2B", dat[upd_len-4:upd_len])
+        if ((hw_model, upd_type, major, minor)
+            == (usb.hw_model, req_type, version.major, version.minor)):
             # Match: Pull out the embedded update file.
             dat = dat[4:upd_len+4]
             break
@@ -57,7 +58,10 @@ def update_firmware(usb, args):
         dat = dat[upd_len+4:]
 
     if not dat:
-        print("%s: No match for F%u hardware" % (filename, usb.hw_model))
+        print("%s: F%u v%u.%u %s update not found"
+              % (filename, usb.hw_model,
+                 version.major, version.minor,
+                 'bootloader' if args.bootloader else 'firmware'))
         return
 
     # Check the matching update file's footer.
