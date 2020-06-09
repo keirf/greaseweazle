@@ -5,7 +5,7 @@
 # This is free and unencumbered software released into the public domain.
 # See the file COPYING for more details, or visit <http://unlicense.org>.
 
-import struct
+import struct, functools
 
 from greaseweazle import error
 from greaseweazle.flux import Flux
@@ -31,10 +31,22 @@ class SCP:
     def from_file(cls, dat):
 
         header = struct.unpack("<3s9BI", dat[0:16])
-        (sig, _, _, nr_revs, _, _, flags, _, _, _, _) = header
+        (sig, _, _, nr_revs, _, _, flags, _, single_sided, _, _) = header
         error.check(sig == b"SCP", "SCP: Bad signature")
-        
+
+        # Some tools generate a short TLUT. We handle this by truncating the
+        # TLUT at the first Track Data Header.
         trk_offs = struct.unpack("<168I", dat[16:0x2b0])
+        for i in range(168):
+            try:
+                off = trk_offs[i]
+            except IndexError:
+                break
+            if off == 0 or off >= 0x2b0:
+                continue
+            off = off//4 - 4
+            error.check(off >= 0, "SCP: Bad Track Table")
+            trk_offs = trk_offs[:off]
 
         scp = cls(0, 2)
         scp.nr_revs = nr_revs
@@ -56,6 +68,25 @@ class SCP:
 
             scp.track_list.append((thdr, tdat))
 
+        # s[side] is True iff there are non-empty tracks on @side
+        s = []
+        for i in range(2):
+            s.append(functools.reduce(lambda x, y: x or (y[1] is not None),
+                                      scp.track_list[i::2], False))
+            
+        # Some tools produce (or used to produce) single-sided images using
+        # consecutive entries in the TLUT. This needs fixing up.
+        if single_sided and functools.reduce(lambda x, y: x and y, s):
+            new_list = []
+            for t in scp.track_list[:84]:
+                if single_sided != 1: # Side 1
+                    new_list.append((None, None))
+                new_list.append(t)
+                if single_sided == 1: # Side 0
+                    new_list.append((None, None))
+            scp.track_list = new_list
+            print('SCP: Imported old single-sided image')
+            
         return scp
 
 
