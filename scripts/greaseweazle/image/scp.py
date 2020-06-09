@@ -10,12 +10,20 @@ import struct, functools
 from greaseweazle import error
 from greaseweazle.flux import Flux
 
+class SCPOpts:
+    """old_ss: Set to True to generate (incorrect) old-style single-sided
+    SCP image.
+    """
+    def __init__(self):
+        self.old_ss = False
+
 class SCP:
 
     # 40MHz
     sample_freq = 40000000
 
     def __init__(self, start_cyl, nr_sides):
+        self.opts = SCPOpts()
         self.nr_sides = nr_sides
         self.nr_revs = None
         self.track_list = [(None,None)] * (start_cyl*2)
@@ -66,7 +74,7 @@ class SCP:
             _, e_nr, e_off = struct.unpack("<3I", thdr[-12:])
             tdat = dat[trk_off+s_off:trk_off+e_off+e_nr*2]
 
-            scp.track_list.append((thdr, tdat))
+            scp.track_list.append((thdr[4:], tdat))
 
         # s[side] is True iff there are non-empty tracks on @side
         s = []
@@ -85,7 +93,7 @@ class SCP:
                 if single_sided == 1: # Side 0
                     new_list.append((None, None))
             scp.track_list = new_list
-            print('SCP: Imported old single-sided image')
+            print('SCP: Imported old-style single-sided image')
             
         return scp
 
@@ -97,7 +105,6 @@ class SCP:
         tdh, dat = self.track_list[off]
         if dat is None:
             return None
-        tdh = tdh[4:]
 
         # Writeout requires only a single revolution
         if writeout:
@@ -125,10 +132,10 @@ class SCP:
         return Flux(index_list, flux_list, SCP.sample_freq)
 
 
-    # append_track:
-    # Converts a Flux object into a Supercard Pro Track and appends it to
-    # the current image-in-progress.
     def append_track(self, flux):
+        """Converts a Flux object into a Supercard Pro Track and appends it to
+        the current image-in-progress.
+        """
 
         def _append(self, tdh, dat):
             self.track_list.append((tdh, dat))
@@ -143,10 +150,7 @@ class SCP:
         
         factor = SCP.sample_freq / flux.sample_freq
 
-        trknr = len(self.track_list)
-        tdh = struct.pack("<3sB", b"TRK", trknr)
-        dat = bytearray()
-
+        tdh, dat = bytearray(), bytearray()
         len_at_index = rev = 0
         to_index = flux.index_list[0]
         rem = 0.0
@@ -197,15 +201,20 @@ class SCP:
 
     def get_image(self):
         single_sided = 1 if self.nr_sides == 1 else 0
+        track_list = self.track_list
+        if single_sided and self.opts.old_ss:
+            print('SCP: Generated old-style single-sided image')
+            track_list = track_list[::2]
         # Generate the TLUT and concatenate all the tracks together.
         trk_offs = bytearray()
         trk_dat = bytearray()
-        for tdh, dat in self.track_list:
+        for trknr in range(len(track_list)):
+            tdh, dat = track_list[trknr]
             if dat is None:
                 trk_offs += struct.pack("<I", 0)
             else:
                 trk_offs += struct.pack("<I", 0x2b0 + len(trk_dat))
-                trk_dat += tdh + dat
+                trk_dat += struct.pack("<3sB", b"TRK", trknr) + tdh + dat
         trk_offs += bytes(0x2a0 - len(trk_offs))
         # Calculate checksum over all data (except 16-byte image header).
         csum = 0
@@ -218,7 +227,7 @@ class SCP:
                              b"SCP",    # Signature
                              0,         # Version
                              0x80,      # DiskType = Other
-                             self.nr_revs, 0, len(self.track_list) - 1,
+                             self.nr_revs, 0, len(track_list) - 1,
                              0x01,      # Flags = Index
                              0,         # 16-bit cell width
                              single_sided,
