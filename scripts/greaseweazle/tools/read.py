@@ -79,21 +79,6 @@ def read_to_image(usb, args, image):
         f.write(image.get_image())
 
 
-def filename_split_opts(filename):
-    """Splits a filename from its list of options."""
-    parts = filename.split('::')
-    name, opts = parts[0], dict()
-    for x in map(lambda x: x.split(':'), parts[1:]):
-        for y in x:
-            try:
-                opt, val = y.split('=')
-            except ValueError:
-                opt, val = y, True
-            if opt:
-                opts[opt] = val
-    return name, opts
-
-
 def main(argv):
 
     parser = util.ArgumentParser()
@@ -120,7 +105,7 @@ def main(argv):
     args = parser.parse_args(argv[2:])
     args.nr_sides = 1 if args.single_sided else 2
 
-    args.file, args.file_opts = filename_split_opts(args.file)
+    args.file, args.file_opts = util.split_opts(args.file)
     
     try:
         usb = util.usb_open(args.device)

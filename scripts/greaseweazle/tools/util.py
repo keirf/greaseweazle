@@ -49,6 +49,21 @@ def drive_letter(letter):
     return types[letter.upper()]
 
 
+def split_opts(seq):
+    """Splits a name from its list of options."""
+    parts = seq.split('::')
+    name, opts = parts[0], dict()
+    for x in map(lambda x: x.split(':'), parts[1:]):
+        for y in x:
+            try:
+                opt, val = y.split('=')
+            except ValueError:
+                opt, val = y, True
+            if opt:
+                opts[opt] = val
+    return name, opts
+
+
 def get_image_class(name):
     image_types = { '.scp': SCP, '.hfe': HFE, '.ipf': IPF }
     _, ext = os.path.splitext(name)
