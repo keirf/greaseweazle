@@ -40,11 +40,12 @@ def write_from_image(usb, args, image):
         for side in range(0, args.nr_sides):
 
             print("\rWriting Track %u.%u..." % (cyl, side), end="")
-            usb.seek(cyl, side)
+            usb.seek((cyl, cyl*2)[args.double_step], side)
 
             track = image.get_track(cyl, side, writeout=True)
             if not track:
-                usb.erase_track(drive_ticks * 1.1)
+                if args.erase_empty:
+                    usb.erase_track(drive_ticks * 1.1)
                 continue
 
             flux = track.flux_for_writeout()
@@ -79,6 +80,10 @@ def main(argv):
                         help="last cylinder to write")
     parser.add_argument("--single-sided", action="store_true",
                         help="single-sided write")
+    parser.add_argument("--double-step", action="store_true",
+                        help="double-step drive heads")
+    parser.add_argument("--erase-empty", action="store_true",
+                        help="erase empty tracks (default: skip)")
     parser.add_argument("file", help="input filename")
     parser.add_argument("device", nargs="?", help="serial device")
     parser.description = description
