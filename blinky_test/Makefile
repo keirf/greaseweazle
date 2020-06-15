@@ -7,6 +7,6 @@ OBJS += util.o
 OBJS += console.o
 OBJS += string.o
 
-SUBDIRS += $(stm32)
+SUBDIRS += f1
 
 console.o: CFLAGS += -DBAUD=115200
