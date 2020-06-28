@@ -92,33 +92,38 @@ def with_drive_selected(fn, usb, args, *_args, **_kwargs):
 def valid_ser_id(ser_id):
     return ser_id and ser_id.upper().startswith("GW")
 
-def find_port(old_port=None):
-    # If we are reopening, and we know the location of the old port, require
-    # to match on location.
+def score_port(x, old_port=None):
+    score = 0
+    if x.manufacturer == "Keir Fraser" and x.product == "Greaseweazle":
+        score = 20
+    elif x.vid == 0x1209 and x.pid == 0x4d69:
+        # Our very own properly-assigned PID. Guaranteed to be us.
+        score = 20
+    elif x.vid == 0x1209 and x.pid == 0x0001:
+        # Our old shared Test PID. It's not guaranteed to be us.
+        score = 10
+    if score > 0 and valid_ser_id(x.serial_number):
+        # A valid serial id is a good sign unless this is a reopen, and
+        # the serials don't match!
+        if not old_port or not valid_ser_id(old_port.serial_number):
+            score = 20
+        elif x.serial_number == old_port.serial_number:
+            score = 30
+        else:
+            score = 0
     if old_port and old_port.location:
-        for x in serial.tools.list_ports.comports():
-            if x.location and x.location == old_port.location:
-                return x.device
-        raise serial.SerialException('Could not reopen Greaseweazle device')
-    # Score each serial port
+        # If this is a reopen, location field must match. A match is not
+        # sufficient in itself however, as Windows may supply the same
+        # location for multiple USB ports (this may be an interaction with
+        # BitDefender). Hence we do not increase the port's score here.
+        if not x.location or x.location != old_port.location:
+            score = 0
+    return score
+
+def find_port(old_port=None):
     best_score, best_port = 0, None
     for x in serial.tools.list_ports.comports():
-        score = 0
-        if x.manufacturer == "Keir Fraser" and x.product == "Greaseweazle":
-            score = 20
-        elif x.vid == 0x1209 and x.pid == 0x4d69:
-            # Our very own properly-assigned PID. Guaranteed to be us.
-            score = 20
-        elif x.vid == 0x1209 and x.pid == 0x0001:
-            # Our old shared Test PID. It's not guaranteed to be us.
-            score = 10
-        if score > 0 and valid_ser_id(x.serial_number):
-            if not old_port or not valid_ser_id(old_port.serial_number):
-                score = 20
-            elif x.serial_number == old_port.serial_number:
-                score = 30
-            else:
-                score = 0
+        score = score_port(x, old_port)
         if score > best_score:
             best_score, best_port = score, x
     if best_port:
