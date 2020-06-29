@@ -35,7 +35,7 @@ GPIO gpio_from_id(uint8_t id)
 const static struct user_pin _user_pins_F7SM_basic_v1[] = {
     { 2, _B, 12, _OD },
     { 0,  0,  0, _OD } };
-const static struct user_pin _user_pins_F7SM_ambertronic_f7_plus[] = {
+const static struct user_pin _user_pins_F7SM_ant_goffart_f7_plus_v1[] = {
     { 2, _B, 12, _OD }, /* board bug: B12 isn't buffered */
     { 4, _C,  6, _PP },
     { 0,  0,  0, _PP } };
@@ -49,15 +49,20 @@ const static struct user_pin _user_pins_F7SM_basic_v2[] = {
     { 4, _C,  8, _OD },
     { 6, _C,  7, _OD },
     { 0,  0,  0, _OD } };
+const static struct user_pin _user_pins_F7SM_ant_goffart_f7_plus_v2[] = {
+    { 2, _B, 12, _PP },
+    { 4, _C,  8, _PP },
+    { 6, _C,  7, _PP },
+    { 0,  0,  0, _PP } };
 const static struct board_config _board_config[] = {
     [F7SM_basic_v1] = {
         .hse_mhz   = 8,
         .hs_usb    = FALSE,
         .user_pins = _user_pins_F7SM_basic_v1 },
-    [F7SM_ambertronic_f7_plus] = {
+    [F7SM_ant_goffart_f7_plus_v1] = {
         .hse_mhz   = 8,
         .hs_usb    = FALSE,
-        .user_pins = _user_pins_F7SM_ambertronic_f7_plus },
+        .user_pins = _user_pins_F7SM_ant_goffart_f7_plus_v1 },
     [F7SM_lightning] = {
         .hse_mhz   = 16,
         .hs_usb    = TRUE,
@@ -66,6 +71,10 @@ const static struct board_config _board_config[] = {
         .hse_mhz   = 8,
         .hs_usb    = FALSE,
         .user_pins = _user_pins_F7SM_basic_v2 },
+    [F7SM_ant_goffart_f7_plus_v2] = {
+        .hse_mhz   = 8,
+        .hs_usb    = FALSE,
+        .user_pins = _user_pins_F7SM_ant_goffart_f7_plus_v2 },
 };
 const struct board_config *board_config;
 

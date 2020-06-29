@@ -90,9 +90,10 @@ void gpio_set_af(GPIO gpio, unsigned int pin, unsigned int af);
 
 enum {
     F7SM_basic_v1 = 0,
-    F7SM_ambertronic_f7_plus,
+    F7SM_ant_goffart_f7_plus_v1,
     F7SM_lightning,
     F7SM_basic_v2,
+    F7SM_ant_goffart_f7_plus_v2,
 };
 
 struct user_pin {
