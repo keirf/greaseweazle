@@ -39,13 +39,16 @@ def write_from_image(usb, args, image):
     for cyl in range(args.scyl, args.ecyl+1):
         for side in range(0, args.nr_sides):
 
-            print("\rWriting Track %u.%u..." % (cyl, side), end="")
-            usb.seek((cyl, cyl*2)[args.double_step], side)
-
             track = image.get_track(cyl, side, writeout=True)
-            if not track:
-                if args.erase_empty:
-                    usb.erase_track(drive_ticks * 1.1)
+            if track is None and not args.erase_empty:
+                continue
+
+            print("\r%sing Track %u.%u..." %
+                  ("Writ" if track is not None else "Eras", cyl, side), end="")
+            usb.seek((cyl, cyl*2)[args.double_step], side)
+            
+            if track is None:
+                usb.erase_track(drive_ticks * 1.1)
                 continue
 
             flux = track.flux_for_writeout()
