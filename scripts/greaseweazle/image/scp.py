@@ -11,11 +11,11 @@ from greaseweazle import error
 from greaseweazle.flux import Flux
 
 class SCPOpts:
-    """old_ss: Set to True to generate (incorrect) old-style single-sided
+    """legacy_ss: Set to True to generate (incorrect) legacy single-sided
     SCP image.
     """
     def __init__(self):
-        self.old_ss = False
+        self.legacy_ss = False
 
 class SCP:
 
@@ -93,7 +93,7 @@ class SCP:
                 if single_sided == 1: # Side 0
                     new_list.append((None, None))
             scp.track_list = new_list
-            print('SCP: Imported old-style single-sided image')
+            print('SCP: Imported legacy single-sided image')
             
         return scp
 
@@ -202,8 +202,8 @@ class SCP:
     def get_image(self):
         single_sided = 1 if self.nr_sides == 1 else 0
         track_list = self.track_list
-        if single_sided and self.opts.old_ss:
-            print('SCP: Generated old-style single-sided image')
+        if single_sided and self.opts.legacy_ss:
+            print('SCP: Generated legacy single-sided image')
             track_list = track_list[::2]
         # Generate the TLUT and concatenate all the tracks together.
         trk_offs = bytearray()
