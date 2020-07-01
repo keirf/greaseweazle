@@ -76,7 +76,7 @@ windist:
 	cd $(PROJ)-$(VER)/scripts && $(PYTHON) setup.py build
 	cp -a $(PROJ)-$(VER)/scripts/build/exe.win*/* $(PROJ)-$(VER)/
 	cp -a $(PROJ)-$(VER)/lib/bitarray/VCRUNTIME140.DLL $(PROJ)-$(VER)/
-	rm -rf $(PROJ)-$(VER)/scripts $(PROJ)-$(VER)/*.py $(PROJ)-$(VER)/gw
+	rm -rf $(PROJ)-$(VER)/scripts/build $(PROJ)-$(VER)/*.py $(PROJ)-$(VER)/gw
 	$(ZIP) $(PROJ)-$(VER)-win.zip $(PROJ)-$(VER)
 
 mrproper: clean
