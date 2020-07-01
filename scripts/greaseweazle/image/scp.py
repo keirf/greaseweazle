@@ -42,6 +42,10 @@ class SCP:
         (sig, _, _, nr_revs, _, _, flags, _, single_sided, _, _) = header
         error.check(sig == b"SCP", "SCP: Bad signature")
 
+        index_cued = flags & 1 or nr_revs == 1
+        if not index_cued:
+            nr_revs -= 1
+        
         # Some tools generate a short TLUT. We handle this by truncating the
         # TLUT at the first Track Data Header.
         trk_offs = struct.unpack("<168I", dat[16:0x2b0])
@@ -68,12 +72,21 @@ class SCP:
 
             # Parse the SCP track header and extract the flux data.
             thdr = dat[trk_off:trk_off+4+12*nr_revs]
-            sig, tnr, _, _, s_off = struct.unpack("<3sB3I", thdr[:16])
+            sig, tnr = struct.unpack("<3sB", thdr[:4])
             error.check(sig == b"TRK", "SCP: Missing track signature")
             error.check(tnr == trknr, "SCP: Wrong track number in header")
+            _off = 12 if index_cued else 24 # skip first partial rev
+            s_off, = struct.unpack("<I", thdr[_off:_off+4])
             _, e_nr, e_off = struct.unpack("<3I", thdr[-12:])
-            tdat = dat[trk_off+s_off:trk_off+e_off+e_nr*2]
 
+            e_off += e_nr*2
+            if s_off == e_off:
+                # FluxEngine creates dummy TDHs for empty tracks.
+                # Bail on them here.
+                scp.track_list.append((None, None))
+                continue
+                
+            tdat = dat[trk_off+s_off:trk_off+e_off]
             scp.track_list.append((thdr[4:], tdat))
 
         # s[side] is True iff there are non-empty tracks on @side
@@ -228,7 +241,7 @@ class SCP:
                              0,         # Version
                              0x80,      # DiskType = Other
                              self.nr_revs, 0, len(track_list) - 1,
-                             0x01,      # Flags = Index
+                             0x03,      # Flags = Index, 96TPI
                              0,         # 16-bit cell width
                              single_sided,
                              0,         # 25ns capture
