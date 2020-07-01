@@ -1,6 +1,6 @@
 
 export FW_MAJOR := 0
-export FW_MINOR := 19
+export FW_MINOR := 20
 
 TARGETS := all blinky clean dist windist mrproper ocd flash start serial
 .PHONY: $(TARGETS)
@@ -41,6 +41,7 @@ dist:
 	rm -rf $(PROJ)-*
 	mkdir -p $(PROJ)-$(VER)/scripts/greaseweazle/image
 	mkdir -p $(PROJ)-$(VER)/scripts/greaseweazle/tools
+	mkdir -p $(PROJ)-$(VER)/scripts/misc
 	mkdir -p $(PROJ)-$(VER)/alt
 	$(MAKE) clean
 	$(MAKE) stm32=f1 all blinky
@@ -57,6 +58,7 @@ dist:
 		$(PROJ)-$(VER)/scripts/greaseweazle/image/
 	cp -a scripts/greaseweazle/tools/*.py \
 		$(PROJ)-$(VER)/scripts/greaseweazle/tools/
+	cp -a scripts/misc/*.py $(PROJ)-$(VER)/scripts/misc/
 	cp -a RELEASE_NOTES $(PROJ)-$(VER)/
 	$(MAKE) clean
 	$(MAKE) stm32=f7 all
