@@ -9,7 +9,7 @@
  - Support version 2 of Ant Goffart's F7 Plus
  - SCP: support legacy single-sided SCP images
    - Automatic import; Export via ::legacy_ss suffix
-     - eg. gw write --single-sided my.scp::legacy_ss
+     - eg. gw read --single-sided my.scp::legacy_ss
 
 ** v0.19 - 8 June 2020
  - F7 v2: Support for the new board design
