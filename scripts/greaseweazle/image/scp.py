@@ -228,6 +228,7 @@ class SCP:
             else:
                 trk_offs += struct.pack("<I", 0x2b0 + len(trk_dat))
                 trk_dat += struct.pack("<3sB", b"TRK", trknr) + tdh + dat
+        error.check(len(trk_offs) <= 0x2a0, "SCP: Too many tracks")
         trk_offs += bytes(0x2a0 - len(trk_offs))
         # Calculate checksum over all data (except 16-byte image header).
         csum = 0
