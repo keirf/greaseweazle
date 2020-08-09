@@ -54,7 +54,15 @@ static struct index {
     volatile unsigned int count;
     /* For synchronising index pulse reporting to the RDATA flux stream. */
     volatile unsigned int rdata_cnt;
+    /* Last time at which ISR fired. */
+    time_t isr_time;
+    /* Timer structure for index_timer() calls. */
+    struct timer timer;
 } index;
+
+/* Timer to clean up stale index.isr_time. */
+#define INDEX_TIMER_PERIOD time_ms(5000)
+static void index_timer(void *unused);
 
 /* A DMA buffer for running a timer associated with a floppy-data I/O pin. */
 static struct dma_ring {
@@ -233,6 +241,8 @@ void floppy_init(void)
     configure_pin(wrprot, GPI_bus);
 
     /* Configure INDEX-changed IRQs and timer. */
+    timer_init(&index.timer, index_timer, NULL);
+    index_timer(NULL);
     exti->rtsr = 0;
     exti->imr = exti->ftsr = m(pin_index);
     IRQx_set_prio(irq_index, INDEX_IRQ_PRI);
@@ -1217,11 +1227,33 @@ const struct usb_class_ops usb_cdc_acm_ops = {
 
 static void IRQ_INDEX_changed(void)
 {
+    unsigned int cnt = tim_rdata->cnt;
+    time_t now = time_now(), prev = index.isr_time;
+
     /* Clear INDEX-changed flag. */
     exti->pr = m(pin_index);
 
+    index.isr_time = now;
+    if (time_diff(prev, now) < time_us(50))
+        return;
+
     index.count++;
-    index.rdata_cnt = tim_rdata->cnt;
+    index.rdata_cnt = cnt;
+}
+
+static void index_timer(void *unused)
+{
+    time_t now = time_now();
+    IRQ_global_disable();
+    /* index.isr_time mustn't get so old that the time_diff() test in
+     * IRQ_INDEX_changed() overflows. To prevent this, we ensure that,
+     * at all times,
+     *   time_diff(index.isr_time, time_now()) < 2*INDEX_TIMER_PERIOD + delta,
+     * where delta is small. */
+    if (time_diff(index.isr_time, now) > INDEX_TIMER_PERIOD)
+        index.isr_time = now - INDEX_TIMER_PERIOD;
+    IRQ_global_enable();
+    timer_set(&index.timer, now + INDEX_TIMER_PERIOD);
 }
 
 /*
