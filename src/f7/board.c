@@ -54,14 +54,17 @@ const static struct user_pin _user_pins_F7SM_ant_goffart_f7_plus_v2[] = {
     { 4, _C,  8, _PP },
     { 6, _C,  7, _PP },
     { 0,  0,  0, _PP } };
+const static struct user_pin _user_pins_F7SM_lightning_plus[] = {
+    { 2, _B, 12, _PP },
+    { 4, _E, 15, _PP },
+    { 6, _E, 14, _PP },
+    { 0,  0,  0, _PP } };
 const static struct board_config _board_config[] = {
     [F7SM_basic_v1] = {
         .hse_mhz   = 8,
-        .hs_usb    = FALSE,
         .user_pins = _user_pins_F7SM_basic_v1 },
     [F7SM_ant_goffart_f7_plus_v1] = {
         .hse_mhz   = 8,
-        .hs_usb    = FALSE,
         .user_pins = _user_pins_F7SM_ant_goffart_f7_plus_v1 },
     [F7SM_lightning] = {
         .hse_mhz   = 16,
@@ -69,12 +72,15 @@ const static struct board_config _board_config[] = {
         .user_pins = _user_pins_F7SM_lightning },
     [F7SM_basic_v2] = {
         .hse_mhz   = 8,
-        .hs_usb    = FALSE,
         .user_pins = _user_pins_F7SM_basic_v2 },
     [F7SM_ant_goffart_f7_plus_v2] = {
         .hse_mhz   = 8,
-        .hs_usb    = FALSE,
         .user_pins = _user_pins_F7SM_ant_goffart_f7_plus_v2 },
+    [F7SM_lightning_plus] = {
+        .hse_mhz   = 16,
+        .hse_byp   = TRUE,
+        .hs_usb    = TRUE,
+        .user_pins = _user_pins_F7SM_lightning_plus },
 };
 const struct board_config *board_config;
 
@@ -176,6 +182,12 @@ static void mcu_board_init(void)
     for (upin = board_config->user_pins; upin->pin_id != 0; upin++) {
         ahb1enr |= 1u << upin->gpio_bank;
         pu[upin->gpio_bank] &= ~(1u << upin->gpio_pin);
+    }
+
+    /* Lightning Plus /FLIPPY output. Unused for now. Tie LOW. */
+    if (gw_info.hw_submodel == F7SM_lightning_plus) {
+        gpio_configure_pin(gpioc, 1, GPI_pull_down);
+        pu[_C] &= ~(1u << 1);
     }
 
     gpio_pull_up_pins(gpioa, pu[_A]);

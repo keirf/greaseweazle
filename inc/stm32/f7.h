@@ -94,6 +94,7 @@ enum {
     F7SM_lightning,
     F7SM_basic_v2,
     F7SM_ant_goffart_f7_plus_v2,
+    F7SM_lightning_plus,
 };
 
 struct user_pin {
@@ -105,6 +106,7 @@ struct user_pin {
 
 struct board_config {
     uint8_t hse_mhz;
+    bool_t hse_byp;
     bool_t hs_usb;
     const struct user_pin *user_pins;
 };

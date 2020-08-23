@@ -23,6 +23,8 @@ static void clock_init(void)
     early_delay_us(2);
 
     /* Start up the external oscillator. */
+    if (board_config->hse_byp)
+        rcc->cr |= RCC_CR_HSEBYP;
     rcc->cr |= RCC_CR_HSEON;
     while (!(rcc->cr & RCC_CR_HSERDY))
         cpu_relax();
