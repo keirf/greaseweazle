@@ -81,7 +81,8 @@ def read_to_image(usb, args, image):
 
 def main(argv):
 
-    parser = util.ArgumentParser()
+    parser = util.ArgumentParser(usage='%(prog)s [options] file')
+    parser.add_argument("--device", help="greaseweazle device name")
     parser.add_argument("--drive", type=util.drive_letter, default='A',
                         help="drive to read (A,B,0,1,2)")
     parser.add_argument("--revs", type=int, default=3,
@@ -94,19 +95,16 @@ def main(argv):
                         help="single-sided read")
     parser.add_argument("--double-step", action="store_true",
                         help="double-step drive heads")
-    parser.add_argument("--rate", type=int, nargs="?",
-                        help="data rate (kbit/s)")
-    parser.add_argument("--rpm", type=int, nargs="?",
-                        help="normalise to RPM")
+    parser.add_argument("--rate", type=int, help="data rate (kbit/s)")
+    parser.add_argument("--rpm", type=int, help="convert drive speed to RPM")
     parser.add_argument("file", help="output filename")
-    parser.add_argument("device", nargs="?", help="serial device")
     parser.description = description
     parser.prog += ' ' + argv[1]
     args = parser.parse_args(argv[2:])
     args.nr_sides = 1 if args.single_sided else 2
 
     args.file, args.file_opts = util.split_opts(args.file)
-    
+
     try:
         usb = util.usb_open(args.device)
         image = open_image(args)

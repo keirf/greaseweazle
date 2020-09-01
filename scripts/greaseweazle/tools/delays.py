@@ -17,7 +17,8 @@ from greaseweazle import usb as USB
 
 def main(argv):
 
-    parser = util.ArgumentParser()
+    parser = util.ArgumentParser(usage='%(prog)s [options]')
+    parser.add_argument("--device", help="greaseweazle device name")
     parser.add_argument("--select", type=int,
                         help="delay after drive select (usecs)")
     parser.add_argument("--step", type=int,
@@ -28,7 +29,6 @@ def main(argv):
                         help="delay after motor on (msecs)")
     parser.add_argument("--auto-off", type=int,
                         help="quiescent time until auto deselect (msecs)")
-    parser.add_argument("device", nargs="?", help="serial device")
     parser.description = description
     parser.prog += ' ' + argv[1]
     args = parser.parse_args(argv[2:])

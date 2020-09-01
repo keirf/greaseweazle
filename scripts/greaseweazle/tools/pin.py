@@ -22,12 +22,10 @@ def level(letter):
 
 def main(argv):
 
-    parser = util.ArgumentParser()
-    parser.add_argument("pin", type=int,
-                        help="pin number")
-    parser.add_argument("level", type=level,
-                        help="pin level (H,L)")
-    parser.add_argument("device", nargs="?", help="serial device")
+    parser = util.ArgumentParser(usage='%(prog)s [options] pin level')
+    parser.add_argument("--device", help="greaseweazle device name")
+    parser.add_argument("pin", type=int, help="pin number")
+    parser.add_argument("level", type=level, help="pin level (H,L)")
     parser.description = description
     parser.prog += ' ' + argv[1]
     args = parser.parse_args(argv[2:])

@@ -31,8 +31,8 @@ def print_info_line(name, value, tab=0):
 
 def main(argv):
 
-    parser = util.ArgumentParser()
-    parser.add_argument("device", nargs="?", help="serial device")
+    parser = util.ArgumentParser(usage='%(prog)s [options]')
+    parser.add_argument("--device", help="greaseweazle device name")
     parser.add_argument("--bootloader", action="store_true",
                         help="display bootloader info (F7 only)")
     parser.description = description

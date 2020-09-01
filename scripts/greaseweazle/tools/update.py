@@ -101,9 +101,9 @@ def update_firmware(usb, args):
 
 def main(argv):
 
-    parser = util.ArgumentParser(allow_abbrev=False)
+    parser = util.ArgumentParser(allow_abbrev=False, usage='%(prog)s [options] [file]')
     parser.add_argument("file", nargs="?", help="update filename")
-    parser.add_argument("device", nargs="?", help="serial device")
+    parser.add_argument("--device", help="greaseweazle device name")
     parser.add_argument("--bootloader", action="store_true",
                         help="update the bootloader (use with caution!)")
     parser.description = description

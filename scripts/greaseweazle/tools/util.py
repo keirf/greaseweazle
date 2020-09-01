@@ -128,7 +128,7 @@ def find_port(old_port=None):
             best_score, best_port = score, x
     if best_port:
         return best_port.device
-    raise serial.SerialException('Could not auto-probe Greaseweazle device')
+    raise serial.SerialException('Cannot find the Greaseweazle device')
 
 def port_info(devname):
     for x in serial.tools.list_ports.comports():
