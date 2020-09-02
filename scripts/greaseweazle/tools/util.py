@@ -76,7 +76,7 @@ def with_drive_selected(fn, usb, args, *_args, **_kwargs):
     usb.set_bus_type(args.drive[0])
     try:
         usb.drive_select(args.drive[1])
-        usb.drive_motor(args.drive[1], True)
+        usb.drive_motor(args.drive[1], _kwargs.pop('motor', True))
         fn(usb, args, *_args, **_kwargs)
     except KeyboardInterrupt:
         print()
