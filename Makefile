@@ -69,7 +69,7 @@ dist:
 	$(ZIP) $(PROJ)-$(VER).zip $(PROJ)-$(VER)
 
 windist:
-	rm -rf $(PROJ)-*
+	rm -rf $(PROJ)-* ipf ipf.zip
 	wget https://github.com/keirf/Greaseweazle/releases/download/$(VER)/$(PROJ)-$(VER).zip
 	$(UNZIP) $(PROJ)-$(VER).zip
 	cp -a scripts/setup.py $(PROJ)-$(VER)/scripts
@@ -77,10 +77,14 @@ windist:
 	cp -a $(PROJ)-$(VER)/scripts/build/exe.win*/* $(PROJ)-$(VER)/
 	cp -a $(PROJ)-$(VER)/lib/bitarray/VCRUNTIME140.DLL $(PROJ)-$(VER)/
 	rm -rf $(PROJ)-$(VER)/scripts/build $(PROJ)-$(VER)/*.py $(PROJ)-$(VER)/gw
+	wget http://softpres.org/_media/files:spsdeclib_5.1_windows.zip -O ipf.zip
+	$(UNZIP) -oipf ipf.zip
+	cp -a ipf/capsimg_binary/CAPSImg.dll $(PROJ)-$(VER)/
+	rm -rf ipf ipf.zip
 	$(ZIP) $(PROJ)-$(VER)-win.zip $(PROJ)-$(VER)
 
 mrproper: clean
-	rm -rf $(PROJ)-*
+	rm -rf $(PROJ)-* ipf ipf.zip
 
 scripts/greaseweazle/version.py: Makefile
 	echo "major = $(FW_MAJOR)" >$@
