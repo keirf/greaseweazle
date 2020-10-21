@@ -291,7 +291,7 @@ class Unit:
                         raise error.Fatal("Bad opcode in flux stream (%d)"
                                           % opcode)
                 else:
-                    val = (i - 249) * 250
+                    val = 250 + (i - 250) * 255
                     val += next(dat_i) - 1
                     flux.append(val)
                     ticks_since_index += val
@@ -311,12 +311,13 @@ class Unit:
             elif val < 250:
                 dat.append(val)
             else:
-                high = val // 250
-                if high <= 5:
-                    dat.append(249+high)
-                    dat.append(1 + val%250)
+                high = (val-250) // 255
+                if high < 5:
+                    dat.append(250 + high)
+                    dat.append(1 + (val-250) % 255)
                 else:
                     dat.append(255)
+                    dat.append(FluxOp.LongFlux)
                     dat.append(1 | (val<<1) & 255)
                     dat.append(1 | (val>>6) & 255)
                     dat.append(1 | (val>>13) & 255)

@@ -344,13 +344,13 @@ static void rdata_encode_flux(void)
             /* 1-249: One byte. */
             u_buf[U_MASK(u_prod++)] = ticks;
         } else {
-            unsigned int high = ticks / 250;
-            if (high <= 5) {
-                /* 250-1499: Two bytes. */
-                u_buf[U_MASK(u_prod++)] = 249 + high;
-                u_buf[U_MASK(u_prod++)] = 1 + (ticks % 250);
+            unsigned int high = (ticks-250) / 255;
+            if (high < 5) {
+                /* 250-1524: Two bytes. */
+                u_buf[U_MASK(u_prod++)] = 250 + high;
+                u_buf[U_MASK(u_prod++)] = 1 + ((ticks-250) % 255);
             } else {
-                /* 1500-(2^28-1): Six bytes */
+                /* 1525-(2^28-1): Six bytes */
                 u_buf[U_MASK(u_prod++)] = 0xff;
                 u_buf[U_MASK(u_prod++)] = FLUXOP_LONGFLUX;
                 u_buf[U_MASK(u_prod++)] = 1 | (ticks << 1);
@@ -521,13 +521,13 @@ static unsigned int _wdata_decode_flux(timcnt_t *tbuf, unsigned int nr)
             if ((uint32_t)(u_prod - u_cons) < 2)
                 goto out;
             u_cons++;
-            x = (x - 249) * 250;
+            x = 250 + (x - 250) * 255;
             x += u_buf[U_MASK(u_cons++)] - 1;
         } else {
-            /* 255: Five bytes */
-            if ((uint32_t)(u_prod - u_cons) < 5)
+            /* 255: Six bytes */
+            if ((uint32_t)(u_prod - u_cons) < 6)
                 goto out;
-            u_cons++;
+            u_cons += 2; /* skip 255, 1 */
             x  = (u_buf[U_MASK(u_cons++)]       ) >>  1;
             x |= (u_buf[U_MASK(u_cons++)] & 0xfe) <<  6;
             x |= (u_buf[U_MASK(u_cons++)] & 0xfe) << 13;
