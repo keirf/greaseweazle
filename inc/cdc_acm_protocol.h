@@ -41,9 +41,6 @@
 #define CMD_WRITE_FLUX      8
 /* CMD_GET_FLUX_STATUS, length=2. Last read/write status returned in ACK. */
 #define CMD_GET_FLUX_STATUS 9
-/* CMD_GET_INDEX_TIMES, length=4, first, nr.
- * Returns nr*4 bytes after ACK. */
-#define CMD_GET_INDEX_TIMES 10
 /* CMD_SWITCH_FW_MODE, length=3, <mode> */
 #define CMD_SWITCH_FW_MODE 11
 /* CMD_SELECT, length=3, drive#. Select drive# as current unit. */
@@ -99,6 +96,13 @@
 
 
 /*
+ * Flux stream opcodes. Preceded by 0xFF byte.
+ */
+#define FLUXOP_LONGFLUX   1
+#define FLUXOP_INDEX      2
+
+
+/*
  * COMMAND PACKETS
  */
 
@@ -107,7 +111,7 @@
 struct packed gw_info {
     uint8_t fw_major;
     uint8_t fw_minor;
-    uint8_t max_index;
+    uint8_t is_main_firmware; /* == 0 -> update bootloader */
     uint8_t max_cmd;
     uint32_t sample_freq;
     uint8_t hw_model, hw_submodel;
@@ -126,7 +130,7 @@ struct packed gw_bw_stats {
 
 /* CMD_READ_FLUX */
 struct packed gw_read_flux {
-    uint8_t nr_idx; /* default: 2 */
+    uint16_t nr_idx; /* default: 2 */
 };
 
 /* CMD_WRITE_FLUX */

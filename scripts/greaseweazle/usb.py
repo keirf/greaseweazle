@@ -109,6 +109,12 @@ class BusType:
     Shugart         = 2
 
 
+## Flux read stream opcodes, preceded by 0xFF byte
+class FluxOp:
+    LongFlux        = 1
+    Index           = 2
+
+
 ## CmdError: Encapsulates a command acknowledgement.
 class CmdError(Exception):
 
@@ -126,9 +132,9 @@ class Unit:
 
     ## Unit information, instance variables:
     ##  major, minor: Greaseweazle firmware version number
-    ##  max_index:    Maximum index timings for Cmd.ReadFlux
     ##  max_cmd:      Maximum Cmd number accepted by this unit
     ##  sample_freq:  Resolution of all time values passed to/from this unit
+    ##  update_mode:  True iff the Greaseweazle unit is in update mode
 
     ## Unit(ser):
     ## Accepts a Pyserial instance for Greaseweazle communications.
@@ -138,17 +144,16 @@ class Unit:
         # Copy firmware info to instance variables (see above for definitions).
         self._send_cmd(struct.pack("3B", Cmd.GetInfo, 3, GetInfo.Firmware))
         x = struct.unpack("<4BI3B21x", self.ser.read(32))
-        (self.major, self.minor, self.max_index,
+        (self.major, self.minor, is_main_firmware,
          self.max_cmd, self.sample_freq, self.hw_model,
          self.hw_submodel, self.usb_speed) = x
         # Old firmware doesn't report HW type but runs on STM32F1 only.
         if self.hw_model == 0:
             self.hw_model = 1
         # Check whether firmware is in update mode: limited command set if so.
-        self.update_mode = (self.max_index == 0)
+        self.update_mode = (is_main_firmware == 0)
         if self.update_mode:
             self.update_jumpered = (self.sample_freq & 1)
-            del self.max_index
             del self.sample_freq
             return
         # We are running main firmware: Check whether an update is needed.
@@ -228,14 +233,6 @@ class Unit:
         self._send_cmd(struct.pack("4B", Cmd.Motor, 4, unit, int(state)))
 
 
-    ## _get_index_times:
-    ## Get index timing values for the last .read_track() command.
-    def _get_index_times(self, nr):
-        self._send_cmd(struct.pack("4B", Cmd.GetIndexTimes, 4, 0, nr))
-        x = struct.unpack("<%dI" % nr, self.ser.read(4*nr))
-        return x
-
-
     ## switch_fw_mode:
     ## Switch between update bootloader and main firmware.
     def switch_fw_mode(self, mode):
@@ -264,27 +261,44 @@ class Unit:
     ## _decode_flux:
     ## Decode the Greaseweazle data stream into a list of flux samples.
     def _decode_flux(self, dat):
-        flux = []
+        flux, index = [], []
         dat_i = iter(dat)
+        ticks_since_index = 0
         try:
             while True:
                 i = next(dat_i)
                 if i < 250:
                     flux.append(i)
+                    ticks_since_index += i
                 elif i == 255:
-                    val =  (next(dat_i) & 254) >>  1
-                    val += (next(dat_i) & 254) <<  6
-                    val += (next(dat_i) & 254) << 13
-                    val += (next(dat_i) & 254) << 20
-                    flux.append(val)
+                    opcode = next(dat_i)
+                    if opcode == FluxOp.LongFlux:
+                        val =  (next(dat_i) & 254) >>  1
+                        val += (next(dat_i) & 254) <<  6
+                        val += (next(dat_i) & 254) << 13
+                        val += (next(dat_i) & 254) << 20
+                        flux.append(val)
+                        ticks_since_index += val
+                    elif opcode == FluxOp.Index:
+                        val =  (next(dat_i) & 254) >>  1
+                        val += (next(dat_i) & 254) <<  6
+                        val += (next(dat_i) & 254) << 13
+                        val += (next(dat_i) & 254) << 20
+                        index.append(ticks_since_index + val)
+                        ticks_since_index = -val
+                        pass
+                    else:
+                        raise error.Fatal("Bad opcode in flux stream (%d)"
+                                          % opcode)
                 else:
                     val = (i - 249) * 250
                     val += next(dat_i) - 1
                     flux.append(val)
+                    ticks_since_index += val
         except StopIteration:
             pass
         error.check(flux[-1] == 0, "Missing terminator on flux read stream")
-        return flux[:-1]
+        return flux[:-1], index
 
 
     ## _encode_flux:
@@ -317,7 +331,7 @@ class Unit:
 
         # Request and read all flux timings for this track.
         dat = bytearray()
-        self._send_cmd(struct.pack("3B", Cmd.ReadFlux, 3, nr_revs+1))
+        self._send_cmd(struct.pack("<2BH", Cmd.ReadFlux, 4, nr_revs+1))
         while True:
             dat += self.ser.read(1)
             dat += self.ser.read(self.ser.in_waiting)
@@ -349,8 +363,7 @@ class Unit:
                 break
 
         # Decode the flux list and read the index-times list.
-        flux_list = self._decode_flux(dat)
-        index_list = self._get_index_times(nr_revs+1)
+        flux_list, index_list = self._decode_flux(dat)
 
         # Clip the initial partial revolution.
         to_index = index_list[0]

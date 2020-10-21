@@ -254,7 +254,8 @@ void floppy_init(void)
 }
 
 struct gw_info gw_info = {
-    .max_index = 15, .max_cmd = CMD_MAX,
+    .is_main_firmware = 1,
+    .max_cmd = CMD_MAX,
     .sample_freq = 72000000u,
     .hw_model = STM32F
 };
@@ -294,9 +295,7 @@ static struct {
     bool_t terminate_at_index;
     bool_t no_flux_area;
     unsigned int packet_len;
-    int ticks_since_index;
     uint32_t ticks_since_flux;
-    uint32_t index_ticks[15];
     uint8_t packet[USB_HS_MPS];
 } rw;
 
@@ -306,7 +305,6 @@ static void rdata_encode_flux(void)
     uint16_t cons = dma.cons, prod;
     timcnt_t prev = dma.prev_sample, curr, next;
     uint32_t ticks = rw.ticks_since_flux;
-    int ticks_since_index = rw.ticks_since_index;
 
     ASSERT(rw.idx < rw.nr_idx);
 
@@ -320,8 +318,14 @@ static void rdata_encode_flux(void)
         /* We have just passed the index mark: Record information about 
          * the just-completed revolution. */
         int partial_flux = ticks + (timcnt_t)(index.rdata_cnt - prev);
-        rw.index_ticks[rw.idx++] = ticks_since_index + partial_flux;
-        ticks_since_index = -partial_flux;
+        ASSERT(partial_flux >= 0);
+        u_buf[U_MASK(u_prod++)] = 0xff;
+        u_buf[U_MASK(u_prod++)] = FLUXOP_INDEX;
+        u_buf[U_MASK(u_prod++)] = 1 | (partial_flux << 1);
+        u_buf[U_MASK(u_prod++)] = 1 | (partial_flux >> 6);
+        u_buf[U_MASK(u_prod++)] = 1 | (partial_flux >> 13);
+        u_buf[U_MASK(u_prod++)] = 1 | (partial_flux >> 20);
+        rw.idx = index.count;
     }
 
     IRQ_global_enable();
@@ -346,8 +350,9 @@ static void rdata_encode_flux(void)
                 u_buf[U_MASK(u_prod++)] = 249 + high;
                 u_buf[U_MASK(u_prod++)] = 1 + (ticks % 250);
             } else {
-                /* 1500-(2^28-1): Five bytes */
+                /* 1500-(2^28-1): Six bytes */
                 u_buf[U_MASK(u_prod++)] = 0xff;
+                u_buf[U_MASK(u_prod++)] = FLUXOP_LONGFLUX;
                 u_buf[U_MASK(u_prod++)] = 1 | (ticks << 1);
                 u_buf[U_MASK(u_prod++)] = 1 | (ticks >> 6);
                 u_buf[U_MASK(u_prod++)] = 1 | (ticks >> 13);
@@ -355,7 +360,6 @@ static void rdata_encode_flux(void)
             }
         }
 
-        ticks_since_index += ticks;
         ticks = 0;
     }
 
@@ -376,12 +380,11 @@ static void rdata_encode_flux(void)
     dma.cons = cons;
     dma.prev_sample = prev;
     rw.ticks_since_flux = ticks;
-    rw.ticks_since_index = ticks_since_index;
 }
 
 static uint8_t floppy_read_prep(const struct gw_read_flux *rf)
 {
-    if ((rf->nr_idx == 0) || (rf->nr_idx > gw_info.max_index))
+    if (rf->nr_idx == 0)
         return ACK_BAD_COMMAND;
 
     /* Prepare Timer & DMA. */
@@ -1034,14 +1037,6 @@ static void process_command(void)
             goto bad_command;
         u_buf[1] = rw.status;
         goto out;
-    }
-    case CMD_GET_INDEX_TIMES: {
-        uint8_t f = u_buf[2], n = u_buf[3];
-        if ((len != 4) || (n > 15) || ((f+n) > gw_info.max_index))
-            goto bad_command;
-        memcpy(&u_buf[2], rw.index_ticks+f, n*4);
-        resp_sz += n*4;
-        break;
     }
     case CMD_SELECT: {
         uint8_t unit = u_buf[2];
