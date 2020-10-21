@@ -299,12 +299,20 @@ static struct {
     uint8_t packet[USB_HS_MPS];
 } rw;
 
+static always_inline void _write_28bit(uint32_t x)
+{
+    u_buf[U_MASK(u_prod++)] = 1 | (x << 1);
+    u_buf[U_MASK(u_prod++)] = 1 | (x >> 6);
+    u_buf[U_MASK(u_prod++)] = 1 | (x >> 13);
+    u_buf[U_MASK(u_prod++)] = 1 | (x >> 20);
+}
+
 static void rdata_encode_flux(void)
 {
     const uint16_t buf_mask = ARRAY_SIZE(dma.buf) - 1;
     uint16_t cons = dma.cons, prod;
     timcnt_t prev = dma.prev_sample, curr, next;
-    uint32_t ticks = rw.ticks_since_flux;
+    uint32_t ticks;
 
     ASSERT(rw.idx < rw.nr_idx);
 
@@ -317,14 +325,10 @@ static void rdata_encode_flux(void)
     if (rw.idx != index.count) {
         /* We have just passed the index mark: Record information about 
          * the just-completed revolution. */
-        int partial_flux = ticks + (timcnt_t)(index.rdata_cnt - prev);
-        ASSERT(partial_flux >= 0);
+        unsigned int partial_flux = (timcnt_t)(index.rdata_cnt - prev);
         u_buf[U_MASK(u_prod++)] = 0xff;
         u_buf[U_MASK(u_prod++)] = FLUXOP_INDEX;
-        u_buf[U_MASK(u_prod++)] = 1 | (partial_flux << 1);
-        u_buf[U_MASK(u_prod++)] = 1 | (partial_flux >> 6);
-        u_buf[U_MASK(u_prod++)] = 1 | (partial_flux >> 13);
-        u_buf[U_MASK(u_prod++)] = 1 | (partial_flux >> 20);
+        _write_28bit(partial_flux);
         rw.idx = index.count;
     }
 
@@ -336,7 +340,7 @@ static void rdata_encode_flux(void)
         curr = next - prev;
         prev = next;
 
-        ticks += curr;
+        ticks = curr;
 
         if (ticks == 0) {
             /* 0: Skip. */
@@ -350,36 +354,31 @@ static void rdata_encode_flux(void)
                 u_buf[U_MASK(u_prod++)] = 250 + high;
                 u_buf[U_MASK(u_prod++)] = 1 + ((ticks-250) % 255);
             } else {
-                /* 1525-(2^28-1): Six bytes */
+                /* 1525-(2^28-1): Seven bytes. */
                 u_buf[U_MASK(u_prod++)] = 0xff;
-                u_buf[U_MASK(u_prod++)] = FLUXOP_LONGFLUX;
-                u_buf[U_MASK(u_prod++)] = 1 | (ticks << 1);
-                u_buf[U_MASK(u_prod++)] = 1 | (ticks >> 6);
-                u_buf[U_MASK(u_prod++)] = 1 | (ticks >> 13);
-                u_buf[U_MASK(u_prod++)] = 1 | (ticks >> 20);
+                u_buf[U_MASK(u_prod++)] = FLUXOP_NOFLUX;
+                _write_28bit(ticks - 249);
+                u_buf[U_MASK(u_prod++)] = 249;
             }
         }
-
-        ticks = 0;
     }
 
     /* If it has been a long time since the last flux timing, transfer some of
-     * the accumulated time from the 16-bit timestamp into the 32-bit
-     * accumulator. This avoids 16-bit overflow and because, we take care to
-     * keep the 16-bit timestamp at least 200us behind, we cannot race the next
-     * flux timestamp. */
-    if (sizeof(timcnt_t) == sizeof(uint16_t)) {
-        curr = tim_rdata->cnt - prev;
-        if (unlikely(curr > sample_us(400))) {
-            prev += sample_us(200);
-            ticks += sample_us(200);
-        }
+     * the accumulated time to the host in a "long gap" sample. This avoids
+     * timing overflow and, because we take care to keep @prev well behind the
+     * sample clock, we cannot race the next flux timestamp. */
+    curr = tim_rdata->cnt - prev;
+    if (unlikely(curr > sample_us(400))) {
+        ticks = sample_us(200);
+        u_buf[U_MASK(u_prod++)] = 0xff;
+        u_buf[U_MASK(u_prod++)] = FLUXOP_NOFLUX;
+        _write_28bit(ticks);
+        prev += ticks;
     }
 
     /* Save our progress for next time. */
     dma.cons = cons;
     dma.prev_sample = prev;
-    rw.ticks_since_flux = ticks;
 }
 
 static uint8_t floppy_read_prep(const struct gw_read_flux *rf)
@@ -487,6 +486,16 @@ static void floppy_read(void)
  * WRITE PATH
  */
 
+static always_inline uint32_t _read_28bit(void)
+{
+    uint32_t x;
+    x  = (u_buf[U_MASK(u_cons++)]       ) >>  1;
+    x |= (u_buf[U_MASK(u_cons++)] & 0xfe) <<  6;
+    x |= (u_buf[U_MASK(u_cons++)] & 0xfe) << 13;
+    x |= (u_buf[U_MASK(u_cons++)] & 0xfe) << 20;
+    return x;
+}
+
 static unsigned int _wdata_decode_flux(timcnt_t *tbuf, unsigned int nr)
 {
     unsigned int todo = nr;
@@ -527,11 +536,9 @@ static unsigned int _wdata_decode_flux(timcnt_t *tbuf, unsigned int nr)
             /* 255: Six bytes */
             if ((uint32_t)(u_prod - u_cons) < 6)
                 goto out;
-            u_cons += 2; /* skip 255, 1 */
-            x  = (u_buf[U_MASK(u_cons++)]       ) >>  1;
-            x |= (u_buf[U_MASK(u_cons++)] & 0xfe) <<  6;
-            x |= (u_buf[U_MASK(u_cons++)] & 0xfe) << 13;
-            x |= (u_buf[U_MASK(u_cons++)] & 0xfe) << 20;
+            u_cons += 2; /* skip 255, FLUXOP_NOFLUX */
+            ticks += _read_28bit();
+            continue;
         }
 
         ticks += x;

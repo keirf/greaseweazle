@@ -111,8 +111,8 @@ class BusType:
 
 ## Flux read stream opcodes, preceded by 0xFF byte
 class FluxOp:
-    LongFlux        = 1
-    Index           = 2
+    Index           = 1
+    NoFlux          = 2
 
 
 ## CmdError: Encapsulates a command acknowledgement.
@@ -263,38 +263,37 @@ class Unit:
     def _decode_flux(self, dat):
         flux, index = [], []
         dat_i = iter(dat)
-        ticks_since_index = 0
+        ticks, ticks_since_index = 0, 0
+        def _read_28bit():
+            val =  (next(dat_i) & 254) >>  1
+            val += (next(dat_i) & 254) <<  6
+            val += (next(dat_i) & 254) << 13
+            val += (next(dat_i) & 254) << 20
+            return val
         try:
             while True:
                 i = next(dat_i)
-                if i < 250:
-                    flux.append(i)
-                    ticks_since_index += i
-                elif i == 255:
+                if i == 255:
                     opcode = next(dat_i)
-                    if opcode == FluxOp.LongFlux:
-                        val =  (next(dat_i) & 254) >>  1
-                        val += (next(dat_i) & 254) <<  6
-                        val += (next(dat_i) & 254) << 13
-                        val += (next(dat_i) & 254) << 20
-                        flux.append(val)
-                        ticks_since_index += val
-                    elif opcode == FluxOp.Index:
-                        val =  (next(dat_i) & 254) >>  1
-                        val += (next(dat_i) & 254) <<  6
-                        val += (next(dat_i) & 254) << 13
-                        val += (next(dat_i) & 254) << 20
-                        index.append(ticks_since_index + val)
+                    if opcode == FluxOp.Index:
+                        val = _read_28bit()
+                        index.append(ticks_since_index + ticks + val)
                         ticks_since_index = -val
-                        pass
+                    elif opcode == FluxOp.NoFlux:
+                        ticks += _read_28bit()
                     else:
                         raise error.Fatal("Bad opcode in flux stream (%d)"
                                           % opcode)
                 else:
-                    val = 250 + (i - 250) * 255
-                    val += next(dat_i) - 1
-                    flux.append(val)
-                    ticks_since_index += val
+                    if i < 250:
+                        val = i
+                    else:
+                        val = 250 + (i - 250) * 255
+                        val += next(dat_i) - 1
+                    ticks += val
+                    flux.append(ticks)
+                    ticks_since_index += ticks
+                    ticks = 0
         except StopIteration:
             pass
         error.check(flux[-1] == 0, "Missing terminator on flux read stream")
@@ -305,6 +304,11 @@ class Unit:
     ## Convert the given flux timings into an encoded data stream.
     def _encode_flux(self, flux):
         dat = bytearray()
+        def _write_28bit(x):
+            dat.append(1 | (x<<1) & 255)
+            dat.append(1 | (x>>6) & 255)
+            dat.append(1 | (x>>13) & 255)
+            dat.append(1 | (x>>20) & 255)
         for val in flux:
             if val == 0:
                 pass
@@ -317,11 +321,9 @@ class Unit:
                     dat.append(1 + (val-250) % 255)
                 else:
                     dat.append(255)
-                    dat.append(FluxOp.LongFlux)
-                    dat.append(1 | (val<<1) & 255)
-                    dat.append(1 | (val>>6) & 255)
-                    dat.append(1 | (val>>13) & 255)
-                    dat.append(1 | (val>>20) & 255)
+                    dat.append(FluxOp.NoFlux)
+                    _write_28bit(val - 249);
+                    dat.append(249)
         dat.append(0) # End of Stream
         return dat
 
