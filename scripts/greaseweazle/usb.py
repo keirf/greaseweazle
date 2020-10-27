@@ -113,6 +113,7 @@ class BusType:
 class FluxOp:
     Index           = 1
     Space           = 2
+    Astable         = 3
 
 
 ## CmdError: Encapsulates a command acknowledgement.
@@ -303,6 +304,8 @@ class Unit:
     ## _encode_flux:
     ## Convert the given flux timings into an encoded data stream.
     def _encode_flux(self, flux):
+        nfa_thresh = round(150e-6 * self.sample_freq)  # 150us
+        nfa_period = round(1.25e-6 * self.sample_freq) # 1.25us
         dat = bytearray()
         def _write_28bit(x):
             dat.append(1 | (x<<1) & 255)
@@ -314,6 +317,13 @@ class Unit:
                 pass
             elif val < 250:
                 dat.append(val)
+            elif val > nfa_thresh:
+                dat.append(255)
+                dat.append(FluxOp.Space)
+                _write_28bit(val)
+                dat.append(255)
+                dat.append(FluxOp.Astable)
+                _write_28bit(nfa_period)
             else:
                 high = (val-250) // 255
                 if high < 5:
@@ -322,7 +332,7 @@ class Unit:
                 else:
                     dat.append(255)
                     dat.append(FluxOp.Space)
-                    _write_28bit(val - 249);
+                    _write_28bit(val - 249)
                     dat.append(249)
         dat.append(0) # End of Stream
         return dat

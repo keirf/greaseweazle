@@ -97,9 +97,30 @@
 
 /*
  * Flux stream opcodes. Preceded by 0xFF byte.
+ * 
+ * Argument types:
+ *  N28: 28-bit non-negative integer N, encoded as 4 bytes b0,b1,b2,b3:
+ *   b0 = (uint8_t)(1 | (N <<  1))
+ *   b1 = (uint8_t)(1 | (N >>  6))
+ *   b2 = (uint8_t)(1 | (N >> 13))
+ *   b3 = (uint8_t)(1 | (N >> 20))
  */
+/* FLUXOP_INDEX [CMD_READ_FLUX]
+ *  Args:
+ *   +4 [N28]: ticks to index, relative to sample cursor.
+ *  Signals an index pulse in the read stream. Sample cursor is unaffected. */
 #define FLUXOP_INDEX      1
+/* FLUXOP_SPACE [CMD_READ_FLUX, CMD_WRITE_FLUX]
+ *  Args:
+ *   +4 [N28]: ticks to increment the sample cursor.
+ *  Increments the sample cursor with no intervening flux transitions. */
 #define FLUXOP_SPACE      2
+/* FLUXOP_ASTABLE [CMD_WRITE_FLUX]
+ *  Args:
+ *   +4 [N28]: astable period.
+ *  Generate regular flux transitions at specified astable period. 
+ *  Duration is specified by immediately preceding FLUXOP_SPACE opcode(s). */
+#define FLUXOP_ASTABLE    3
 
 
 /*

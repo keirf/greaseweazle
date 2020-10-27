@@ -298,9 +298,14 @@ static struct {
     bool_t packet_ready;
     bool_t write_finished;
     bool_t terminate_at_index;
-    bool_t no_flux_area;
+    uint32_t astable_period;
     unsigned int packet_len;
-    uint32_t ticks_since_flux;
+    uint32_t ticks;
+    enum {
+        FLUXMODE_idle,    /* generating no flux (awaiting next command) */
+        FLUXMODE_oneshot, /* generating a single flux */
+        FLUXMODE_astable  /* generating a region of oscillating flux */
+    } flux_mode;
     uint8_t packet[USB_HS_MPS];
 } rw;
 
@@ -507,24 +512,62 @@ static uint32_t _read_28bit(void)
 
 static unsigned int _wdata_decode_flux(timcnt_t *tbuf, unsigned int nr)
 {
+#define MIN_PULSE sample_ns(800)
+
     unsigned int todo = nr;
-    uint32_t x, ticks = rw.ticks_since_flux;
+    uint32_t x, ticks = rw.ticks;
 
     if (todo == 0)
         return 0;
 
-    if (rw.no_flux_area) {
-        unsigned int nfa_pulse = sample_ns(1250);
-        while (ticks >= nfa_pulse) {
-            *tbuf++ = nfa_pulse - 1;
-            ticks -= nfa_pulse;
+    switch (rw.flux_mode) {
+
+    case FLUXMODE_astable: {
+        /* Produce flux transitions at the specified period. */
+        uint32_t pulse = rw.astable_period;
+        while (ticks >= pulse) {
+            *tbuf++ = pulse - 1;
+            ticks -= pulse;
             if (!--todo)
                 goto out;
         }
-        rw.no_flux_area = FALSE;
+        rw.flux_mode = FLUXMODE_idle;
+        break;
+    }
+
+    case FLUXMODE_oneshot:
+        /* If ticks to next flux would overflow the hardware counter, insert
+         * extra fluxes as necessary to get us to the proper next flux. */
+        while (ticks != (timcnt_t)ticks) {
+            uint32_t pulse = (timcnt_t)-1 + 1;
+            *tbuf++ = pulse - 1;
+            ticks -= pulse;
+            if (!--todo)
+                goto out;
+        }
+
+        /* Process the one-shot unless it's too short, in which case
+         * it will be merged into the next region. */
+        if (ticks > MIN_PULSE) {
+            *tbuf++ = ticks - 1;
+            ticks = 0;
+            if (!--todo)
+                goto out;
+        }
+
+        rw.flux_mode = FLUXMODE_idle;
+        break;
+
+    case FLUXMODE_idle:
+        /* Nothing to do (waiting for a flux command). */
+        break;
+
     }
 
     while (u_cons != u_prod) {
+
+        ASSERT(rw.flux_mode == FLUXMODE_idle);
+
         x = u_buf[U_MASK(u_cons)];
         if (x == 0) {
             /* 0: Terminate */
@@ -532,10 +575,10 @@ static unsigned int _wdata_decode_flux(timcnt_t *tbuf, unsigned int nr)
             rw.write_finished = TRUE;
             goto out;
         } else if (x < 250) {
-            /* 1-249: One byte */
+            /* 1-249: One byte. Time to next flux.*/
             u_cons++;
         } else if (x < 255) {
-            /* 250-254: Two bytes */
+            /* 250-254: Two bytes. Time to next flux. */
             if ((uint32_t)(u_prod - u_cons) < 2)
                 goto out;
             u_cons++;
@@ -543,19 +586,43 @@ static unsigned int _wdata_decode_flux(timcnt_t *tbuf, unsigned int nr)
             x += u_buf[U_MASK(u_cons++)] - 1;
         } else {
             /* 255: Six bytes */
+            uint8_t op;
             if ((uint32_t)(u_prod - u_cons) < 6)
                 goto out;
-            u_cons += 2; /* skip 255, FLUXOP_SPACE */
-            ticks += _read_28bit();
-            continue;
+            op = u_buf[U_MASK(u_cons+1)];
+            u_cons += 2;
+            switch (op) {
+            case FLUXOP_SPACE:
+                ticks += _read_28bit();
+                continue;
+            case FLUXOP_ASTABLE:
+                rw.astable_period = _read_28bit();
+                if ((rw.astable_period < MIN_PULSE)
+                    || (rw.astable_period != (timcnt_t)rw.astable_period)) {
+                    /* Bad period value: underflow or overflow. */
+                    goto error;
+                }
+                rw.flux_mode = FLUXMODE_astable;
+                goto out;
+            default:
+                /* Invalid opcode */
+                u_cons += 4;
+                goto error;
+            }
         }
 
+        /* We're now implicitly in FLUXMODE_oneshot, but we don't register it 
+         * explicitly as we usually switch straight back to FLUXMODE_idle. */
         ticks += x;
-        if (ticks < sample_ns(800))
+
+        /* This sample too small? Then ignore this flux transition. */
+        if (ticks < MIN_PULSE)
             continue;
 
-        if (ticks > sample_us(150)) {
-            rw.no_flux_area = TRUE;
+        /* This sample overflows the hardware timer's counter width?
+         * Then bail, and we'll split it into chunks. */
+        if (ticks != (timcnt_t)ticks) {
+            rw.flux_mode = FLUXMODE_oneshot;
             goto out;
         }
 
@@ -566,8 +633,14 @@ static unsigned int _wdata_decode_flux(timcnt_t *tbuf, unsigned int nr)
     }
 
 out:
-    rw.ticks_since_flux = ticks;
+    rw.ticks = ticks;
     return nr - todo;
+
+error:
+    floppy_flux_end();
+    rw.status = ACK_BAD_COMMAND;
+    floppy_state = ST_write_flux_drain;
+    goto out;
 }
 
 static void wdata_decode_flux(void)
@@ -634,6 +707,7 @@ static uint8_t floppy_write_prep(const struct gw_write_flux *wf)
 
     floppy_state = ST_write_flux_wait_data;
     memset(&rw, 0, sizeof(rw));
+    rw.flux_mode = FLUXMODE_idle;
     rw.status = ACK_OKAY;
 
     rw.terminate_at_index = wf->terminate_at_index;
@@ -648,6 +722,8 @@ static void floppy_write_wait_data(void)
 
     floppy_process_write_packet();
     wdata_decode_flux();
+    if (rw.status != ACK_OKAY)
+        return;
 
     /* We don't wait for the massive F7 u_buf[] to fill at Full Speed. */
     u_buf_threshold = ((U_BUF_SZ > 16384) && !usb_is_highspeed())
@@ -727,6 +803,8 @@ static void floppy_write(void)
 
     floppy_process_write_packet();
     wdata_decode_flux();
+    if (rw.status != ACK_OKAY)
+        return;
 
     /* Early termination on index pulse? */
     if (rw.terminate_at_index && (index.count != 0))
