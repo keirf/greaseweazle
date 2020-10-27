@@ -260,10 +260,15 @@ struct gw_info gw_info = {
     .hw_model = STM32F
 };
 
+static void auto_off_nudge(void)
+{
+    auto_off.deadline = time_now() + time_ms(delay_params.auto_off);
+}
+
 static void auto_off_arm(void)
 {
     auto_off.armed = TRUE;
-    auto_off.deadline = time_now() + time_ms(delay_params.auto_off);
+    auto_off_nudge();
 }
 
 static void floppy_end_command(void *ack, unsigned int ack_len)
@@ -299,7 +304,7 @@ static struct {
     uint8_t packet[USB_HS_MPS];
 } rw;
 
-static always_inline void _write_28bit(uint32_t x)
+static void _write_28bit(uint32_t x)
 {
     u_buf[U_MASK(u_prod++)] = 1 | (x << 1);
     u_buf[U_MASK(u_prod++)] = 1 | (x >> 6);
@@ -325,11 +330,15 @@ static void rdata_encode_flux(void)
     if (rw.idx != index.count) {
         /* We have just passed the index mark: Record information about 
          * the just-completed revolution. */
-        unsigned int partial_flux = (timcnt_t)(index.rdata_cnt - prev);
+        rw.idx = index.count;
+        ticks = (timcnt_t)(index.rdata_cnt - prev);
+        IRQ_global_enable(); /* we're done reading ISR variables */
         u_buf[U_MASK(u_prod++)] = 0xff;
         u_buf[U_MASK(u_prod++)] = FLUXOP_INDEX;
-        _write_28bit(partial_flux);
-        rw.idx = index.count;
+        _write_28bit(ticks);
+        /* Defer auto-off while read is progressing (as measured by index
+         * pulses).  */
+        auto_off_nudge();
     }
 
     IRQ_global_enable();
@@ -486,7 +495,7 @@ static void floppy_read(void)
  * WRITE PATH
  */
 
-static always_inline uint32_t _read_28bit(void)
+static uint32_t _read_28bit(void)
 {
     uint32_t x;
     x  = (u_buf[U_MASK(u_cons++)]       ) >>  1;
