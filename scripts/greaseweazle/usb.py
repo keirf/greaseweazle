@@ -112,7 +112,7 @@ class BusType:
 ## Flux read stream opcodes, preceded by 0xFF byte
 class FluxOp:
     Index           = 1
-    NoFlux          = 2
+    Space           = 2
 
 
 ## CmdError: Encapsulates a command acknowledgement.
@@ -279,7 +279,7 @@ class Unit:
                         val = _read_28bit()
                         index.append(ticks_since_index + ticks + val)
                         ticks_since_index = -val
-                    elif opcode == FluxOp.NoFlux:
+                    elif opcode == FluxOp.Space:
                         ticks += _read_28bit()
                     else:
                         raise error.Fatal("Bad opcode in flux stream (%d)"
@@ -321,7 +321,7 @@ class Unit:
                     dat.append(1 + (val-250) % 255)
                 else:
                     dat.append(255)
-                    dat.append(FluxOp.NoFlux)
+                    dat.append(FluxOp.Space)
                     _write_28bit(val - 249);
                     dat.append(249)
         dat.append(0) # End of Stream

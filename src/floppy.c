@@ -365,7 +365,7 @@ static void rdata_encode_flux(void)
             } else {
                 /* 1525-(2^28-1): Seven bytes. */
                 u_buf[U_MASK(u_prod++)] = 0xff;
-                u_buf[U_MASK(u_prod++)] = FLUXOP_NOFLUX;
+                u_buf[U_MASK(u_prod++)] = FLUXOP_SPACE;
                 _write_28bit(ticks - 249);
                 u_buf[U_MASK(u_prod++)] = 249;
             }
@@ -380,7 +380,7 @@ static void rdata_encode_flux(void)
     if (unlikely(curr > sample_us(400))) {
         ticks = sample_us(200);
         u_buf[U_MASK(u_prod++)] = 0xff;
-        u_buf[U_MASK(u_prod++)] = FLUXOP_NOFLUX;
+        u_buf[U_MASK(u_prod++)] = FLUXOP_SPACE;
         _write_28bit(ticks);
         prev += ticks;
     }
@@ -545,7 +545,7 @@ static unsigned int _wdata_decode_flux(timcnt_t *tbuf, unsigned int nr)
             /* 255: Six bytes */
             if ((uint32_t)(u_prod - u_cons) < 6)
                 goto out;
-            u_cons += 2; /* skip 255, FLUXOP_NOFLUX */
+            u_cons += 2; /* skip 255, FLUXOP_SPACE */
             ticks += _read_28bit();
             continue;
         }

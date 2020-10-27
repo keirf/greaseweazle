@@ -99,7 +99,7 @@
  * Flux stream opcodes. Preceded by 0xFF byte.
  */
 #define FLUXOP_INDEX      1
-#define FLUXOP_NOFLUX     2
+#define FLUXOP_SPACE      2
 
 
 /*
