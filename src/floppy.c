@@ -81,6 +81,15 @@ static struct {
     bool_t armed;
 } auto_off;
 
+/* Marshalling and unmarshalling of USB packets. */
+static struct {
+    /* TRUE if a packet is ready: .data and .len are valid. */
+    bool_t ready;
+    /* Length and contents of the packet (if ready==TRUE). */
+    unsigned int len;
+    uint8_t data[USB_HS_MPS];
+} usb_packet;
+
 static enum {
     ST_inactive,
     ST_command_wait,
@@ -295,18 +304,15 @@ static struct {
     };
     uint8_t status;
     uint8_t idx, nr_idx;
-    bool_t packet_ready;
     bool_t write_finished;
     bool_t terminate_at_index;
     uint32_t astable_period;
-    unsigned int packet_len;
     uint32_t ticks;
     enum {
         FLUXMODE_idle,    /* generating no flux (awaiting next command) */
         FLUXMODE_oneshot, /* generating a single flux */
         FLUXMODE_astable  /* generating a region of oscillating flux */
     } flux_mode;
-    uint8_t packet[USB_HS_MPS];
 } rw;
 
 static void _write_28bit(uint32_t x)
@@ -427,13 +433,14 @@ static void make_read_packet(unsigned int n)
     unsigned int c = U_MASK(u_cons);
     unsigned int l = U_BUF_SZ - c;
     if (l < n) {
-        memcpy(rw.packet, &u_buf[c], l);
-        memcpy(&rw.packet[l], u_buf, n-l);
+        memcpy(usb_packet.data, &u_buf[c], l);
+        memcpy(&usb_packet.data[l], u_buf, n-l);
     } else {
-        memcpy(rw.packet, &u_buf[c], n);
+        memcpy(usb_packet.data, &u_buf[c], n);
     }
     u_cons += n;
-    rw.packet_ready = TRUE;
+    usb_packet.ready = TRUE;
+    usb_packet.len = n;
 }
 
 static void floppy_read(void)
@@ -449,7 +456,7 @@ static void floppy_read(void)
 
             /* Overflow */
             printk("OVERFLOW %u %u %u %u\n", u_cons, u_prod,
-                   rw.packet_ready, ep_tx_ready(EP_TX));
+                   usb_packet.ready, ep_tx_ready(EP_TX));
             floppy_flux_end();
             rw.status = ACK_FLUX_OVERFLOW;
             floppy_state = ST_read_flux_drain;
@@ -474,24 +481,24 @@ static void floppy_read(void)
         }
 
     } else if ((avail < usb_bulk_mps)
-               && !rw.packet_ready
+               && !usb_packet.ready
                && ep_tx_ready(EP_TX)) {
 
         /* Final packet, including ACK byte (NUL). */
-        memset(rw.packet, 0, usb_bulk_mps);
+        memset(usb_packet.data, 0, usb_bulk_mps);
         make_read_packet(avail);
         floppy_state = ST_command_wait;
-        floppy_end_command(rw.packet, avail+1);
+        floppy_end_command(usb_packet.data, avail+1);
         return; /* FINISHED */
 
     }
 
-    if (!rw.packet_ready && (avail >= usb_bulk_mps))
+    if (!usb_packet.ready && (avail >= usb_bulk_mps))
         make_read_packet(usb_bulk_mps);
 
-    if (rw.packet_ready && ep_tx_ready(EP_TX)) {
-        usb_write(EP_TX, rw.packet, usb_bulk_mps);
-        rw.packet_ready = FALSE;
+    if (usb_packet.ready && ep_tx_ready(EP_TX)) {
+        usb_write(EP_TX, usb_packet.data, usb_packet.len);
+        usb_packet.ready = FALSE;
     }
 }
 
@@ -666,26 +673,26 @@ static void floppy_process_write_packet(void)
 {
     int len = ep_rx_ready(EP_RX);
 
-    if ((len >= 0) && !rw.packet_ready) {
-        usb_read(EP_RX, rw.packet, len);
-        rw.packet_ready = TRUE;
-        rw.packet_len = len;
+    if ((len >= 0) && !usb_packet.ready) {
+        usb_read(EP_RX, usb_packet.data, len);
+        usb_packet.ready = TRUE;
+        usb_packet.len = len;
     }
 
-    if (rw.packet_ready) {
+    if (usb_packet.ready) {
         unsigned int avail = U_BUF_SZ - (uint32_t)(u_prod - u_cons);
-        unsigned int n = rw.packet_len;
+        unsigned int n = usb_packet.len;
         if (avail >= n) {
             unsigned int p = U_MASK(u_prod);
             unsigned int l = U_BUF_SZ - p;
             if (l < n) {
-                memcpy(&u_buf[p], rw.packet, l);
-                memcpy(u_buf, &rw.packet[l], n-l);
+                memcpy(&u_buf[p], usb_packet.data, l);
+                memcpy(u_buf, &usb_packet.data[l], n-l);
             } else {
-                memcpy(&u_buf[p], rw.packet, n);
+                memcpy(&u_buf[p], usb_packet.data, n);
             }
             u_prod += n;
-            rw.packet_ready = FALSE;
+            usb_packet.ready = FALSE;
         }
     }
 }
@@ -789,7 +796,7 @@ static void floppy_write_check_underflow(void)
 
         /* Underflow */
         printk("UNDERFLOW %u %u %u %u\n", u_cons, u_prod,
-               rw.packet_ready, ep_rx_ready(EP_RX));
+               usb_packet.ready, ep_rx_ready(EP_RX));
         floppy_flux_end();
         rw.status = ACK_FLUX_UNDERFLOW;
         floppy_state = ST_write_flux_drain;
@@ -841,7 +848,7 @@ static void floppy_write_drain(void)
         return;
     }
 
-    /* Wait for space to write ACK packet. */
+    /* Wait for space to write ACK usb_packet. */
     if (!ep_tx_ready(EP_TX))
         return;
 
@@ -931,11 +938,11 @@ static void source_bytes(void)
 
     if (ss.todo < usb_bulk_mps) {
         floppy_state = ST_command_wait;
-        floppy_end_command(rw.packet, ss.todo);
+        floppy_end_command(usb_packet.data, ss.todo);
         return; /* FINISHED */
     }
 
-    usb_write(EP_TX, rw.packet, usb_bulk_mps);
+    usb_write(EP_TX, usb_packet.data, usb_bulk_mps);
     ss.todo -= usb_bulk_mps;
     ss_update_deltas(usb_bulk_mps);
 }
@@ -960,7 +967,7 @@ static void sink_bytes(void)
         return;
 
     /* Read it and adjust byte counter. */
-    usb_read(EP_RX, rw.packet, len);
+    usb_read(EP_RX, usb_packet.data, len);
     ss.todo = (ss.todo <= len) ? 0 : ss.todo - len;
     ss_update_deltas(len);
 }
