@@ -90,6 +90,15 @@ static struct {
     uint8_t data[USB_HS_MPS];
 } usb_packet;
 
+/* Read, write, erase: Shared command state. */
+static struct {
+    union {
+        time_t start; /* read, write: Time at which read/write started. */
+        time_t end;   /* erase: Time at which to end the erasure. */
+    };
+    uint8_t status;
+} flux_op;
+
 static enum {
     ST_inactive,
     ST_command_wait,
@@ -298,22 +307,8 @@ static void floppy_end_command(void *ack, unsigned int ack_len)
  */
 
 static struct {
-    union {
-        time_t start; /* read, write: Time at which read/write started. */
-        time_t end;   /* erase: Time at which to end the erasure. */
-    };
-    uint8_t status;
-    uint8_t idx, nr_idx;
-    bool_t write_finished;
-    bool_t terminate_at_index;
-    uint32_t astable_period;
-    uint32_t ticks;
-    enum {
-        FLUXMODE_idle,    /* generating no flux (awaiting next command) */
-        FLUXMODE_oneshot, /* generating a single flux */
-        FLUXMODE_astable  /* generating a region of oscillating flux */
-    } flux_mode;
-} rw;
+    unsigned int idx, nr_idx;
+} read;
 
 static void _write_28bit(uint32_t x)
 {
@@ -330,7 +325,7 @@ static void rdata_encode_flux(void)
     timcnt_t prev = dma.prev_sample, curr, next;
     uint32_t ticks;
 
-    ASSERT(rw.idx < rw.nr_idx);
+    ASSERT(read.idx < read.nr_idx);
 
     /* We don't want to race the Index IRQ handler. */
     IRQ_global_disable();
@@ -338,10 +333,10 @@ static void rdata_encode_flux(void)
     /* Find out where the DMA engine's producer index has got to. */
     prod = ARRAY_SIZE(dma.buf) - dma_rdata.ndtr;
 
-    if (rw.idx != index.count) {
+    if (read.idx != index.count) {
         /* We have just passed the index mark: Record information about 
          * the just-completed revolution. */
-        rw.idx = index.count;
+        read.idx = index.count;
         ticks = (timcnt_t)(index.rdata_cnt - prev);
         IRQ_global_enable(); /* we're done reading ISR variables */
         u_buf[U_MASK(u_prod++)] = 0xff;
@@ -419,11 +414,13 @@ static uint8_t floppy_read_prep(const struct gw_read_flux *rf)
     tim_rdata->cr1 = TIM_CR1_CEN;
 
     index.count = 0;
+    usb_packet.ready = FALSE;
+
     floppy_state = ST_read_flux;
-    memset(&rw, 0, sizeof(rw));
-    rw.nr_idx = rf->nr_idx;
-    rw.start = time_now();
-    rw.status = ACK_OKAY;
+    flux_op.start = time_now();
+    flux_op.status = ACK_OKAY;
+    memset(&read, 0, sizeof(read));
+    read.nr_idx = rf->nr_idx;
 
     return ACK_OKAY;
 }
@@ -458,23 +455,23 @@ static void floppy_read(void)
             printk("OVERFLOW %u %u %u %u\n", u_cons, u_prod,
                    usb_packet.ready, ep_tx_ready(EP_TX));
             floppy_flux_end();
-            rw.status = ACK_FLUX_OVERFLOW;
+            flux_op.status = ACK_FLUX_OVERFLOW;
             floppy_state = ST_read_flux_drain;
             u_cons = u_prod = avail = 0;
 
-        } else if (rw.idx >= rw.nr_idx) {
+        } else if (read.idx >= read.nr_idx) {
 
             /* Read all requested revolutions. */
             floppy_flux_end();
             floppy_state = ST_read_flux_drain;
 
         } else if ((index.count == 0)
-                   && (time_since(rw.start) > time_ms(2000))) {
+                   && (time_since(flux_op.start) > time_ms(2000))) {
 
             /* Timeout */
             printk("NO INDEX\n");
             floppy_flux_end();
-            rw.status = ACK_NO_INDEX;
+            flux_op.status = ACK_NO_INDEX;
             floppy_state = ST_read_flux_drain;
             u_cons = u_prod = avail = 0;
 
@@ -507,6 +504,18 @@ static void floppy_read(void)
  * WRITE PATH
  */
 
+static struct {
+    bool_t is_finished;
+    bool_t terminate_at_index;
+    uint32_t astable_period;
+    uint32_t ticks;
+    enum {
+        FLUXMODE_idle,    /* generating no flux (awaiting next command) */
+        FLUXMODE_oneshot, /* generating a single flux */
+        FLUXMODE_astable  /* generating a region of oscillating flux */
+    } flux_mode;
+} write;
+
 static uint32_t _read_28bit(void)
 {
     uint32_t x;
@@ -522,23 +531,23 @@ static unsigned int _wdata_decode_flux(timcnt_t *tbuf, unsigned int nr)
 #define MIN_PULSE sample_ns(800)
 
     unsigned int todo = nr;
-    uint32_t x, ticks = rw.ticks;
+    uint32_t x, ticks = write.ticks;
 
     if (todo == 0)
         return 0;
 
-    switch (rw.flux_mode) {
+    switch (write.flux_mode) {
 
     case FLUXMODE_astable: {
         /* Produce flux transitions at the specified period. */
-        uint32_t pulse = rw.astable_period;
+        uint32_t pulse = write.astable_period;
         while (ticks >= pulse) {
             *tbuf++ = pulse - 1;
             ticks -= pulse;
             if (!--todo)
                 goto out;
         }
-        rw.flux_mode = FLUXMODE_idle;
+        write.flux_mode = FLUXMODE_idle;
         break;
     }
 
@@ -562,7 +571,7 @@ static unsigned int _wdata_decode_flux(timcnt_t *tbuf, unsigned int nr)
                 goto out;
         }
 
-        rw.flux_mode = FLUXMODE_idle;
+        write.flux_mode = FLUXMODE_idle;
         break;
 
     case FLUXMODE_idle:
@@ -573,13 +582,13 @@ static unsigned int _wdata_decode_flux(timcnt_t *tbuf, unsigned int nr)
 
     while (u_cons != u_prod) {
 
-        ASSERT(rw.flux_mode == FLUXMODE_idle);
+        ASSERT(write.flux_mode == FLUXMODE_idle);
 
         x = u_buf[U_MASK(u_cons)];
         if (x == 0) {
             /* 0: Terminate */
             u_cons++;
-            rw.write_finished = TRUE;
+            write.is_finished = TRUE;
             goto out;
         } else if (x < 250) {
             /* 1-249: One byte. Time to next flux.*/
@@ -602,15 +611,16 @@ static unsigned int _wdata_decode_flux(timcnt_t *tbuf, unsigned int nr)
             case FLUXOP_SPACE:
                 ticks += _read_28bit();
                 continue;
-            case FLUXOP_ASTABLE:
-                rw.astable_period = _read_28bit();
-                if ((rw.astable_period < MIN_PULSE)
-                    || (rw.astable_period != (timcnt_t)rw.astable_period)) {
+            case FLUXOP_ASTABLE: {
+                uint32_t period = _read_28bit();
+                if ((period < MIN_PULSE) || (period != (timcnt_t)period)) {
                     /* Bad period value: underflow or overflow. */
                     goto error;
                 }
-                rw.flux_mode = FLUXMODE_astable;
+                write.astable_period = period;
+                write.flux_mode = FLUXMODE_astable;
                 goto out;
+            }
             default:
                 /* Invalid opcode */
                 u_cons += 4;
@@ -629,7 +639,7 @@ static unsigned int _wdata_decode_flux(timcnt_t *tbuf, unsigned int nr)
         /* This sample overflows the hardware timer's counter width?
          * Then bail, and we'll split it into chunks. */
         if (ticks != (timcnt_t)ticks) {
-            rw.flux_mode = FLUXMODE_oneshot;
+            write.flux_mode = FLUXMODE_oneshot;
             goto out;
         }
 
@@ -640,12 +650,12 @@ static unsigned int _wdata_decode_flux(timcnt_t *tbuf, unsigned int nr)
     }
 
 out:
-    rw.ticks = ticks;
+    write.ticks = ticks;
     return nr - todo;
 
 error:
     floppy_flux_end();
-    rw.status = ACK_BAD_COMMAND;
+    flux_op.status = ACK_BAD_COMMAND;
     floppy_state = ST_write_flux_drain;
     goto out;
 }
@@ -712,12 +722,13 @@ static uint8_t floppy_write_prep(const struct gw_write_flux *wf)
     dma_wdata.ndtr = ARRAY_SIZE(dma.buf);
     dma.prod = 0;
 
-    floppy_state = ST_write_flux_wait_data;
-    memset(&rw, 0, sizeof(rw));
-    rw.flux_mode = FLUXMODE_idle;
-    rw.status = ACK_OKAY;
+    usb_packet.ready = FALSE;
 
-    rw.terminate_at_index = wf->terminate_at_index;
+    floppy_state = ST_write_flux_wait_data;
+    flux_op.status = ACK_OKAY;
+    memset(&write, 0, sizeof(write));
+    write.flux_mode = FLUXMODE_idle;
+    write.terminate_at_index = wf->terminate_at_index;
 
     return ACK_OKAY;
 }
@@ -729,7 +740,7 @@ static void floppy_write_wait_data(void)
 
     floppy_process_write_packet();
     wdata_decode_flux();
-    if (rw.status != ACK_OKAY)
+    if (flux_op.status != ACK_OKAY)
         return;
 
     /* We don't wait for the massive F7 u_buf[] to fill at Full Speed. */
@@ -738,10 +749,10 @@ static void floppy_write_wait_data(void)
 
     /* Wait for DMA and input buffers to fill, or write stream to end. We must
      * take care because, since we are not yet draining the DMA buffer, the
-     * write stream may end without us noticing and setting rw.write_finished. 
+     * write stream may end without us noticing and setting write.is_finished. 
      * Hence we peek for a NUL byte in the input buffer if it's non-empty. */
     write_finished = ((u_prod == u_cons)
-                      ? rw.write_finished
+                      ? write.is_finished
                       : (u_buf[U_MASK(u_prod-1)] == 0));
     if (((dma.prod != (ARRAY_SIZE(dma.buf)-1)) 
          || ((uint32_t)(u_prod - u_cons) < u_buf_threshold))
@@ -749,7 +760,7 @@ static void floppy_write_wait_data(void)
         return;
 
     floppy_state = ST_write_flux_wait_index;
-    rw.start = time_now();
+    flux_op.start = time_now();
 
     /* Enable DMA only after flux values are generated. */
     dma_wdata_start();
@@ -765,10 +776,10 @@ static void floppy_write_wait_data(void)
 static void floppy_write_wait_index(void)
 {
     if (index.count == 0) {
-        if (time_since(rw.start) > time_ms(2000)) {
+        if (time_since(flux_op.start) > time_ms(2000)) {
             /* Timeout */
             floppy_flux_end();
-            rw.status = ACK_NO_INDEX;
+            flux_op.status = ACK_NO_INDEX;
             floppy_state = ST_write_flux_drain;
         }
         return;
@@ -798,7 +809,7 @@ static void floppy_write_check_underflow(void)
         printk("UNDERFLOW %u %u %u %u\n", u_cons, u_prod,
                usb_packet.ready, ep_rx_ready(EP_RX));
         floppy_flux_end();
-        rw.status = ACK_FLUX_UNDERFLOW;
+        flux_op.status = ACK_FLUX_UNDERFLOW;
         floppy_state = ST_write_flux_drain;
 
     }
@@ -810,14 +821,14 @@ static void floppy_write(void)
 
     floppy_process_write_packet();
     wdata_decode_flux();
-    if (rw.status != ACK_OKAY)
+    if (flux_op.status != ACK_OKAY)
         return;
 
     /* Early termination on index pulse? */
-    if (rw.terminate_at_index && (index.count != 0))
+    if (write.terminate_at_index && (index.count != 0))
         goto terminate;
 
-    if (!rw.write_finished) {
+    if (!write.is_finished) {
         floppy_write_check_underflow();
         return;
     }
@@ -826,7 +837,7 @@ static void floppy_write(void)
     todo = ~0;
     do {
         /* Check for early termination on index pulse. */
-        if (rw.terminate_at_index && (index.count != 0))
+        if (write.terminate_at_index && (index.count != 0))
             goto terminate;
         /* Check progress of draining the DMA ring. */
         prev_todo = todo;
@@ -842,7 +853,7 @@ terminate:
 static void floppy_write_drain(void)
 {
     /* Drain the write stream. */
-    if (!rw.write_finished) {
+    if (!write.is_finished) {
         floppy_process_write_packet();
         (void)_wdata_decode_flux(dma.buf, ARRAY_SIZE(dma.buf));
         return;
@@ -853,7 +864,7 @@ static void floppy_write_drain(void)
         return;
 
     /* ACK with Status byte. */
-    u_buf[0] = rw.status;
+    u_buf[0] = flux_op.status;
     floppy_state = ST_command_wait;
     floppy_end_command(u_buf, 1);
 }
@@ -871,22 +882,21 @@ static uint8_t floppy_erase_prep(const struct gw_erase_flux *ef)
     write_pin(wgate, TRUE);
 
     floppy_state = ST_erase_flux;
-    memset(&rw, 0, sizeof(rw));
-    rw.status = ACK_OKAY;
-    rw.end = time_now() + time_from_samples(ef->erase_ticks);
+    flux_op.status = ACK_OKAY;
+    flux_op.end = time_now() + time_from_samples(ef->erase_ticks);
 
     return ACK_OKAY;
 }
 
 static void floppy_erase(void)
 {
-    if (time_since(rw.end) < 0)
+    if (time_since(flux_op.end) < 0)
         return;
 
     write_pin(wgate, FALSE);
 
     /* ACK with Status byte. */
-    u_buf[0] = rw.status;
+    u_buf[0] = flux_op.status;
     floppy_state = ST_command_wait;
     floppy_end_command(u_buf, 1);
 }
@@ -1136,7 +1146,7 @@ static void process_command(void)
     case CMD_GET_FLUX_STATUS: {
         if (len != 2)
             goto bad_command;
-        u_buf[1] = rw.status;
+        u_buf[1] = flux_op.status;
         goto out;
     }
     case CMD_SELECT: {
