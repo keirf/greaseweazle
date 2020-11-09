@@ -6,6 +6,7 @@
 # See the file COPYING for more details, or visit <http://unlicense.org>.
 
 import struct
+import itertools as it
 from greaseweazle import version
 from greaseweazle import error
 from greaseweazle.flux import Flux
@@ -263,7 +264,8 @@ class Unit:
     ## Decode the Greaseweazle data stream into a list of flux samples.
     def _decode_flux(self, dat):
         flux, index = [], []
-        dat_i = iter(dat)
+        assert dat[-1] == 0
+        dat_i = it.islice(dat, 0, len(dat)-1)
         ticks, ticks_since_index = 0, 0
         def _read_28bit():
             val =  (next(dat_i) & 254) >>  1
@@ -297,8 +299,7 @@ class Unit:
                     ticks = 0
         except StopIteration:
             pass
-        error.check(flux[-1] == 0, "Missing terminator on flux read stream")
-        return flux[:-1], index
+        return flux, index
 
 
     ## _encode_flux:
