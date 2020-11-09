@@ -5,46 +5,56 @@
 # This is free and unencumbered software released into the public domain.
 # See the file COPYING for more details, or visit <http://unlicense.org>.
 
-import binascii, itertools
+import binascii
+import itertools as it
 from bitarray import bitarray
 
 class Bitcell:
 
-    def __init__(self):
-        self.clock = 2 / 1000000
+    def __init__(self, clock = 2e-6, flux = None):
+        self.clock = clock
         self.clock_max_adj = 0.10
         self.pll_period_adj = 0.05
         self.pll_phase_adj = 0.60
+        self.bitarray = bitarray(endian='big')
+        self.timearray = []
+        self.revolutions = []
+        if flux is not None:
+            self.from_flux(flux)
 
+        
     def __str__(self):
         s = ""
-        rev = 0
-        for b, _ in self.revolution_list:
+        for rev in range(len(self.revolutions)):
+            b, _ = self.get_revolution(rev)
             s += "Revolution %u: " % rev
             s += str(binascii.hexlify(b.tobytes())) + "\n"
-            rev += 1
         return s[:-1]
 
+    
+    def get_revolution(self, nr):
+        start = sum(self.revolutions[:nr])
+        end = start + self.revolutions[nr]
+        return self.bitarray[start:end], self.timearray[start:end]
+
+    
     def from_flux(self, flux):
 
-        index_list, freq = flux.index_list, flux.sample_freq
+        freq = flux.sample_freq
 
         clock = self.clock
         clock_min = self.clock * (1 - self.clock_max_adj)
         clock_max = self.clock * (1 + self.clock_max_adj)
         ticks = 0.0
 
-        # Per-revolution list of bitcells and bitcell times.
-        self.revolution_list = []
+        index_iter = iter(map(lambda x: x/freq, flux.index_list))
 
-        # Initialise bitcell lists for the first revolution.
         bits, times = bitarray(endian='big'), []
-        to_index = index_list[0] / freq
-        index_list = index_list[1:]
+        to_index = next(index_iter)
 
         # Make sure there's enough time in the flux list to cover all
         # revolutions by appending a "large enough" final flux value.
-        for x in itertools.chain(flux.list, [sum(flux.index_list)]):
+        for x in it.chain(flux.list, [sum(flux.index_list)]):
 
             # Gather enough ticks to generate at least one bitcell.
             ticks += x / freq
@@ -58,12 +68,15 @@ class Bitcell:
                 # Check if we cross the index mark.
                 to_index -= clock
                 if to_index < 0:
-                    self.revolution_list.append((bits, times))
-                    if not index_list:
+                    self.bitarray += bits
+                    self.timearray += times
+                    self.revolutions.append(len(times))
+                    assert len(times) == len(bits)
+                    try:
+                        to_index += next(index_iter)
+                    except StopIteration:
                         return
                     bits, times = bitarray(endian='big'), []
-                    to_index = index_list[0] / freq
-                    index_list = index_list[1:]
 
                 ticks -= clock
                 times.append(clock)
@@ -88,7 +101,9 @@ class Bitcell:
             times[-1] += ticks - new_ticks
             ticks = new_ticks
 
-        self.revolution_list.append((bits, times))
+        # We can't get here: We should run out of indexes before we run
+        # out of flux.
+        assert False
 
 # Local variables:
 # python-indent: 4

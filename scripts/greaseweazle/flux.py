@@ -25,7 +25,19 @@ class Flux:
 
 
     def flux_for_writeout(self):
+        return self.flux()
+
+    def flux(self):
         return self
+
+    def scale(self, factor):
+        """Scale up all flux and index timings by specified factor."""
+        self.sample_freq /= factor
+
+    @property
+    def mean_index_time(self):
+        """Mean time between index pulses, in seconds (float)"""
+        return sum(self.index_list) / (len(self.index_list) * self.sample_freq)
 
  
 # Local variables:

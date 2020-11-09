@@ -16,6 +16,7 @@ from greaseweazle import usb as USB
 from greaseweazle.image.scp import SCP
 from greaseweazle.image.hfe import HFE
 from greaseweazle.image.ipf import IPF
+from greaseweazle.image.adf import ADF
 
 
 class CmdlineHelpFormatter(argparse.ArgumentDefaultsHelpFormatter):
@@ -65,7 +66,7 @@ def split_opts(seq):
 
 
 def get_image_class(name):
-    image_types = { '.scp': SCP, '.hfe': HFE, '.ipf': IPF }
+    image_types = { '.adf': ADF, '.scp': SCP, '.hfe': HFE, '.ipf': IPF }
     _, ext = os.path.splitext(name)
     error.check(ext.lower() in image_types,
                 "%s: Unrecognised file suffix '%s'" % (name, ext))

@@ -12,6 +12,7 @@ description = "Write a disk from the specified image file."
 import sys
 
 from greaseweazle.tools import util
+from greaseweazle import error
 from greaseweazle import usb as USB
 
 
@@ -25,6 +26,17 @@ def open_image(args):
             image = image_class.from_file(f.read())
     return image
 
+class Formatter:
+    def __init__(self):
+        self.length = 0
+    def print(self, s):
+        self.erase()
+        self.length = len(s)
+        print(s, end="", flush=True)
+    def erase(self):
+        l = self.length
+        print("\b"*l + " "*l + "\b"*l, end="", flush=True)
+        self.length = 0
 
 # write_from_image:
 # Writes the specified image file to floppy disk.
@@ -36,6 +48,8 @@ def write_from_image(usb, args, image):
     drive_ticks = (flux.index_list[0] + flux.index_list[1]) / 2
     del flux
 
+    verified_count, not_verified_count = 0, 0
+
     for cyl in range(args.scyl, args.ecyl+1):
         for side in range(0, args.nr_sides):
 
@@ -44,7 +58,8 @@ def write_from_image(usb, args, image):
                 continue
 
             print("\r%sing Track %u.%u..." %
-                  ("Writ" if track is not None else "Eras", cyl, side), end="")
+                  ("Writ" if track is not None else "Eras", cyl, side),
+                  end="", flush=True)
             usb.seek((cyl, cyl*2)[args.double_step], side)
             
             if track is None:
@@ -67,9 +82,41 @@ def write_from_image(usb, args, image):
                 flux_list.append(val)
 
             # Encode the flux times for Greaseweazle, and write them out.
-            usb.write_track(flux_list, flux.terminate_at_index)
+            formatter = Formatter()
+            verified = False
+            for retry in range(3):
+                usb.write_track(flux_list, flux.terminate_at_index)
+                try:
+                    no_verify = args.no_verify or track.verify is None
+                except AttributeError: # track.verify undefined
+                    no_verify = True
+                if no_verify:
+                    not_verified_count += 1
+                    verified = True
+                    break
+                v_revs = 1 if track.splice == 0 else 2
+                v_flux = usb.read_track(v_revs)
+                v_flux.scale(flux.mean_index_time / v_flux.mean_index_time)
+                verified = track.verify.verify_track(v_flux)
+                if verified:
+                    verified_count += 1
+                    break
+                formatter.print(" Retry %d" % (retry + 1))
+            formatter.erase()
+            error.check(verified, "Failed to write Track %u.%u" % (cyl, side))
 
     print()
+    if not_verified_count == 0:
+        print("All tracks verified")
+    else:
+        if verified_count == 0:
+            s = "No tracks verified "
+        else:
+            s = ("%d tracks verified; %d tracks *not* verified "
+                 % (verified_count, not_verified_count))
+        s += ("(Reason: Verify %s)"
+              % ("unavailable", "disabled")[args.no_verify])
+        print(s)
 
 
 def main(argv):
@@ -88,6 +135,8 @@ def main(argv):
                         help="double-step drive heads")
     parser.add_argument("--erase-empty", action="store_true",
                         help="erase empty tracks (default: skip)")
+    parser.add_argument("--no-verify", action="store_true",
+                        help="disable verify")
     parser.add_argument("file", help="input filename")
     parser.description = description
     parser.prog += ' ' + argv[1]
@@ -97,7 +146,11 @@ def main(argv):
     try:
         usb = util.usb_open(args.device)
         image = open_image(args)
-        util.with_drive_selected(write_from_image, usb, args, image)
+        try:
+            util.with_drive_selected(write_from_image, usb, args, image)
+        except:
+            print()
+            raise
     except USB.CmdError as error:
         print("Command Failed: %s" % error)
 

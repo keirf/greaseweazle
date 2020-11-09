@@ -50,7 +50,11 @@ def main(argv):
 
     try:
         usb = util.usb_open(args.device)
-        util.with_drive_selected(erase, usb, args)
+        try:
+            util.with_drive_selected(erase, usb, args)
+        except:
+            print()
+            raise
     except USB.CmdError as error:
         print("Command Failed: %s" % error)
 

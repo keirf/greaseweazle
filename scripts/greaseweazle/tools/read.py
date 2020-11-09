@@ -10,6 +10,7 @@
 description = "Read a disk to the specified image file."
 
 import sys
+import importlib
 
 from greaseweazle.tools import util
 from greaseweazle import error
@@ -59,7 +60,7 @@ def normalise_rpm(flux, rpm):
     return Flux([norm_to_index]*len(flux.index_list), norm_flux, freq)
 
 
-def read_to_image(usb, args, image):
+def read_to_image(usb, args, image, decoder=None):
     """Reads a floppy disk and dumps it into a new image file.
     """
 
@@ -70,7 +71,8 @@ def read_to_image(usb, args, image):
             flux = usb.read_track(args.revs)
             if args.rpm is not None:
                 flux = normalise_rpm(flux, args.rpm)
-            image.append_track(flux)
+            dat = flux if decoder is None else decoder(cyl, side, flux)
+            image.append_track(dat)
 
     print()
 
@@ -85,6 +87,7 @@ def main(argv):
     parser.add_argument("--device", help="greaseweazle device name")
     parser.add_argument("--drive", type=util.drive_letter, default='A',
                         help="drive to read (A,B,0,1,2)")
+    parser.add_argument("--format", help="disk format")
     parser.add_argument("--revs", type=int, default=3,
                         help="number of revolutions to read per track")
     parser.add_argument("--scyl", type=int, default=0,
@@ -108,7 +111,18 @@ def main(argv):
     try:
         usb = util.usb_open(args.device)
         image = open_image(args)
-        util.with_drive_selected(read_to_image, usb, args, image)
+        if not args.format and hasattr(image, 'default_format'):
+            args.format = image.default_format
+        decoder = None
+        if args.format:
+            mod = importlib.import_module('greaseweazle.codec.' + args.format)
+            decoder = mod.__dict__['decode_track']
+        try:
+            util.with_drive_selected(read_to_image, usb, args, image,
+                                     decoder=decoder)
+        except:
+            print()
+            raise
     except USB.CmdError as error:
         print("Command Failed: %s" % error)
 
