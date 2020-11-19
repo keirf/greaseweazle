@@ -84,8 +84,6 @@ bool_t cdc_acm_handle_class_request(void)
     case CDC_SEND_BREAK:
         /* wValue = #millisecs. We ignore it and return success. */
         TRC("BREAK\n");
-        usb_cdc_acm_ops.reset();
-        usb_cdc_acm_ops.configure();
         break;
 
     default:
