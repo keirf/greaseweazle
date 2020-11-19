@@ -53,11 +53,7 @@ dist:
 	cp -a gw $(PROJ)-$(VER)/
 	cp -a scripts/49-greaseweazle.rules $(PROJ)-$(VER)/scripts/
 	cp -a scripts/gw.py $(PROJ)-$(VER)/scripts/
-	cp -a scripts/greaseweazle/*.py $(PROJ)-$(VER)/scripts/greaseweazle/
-	cp -a scripts/greaseweazle/image/*.py \
-		$(PROJ)-$(VER)/scripts/greaseweazle/image/
-	cp -a scripts/greaseweazle/tools/*.py \
-		$(PROJ)-$(VER)/scripts/greaseweazle/tools/
+	cp -a scripts/greaseweazle $(PROJ)-$(VER)/scripts
 	cp -a scripts/misc/*.py $(PROJ)-$(VER)/scripts/misc/
 	cp -a RELEASE_NOTES $(PROJ)-$(VER)/
 	$(MAKE) clean
