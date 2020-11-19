@@ -40,13 +40,13 @@ class AmigaDOS:
     def get_adf_track(self):
         tdat = bytearray()
         for sec in self.sector:
-            tdat += sec[1] if sec is not None else bytes([0] * 512)
+            tdat += sec[1] if sec is not None else bytes(512)
         return tdat
 
     def set_adf_track(self, tdat):
         self.map = list(range(self.nsec))
         for sec in self.map:
-            self.sector[sec] = bytes([0x00] * 16), tdat[sec*512:(sec+1)*512]
+            self.sector[sec] = bytes(16), tdat[sec*512:(sec+1)*512]
 
     def flux_for_writeout(self):
         return self.flux()
@@ -56,14 +56,14 @@ class AmigaDOS:
 
     def bits(self):
         next_bad_sec_id = 0
-        t = bytearray(64)
+        t = encode(bytes(128))
         for nr in range(self.nsec):
             sec_id = self.map[nr]
             if sec_id is None:
                 while self.sector[next_bad_sec_id] is not None:
                     next_bad_sec_id += 1
                 sec_id = next_bad_sec_id
-                label, data = bytes([0x00] * 16), bytes([0x00] * 512)
+                label, data = bytes(16), bytes(512)
             else:
                 label, data = self.sector[sec_id]
             t += sync_bytes
@@ -73,7 +73,7 @@ class AmigaDOS:
             t += encode(struct.pack('>I', checksum(header + label)))
             t += encode(struct.pack('>I', checksum(data)))
             t += encode(data)
-            t += encode([0x00] * 2)
+            t += encode(bytes(2))
         tlen = 101376 if self.nsec == 11 else 202752
         t += bytes(tlen//8-len(t))
         return mfm_encode(t)
