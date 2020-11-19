@@ -192,6 +192,11 @@ static void reset_user_pins(void)
     write_pin(densel, FALSE);
 }
 
+/* No Flippy-modded drive support on F1 boards. */
+#define flippy_trk0_sensor_disable() ((void)0)
+#define flippy_trk0_sensor_enable() ((void)0)
+#define flippy_detect() FALSE
+
 /*
  * Local variables:
  * mode: C

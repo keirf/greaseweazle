@@ -29,8 +29,10 @@
 
 static int bus_type = -1;
 static int unit_nr = -1;
-static struct {
+static struct unit {
     int cyl;
+    bool_t initialised;
+    bool_t is_flippy;
     bool_t motor;
 } unit[3];
 
@@ -140,13 +142,9 @@ static void step_one_in(void)
 
 static void _set_bus_type(uint8_t type)
 {
-    int i;
     bus_type = type;
     unit_nr = -1;
-    for (i = 0; i < ARRAY_SIZE(unit); i++) {
-        unit[i].cyl = -1;
-        unit[i].motor = FALSE;
-    }
+    memset(unit, 0, sizeof(unit));
     reset_bus();
 }
 
@@ -163,48 +161,51 @@ static bool_t set_bus_type(uint8_t type)
     return TRUE;
 }
 
-static uint8_t floppy_seek(unsigned int cyl)
+static uint8_t floppy_seek(int cyl)
 {
-    int cur_cyl;
+    struct unit *u;
 
     if (unit_nr < 0)
         return ACK_NO_UNIT;
-    cur_cyl = unit[unit_nr].cyl;
+    u = &unit[unit_nr];
 
-    if ((cyl == 0) || (cur_cyl < 0)) {
-
+    if (!u->initialised) {
         unsigned int i;
         for (i = 0; i < 256; i++) {
             if (get_trk0() == LOW)
-                break;
+                goto found_trk0;
             step_one_out();
         }
-        cur_cyl = 0;
-        if (get_trk0() == HIGH) {
-            unit[unit_nr].cyl = -1;
-            return ACK_NO_TRK0;
-        }
-
+        return ACK_NO_TRK0;
+    found_trk0:
+        u->is_flippy = flippy_detect();
+        u->initialised = TRUE;
+        u->cyl = 0;
     }
 
-    if (cur_cyl < 0) {
+    if ((cyl < (u->is_flippy ? -8 : 0)) || (cyl > 100))
+        return ACK_BAD_CYLINDER;
 
-    } else if (cur_cyl <= cyl) {
+    flippy_trk0_sensor_disable();
 
-        unsigned int nr = cyl - cur_cyl;
+    if (u->cyl <= cyl) {
+
+        int nr = cyl - u->cyl;
         while (nr--)
             step_one_in();
 
     } else {
 
-        unsigned int nr = cur_cyl - cyl;
+        int nr = u->cyl - cyl;
         while (nr--)
             step_one_out();
 
     }
 
+    flippy_trk0_sensor_enable();
+
     delay_ms(delay_params.seek_settle);
-    unit[unit_nr].cyl = cyl;
+    u->cyl = cyl;
 
     return ACK_OKAY;
 }
@@ -230,15 +231,37 @@ static void floppy_flux_end(void)
         continue;
 }
 
-static void floppy_reset(void)
+static void do_auto_off(void)
 {
-    floppy_state = ST_inactive;
-    auto_off.armed = FALSE;
+    int i;
 
     floppy_flux_end();
 
+    for (i = 0; i < ARRAY_SIZE(unit); i++) {
+
+        struct unit *u = &unit[i];
+        if (!u->initialised)
+            continue;
+
+        if (u->cyl < 0) {
+            drive_select(i);
+            floppy_seek(0);
+        }
+
+        if (u->motor)
+            drive_motor(i, FALSE);
+
+    }
+
     drive_deselect();
 
+    auto_off.armed = FALSE;
+}
+
+static void floppy_reset(void)
+{
+    floppy_state = ST_inactive;
+    do_auto_off();
     act_led(FALSE);
 }
 
@@ -1089,8 +1112,8 @@ static void process_command(void)
         break;
     }
     case CMD_SEEK: {
-        uint8_t cyl = u_buf[2];
-        if ((len != 3) || (cyl > 85))
+        int8_t cyl = u_buf[2];
+        if (len != 3)
             goto bad_command;
         u_buf[1] = floppy_seek(cyl);
         goto out;
@@ -1244,17 +1267,10 @@ static void floppy_configure(void)
 
 void floppy_process(void)
 {
-    int i, len;
+    int len;
 
-    if (auto_off.armed && (time_since(auto_off.deadline) >= 0)) {
-        floppy_flux_end();
-        for (i = 0; i < ARRAY_SIZE(unit); i++) {
-            if (unit[i].motor)
-                drive_motor(i, FALSE);
-        }
-        drive_deselect();
-        auto_off.armed = FALSE;
-    }
+    if (auto_off.armed && (time_since(auto_off.deadline) >= 0))
+        do_auto_off();
 
     switch (floppy_state) {
 

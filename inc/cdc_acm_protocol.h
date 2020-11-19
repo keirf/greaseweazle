@@ -84,6 +84,7 @@
 #define ACK_NO_BUS          8
 #define ACK_BAD_UNIT        9
 #define ACK_BAD_PIN        10
+#define ACK_BAD_CYLINDER   11
 
 
 /*

@@ -184,9 +184,9 @@ static void mcu_board_init(void)
         pu[upin->gpio_bank] &= ~(1u << upin->gpio_pin);
     }
 
-    /* Lightning Plus /FLIPPY output. Unused for now. Tie LOW. */
+    /* Lightning Plus TRK0_DISABLE output: Set inactive (LOW). */
     if (gw_info.hw_submodel == F7SM_lightning_plus) {
-        gpio_configure_pin(gpioc, 1, GPI_pull_down);
+        gpio_configure_pin(gpioc, 1, GPO_pushpull(IOSPD_LOW, LOW));
         pu[_C] &= ~(1u << 1);
     }
 

@@ -283,6 +283,26 @@ static void reset_user_pins(void)
         gpio_write_pin(gpio_from_id(upin->gpio_bank), upin->gpio_pin, O_FALSE);
 }
 
+static void flippy_trk0_sensor(bool_t level)
+{
+    if (gw_info.hw_submodel == F7SM_lightning_plus) {
+        gpio_write_pin(gpioc, 1, level);
+        delay_us(10);
+    }
+}
+
+#define flippy_trk0_sensor_disable() flippy_trk0_sensor(HIGH)
+#define flippy_trk0_sensor_enable() flippy_trk0_sensor(LOW)
+
+static bool_t flippy_detect(void)
+{
+    bool_t is_flippy;
+    flippy_trk0_sensor_disable();
+    is_flippy = (get_trk0() == HIGH);
+    flippy_trk0_sensor_enable();
+    return is_flippy;
+}
+
 /*
  * Local variables:
  * mode: C

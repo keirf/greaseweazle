@@ -76,6 +76,7 @@ class Ack:
     NoBus           =  8
     BadUnit         =  9
     BadPin          = 10
+    BadCylinder     = 11
     str = {
         Okay: "Okay",
         BadCommand: "Bad Command",
@@ -86,8 +87,9 @@ class Ack:
         Wrprot: "Disk is Write Protected",
         NoUnit: "No drive unit selected",
         NoBus: "No bus type (eg. Shugart, IBM/PC) specified",
-        BadUnit: "Bad unit number",
-        BadPin: "Not a modifiable pin"
+        BadUnit: "Invalid unit number",
+        BadPin: "Not a modifiable pin",
+        BadCylinder: "Invalid cylinder"
     }
 
 
@@ -124,10 +126,17 @@ class CmdError(Exception):
         self.cmd = cmd
         self.code = code
 
+    def cmd_str(self):
+        return Cmd.str.get(self.cmd[0], "UnknownCmd")
+        
+    def errcode_str(self):
+        if self.code == Ack.BadCylinder:
+            s = Ack.str[Ack.BadCylinder]
+            return s + " %d" % struct.unpack('2Bb', self.cmd)[2]
+        return Ack.str.get(self.code, "Unknown Error (%u)" % self.code)
+
     def __str__(self):
-        return "%s: %s" % (Cmd.str.get(self.cmd, "UnknownCmd"),
-                           Ack.str.get(self.code, "Unknown Error (%u)"
-                                       % self.code))
+        return "%s: %s" % (self.cmd_str(), self.errcode_str())
 
 
 class Unit:
@@ -189,13 +198,13 @@ class Unit:
         error.check(c == cmd[0], "Command returned garbage (%02x != %02x)"
                     % (c, cmd[0]))
         if r != 0:
-            raise CmdError(c, r)
+            raise CmdError(cmd, r)
 
 
     ## seek:
     ## Seek the selected drive's heads to the specified track (cyl, side).
     def seek(self, cyl, side):
-        self._send_cmd(struct.pack("3B", Cmd.Seek, 3, cyl))
+        self._send_cmd(struct.pack("2Bb", Cmd.Seek, 3, cyl))
         self._send_cmd(struct.pack("3B", Cmd.Side, 3, side))
 
 

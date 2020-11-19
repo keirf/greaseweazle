@@ -9,7 +9,7 @@
 
 description = "Seek to the specified cylinder."
 
-import sys
+import struct, sys
 
 from greaseweazle.tools import util
 from greaseweazle import error
@@ -29,16 +29,27 @@ def main(argv):
     parser.add_argument("--device", help="greaseweazle device name")
     parser.add_argument("--drive", type=util.drive_letter, default='A',
                         help="drive to read (A,B,0,1,2)")
+    parser.add_argument("--force", action="store_true",
+                        help="allow extreme cylinders with no prompt")
     parser.add_argument("cylinder", type=int, help="cylinder to seek")
     parser.description = description
     parser.prog += ' ' + argv[1]
     args = parser.parse_args(argv[2:])
 
     try:
+        struct.pack('b', args.cylinder)
+    except struct.error:
+        raise error.Fatal("Cylinder %d out of range" % args.cylinder)
+    if not 0 <= args.cylinder <= 83 and not args.force:
+        answer = input("Seek to extreme cylinder %d, Yes/No? " % args.cylinder)
+        if answer != "Yes":
+            return
+    
+    try:
         usb = util.usb_open(args.device)
         util.with_drive_selected(seek, usb, args, motor=False)
-    except USB.CmdError as error:
-        print("Command Failed: %s" % error)
+    except USB.CmdError as err:
+        print("Command Failed: %s" % err)
 
 
 if __name__ == "__main__":
