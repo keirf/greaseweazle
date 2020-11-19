@@ -171,11 +171,6 @@ def usb_open(devicename, is_update=False, mode_check=True):
     if not mode_check:
         return usb
 
-    print("** %s v%u.%u [F%u], Host Tools v%u.%u"
-          % (("Greaseweazle", "Bootloader")[usb.update_mode],
-             usb.major, usb.minor, usb.hw_model,
-             version.major, version.minor))
-
     if usb.update_mode and not is_update:
         if usb.hw_model == 7 and not usb.update_jumpered:
             usb = usb_reopen(usb, is_update)
