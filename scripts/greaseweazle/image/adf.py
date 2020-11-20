@@ -76,11 +76,16 @@ class ADF:
         tlen = self.sec_per_track * 512
         tdat = bytearray()
 
-        for t in self.track_list:
-            if t is None or not hasattr(t, 'get_adf_track'):
+        for tracknr in range(len(self.track_list)):
+            t = self.track_list[tracknr]
+            if t is not None and hasattr(t, 'get_adf_track'):
+                tdat += t.get_adf_track()
+            elif tracknr < 160:
+                # Pad empty/damaged tracks.
                 tdat += bytes(tlen)
             else:
-                tdat += t.get_adf_track()
+                # Do not extend past 160 tracks unless there is data.
+                break
 
         if len(self.track_list) < 160:
             tdat += bytes(tlen * (160 - len(self.track_list)))
