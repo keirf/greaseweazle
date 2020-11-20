@@ -120,7 +120,11 @@ def decode_track(cyl, head, flux):
     
     sectors = bits.search(sync)
     for offs in bits.itersearch(sync):
+
         sec = bits[offs:offs+544*16].tobytes()
+        if len(sec) != 1088:
+            continue
+
         header = decode(sec[4:12])
         format, track, sec_id, togo = tuple(header)
         if format != 0xff or track != tracknr \
