@@ -5,13 +5,8 @@
 # This is free and unencumbered software released into the public domain.
 # See the file COPYING for more details, or visit <http://unlicense.org>.
 
-import struct
-
 from greaseweazle import error
-from greaseweazle.track import MasterTrack
-from greaseweazle.bitcell import Bitcell
 import greaseweazle.codec.amiga.amigados as amigados
-from bitarray import bitarray
 
 class ADF:
 
@@ -56,18 +51,10 @@ class ADF:
         off = cyl * 2 + side
         if off >= len(self.track_list):
             return None
-        rawbytes = self.track_list[off].bits()
-        tdat = bitarray(endian='big')
-        tdat.frombytes(rawbytes)
-        track = MasterTrack(
-            bits = tdat,
-            time_per_rev = 0.2)
-        track.verify = self.track_list[off]
-        return track
+        return self.track_list[off].raw_track()
 
 
     def append_track(self, track):
-        
         self.track_list.append(track)
 
 

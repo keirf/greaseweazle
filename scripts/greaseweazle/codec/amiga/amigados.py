@@ -9,7 +9,7 @@ import struct
 import itertools as it
 from bitarray import bitarray
 
-from greaseweazle.bitcell import Bitcell
+from greaseweazle.track import MasterTrack, RawTrack
 
 sync_bytes = b'\x44\x89\x44\x89'
 sync = bitarray(endian='big')
@@ -55,14 +55,14 @@ class AmigaDOS:
 
 
     def flux_for_writeout(self):
-        return self.flux()
+        return self.raw_track().flux_for_writeout()
 
 
     def flux(self):
-        return self
+        return self.raw_track().flux()
 
 
-    def bits(self):
+    def raw_track(self):
 
         # List of sector IDs missing from the sector map:
         missing = iter([x for x in range(self.nsec) if not x in self.map])
@@ -84,10 +84,15 @@ class AmigaDOS:
             t += encode(data)
             t += encode(bytes(2))
 
-        # Add the pre-index gap, and encode to MFM.
+        # Add the pre-index gap.
         tlen = 101376 * (self.nsec//11)
         t += bytes(tlen//8-len(t))
-        return mfm_encode(t)
+
+        track = MasterTrack(
+            bits = mfm_encode(t),
+            time_per_rev = 0.2)
+        track.verify = self
+        return track
 
 
     def verify_track(self, flux):
@@ -128,10 +133,10 @@ def checksum(dat):
     return (csum ^ (csum>>1)) & 0x55555555
 
 
-def decode_track(cyl, head, flux):
+def decode_track(cyl, head, track):
 
-    bc = Bitcell(clock = 2e-6, flux = flux)
-    bits, times = bc.bitarray, bc.timearray
+    raw = RawTrack(clock = 2e-6, data = track)
+    bits, times = raw.bitarray, raw.timearray
     tracknr = cyl*2 + head
     ados = AmigaDOS(tracknr)
     

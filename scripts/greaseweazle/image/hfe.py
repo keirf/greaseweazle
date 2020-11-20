@@ -8,8 +8,7 @@
 import struct
 
 from greaseweazle import error
-from greaseweazle.track import MasterTrack
-from greaseweazle.bitcell import Bitcell
+from greaseweazle.track import MasterTrack, RawTrack
 from bitarray import bitarray
 
 class HFE:
@@ -76,9 +75,9 @@ class HFE:
         return track
 
 
-    def append_track(self, flux):
-        bc = Bitcell(clock = 5e-4 / self.bitrate, flux = flux)
-        bits, _ = bc.get_revolution(0)
+    def append_track(self, track):
+        raw = RawTrack(clock = 5e-4 / self.bitrate, data = track)
+        bits, _ = raw.get_revolution(0)
         bits.bytereverse()
         self.track_list.append((len(bits), bits.tobytes()))
 

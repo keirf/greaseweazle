@@ -145,8 +145,8 @@ class SCP:
         return Flux(index_list, flux_list, SCP.sample_freq)
 
 
-    def append_track(self, flux):
-        """Converts a Flux object into a Supercard Pro Track and appends it to
+    def append_track(self, track):
+        """Converts @track into a Supercard Pro Track and appends it to
         the current image-in-progress.
         """
 
@@ -154,6 +154,8 @@ class SCP:
             self.track_list.append((tdh, dat))
             if self.nr_sides == 1:
                 self.track_list.append((None, None))
+
+        flux = track.flux()
 
         nr_revs = len(flux.index_list)
         if not self.nr_revs:

@@ -6,6 +6,7 @@
 # See the file COPYING for more details, or visit <http://unlicense.org>.
 
 import binascii
+import itertools as it
 from bitarray import bitarray
 from greaseweazle.flux import Flux
 
@@ -16,13 +17,17 @@ class MasterTrack:
     def bitrate(self):
         return len(self.bits) / self.time_per_rev
 
-    # bits: Track bitcell data, aligned to the write splice (bitarray)
+    # bits: Track bitcell data, aligned to the write splice (bitarray or bytes)
     # time_per_rev: Time per revolution, in seconds (float)
     # bit_ticks: Per-bitcell time values, in unitless 'ticks'
     # splice: Location of the track splice, in bitcells, after the index
     # weak: List of (start, length) weak ranges
     def __init__(self, bits, time_per_rev, bit_ticks=None, splice=0, weak=[]):
-        self.bits = bits
+        if isinstance(bits, bytes):
+            self.bits = bitarray(endian='big')
+            self.bits.frombytes(bits)
+        else:
+            self.bits = bits
         self.time_per_rev = time_per_rev
         self.bit_ticks = bit_ticks
         self.splice = splice
@@ -44,6 +49,9 @@ class MasterTrack:
         return s
 
     def flux_for_writeout(self):
+        return self.flux(for_writeout=True)
+
+    def flux(self, for_writeout=False):
 
         # We're going to mess with the track data, so take a copy.
         bits = self.bits.copy()
@@ -90,7 +98,10 @@ class MasterTrack:
             bit_ticks = bit_ticks[index:] + bit_ticks[:index]
         splice_at_index = index < 4 or bitlen - index < 4
 
-        if splice_at_index:
+        if not for_writeout:
+            # Do not extend the track for reliable writeout to disk.
+            pass
+        elif splice_at_index:
             # Splice is at the index (or within a few bitcells of it).
             # We stretch the track with extra bytes of filler, in case the
             # drive motor spins slower than expected and we need more filler
@@ -126,7 +137,7 @@ class MasterTrack:
             if bit:
                 flux_list.append(flux_ticks)
                 flux_ticks = 0
-        if flux_ticks:
+        if flux_ticks and for_writeout:
             flux_list.append(flux_ticks)
 
         # Package up the flux for return.
@@ -135,7 +146,106 @@ class MasterTrack:
         flux.terminate_at_index = splice_at_index
         return flux
 
- 
+
+# Track data generated from flux.
+class RawTrack:
+
+    def __init__(self, clock = 2e-6, data = None):
+        self.clock = clock
+        self.clock_max_adj = 0.10
+        self.pll_period_adj = 0.05
+        self.pll_phase_adj = 0.60
+        self.bitarray = bitarray(endian='big')
+        self.timearray = []
+        self.revolutions = []
+        if data is not None:
+            self.append_revolutions(data)
+
+
+    def __str__(self):
+        s = "\nRaw Track: %d revolutions\n" % len(self.revolutions)
+        for rev in range(len(self.revolutions)):
+            b, _ = self.get_revolution(rev)
+            s += "Revolution %u: " % rev
+            s += str(binascii.hexlify(b.tobytes())) + "\n"
+        return s[:-1]
+
+    
+    def get_revolution(self, nr):
+        start = sum(self.revolutions[:nr])
+        end = start + self.revolutions[nr]
+        return self.bitarray[start:end], self.timearray[start:end]
+
+    
+    def append_revolutions(self, data):
+
+        flux = data.flux()
+        freq = flux.sample_freq
+
+        clock = self.clock
+        clock_min = self.clock * (1 - self.clock_max_adj)
+        clock_max = self.clock * (1 + self.clock_max_adj)
+        ticks = 0.0
+
+        index_iter = iter(map(lambda x: x/freq, flux.index_list))
+
+        bits, times = bitarray(endian='big'), []
+        to_index = next(index_iter)
+
+        # Make sure there's enough time in the flux list to cover all
+        # revolutions by appending a "large enough" final flux value.
+        for x in it.chain(flux.list, [sum(flux.index_list)]):
+
+            # Gather enough ticks to generate at least one bitcell.
+            ticks += x / freq
+            if ticks < clock/2:
+                continue
+
+            # Clock out zero or more 0s, followed by a 1.
+            zeros = 0
+            while True:
+
+                # Check if we cross the index mark.
+                to_index -= clock
+                if to_index < 0:
+                    self.bitarray += bits
+                    self.timearray += times
+                    self.revolutions.append(len(times))
+                    assert len(times) == len(bits)
+                    try:
+                        to_index += next(index_iter)
+                    except StopIteration:
+                        return
+                    bits, times = bitarray(endian='big'), []
+
+                ticks -= clock
+                times.append(clock)
+                if ticks >= clock/2:
+                    zeros += 1
+                    bits.append(False)
+                else:
+                    bits.append(True)
+                    break
+
+            # PLL: Adjust clock frequency according to phase mismatch.
+            if zeros <= 3:
+                # In sync: adjust clock by a fraction of the phase mismatch.
+                clock += ticks * self.pll_period_adj
+            else:
+                # Out of sync: adjust clock towards centre.
+                clock += (self.clock - clock) * self.pll_period_adj
+            # Clamp the clock's adjustment range.
+            clock = min(max(clock, clock_min), clock_max)
+            # PLL: Adjust clock phase according to mismatch.
+            new_ticks = ticks * (1 - self.pll_phase_adj)
+            times[-1] += ticks - new_ticks
+            ticks = new_ticks
+
+        # We can't get here: We should run out of indexes before we run
+        # out of flux.
+        assert False
+
+
 # Local variables:
 # python-indent: 4
 # End:
