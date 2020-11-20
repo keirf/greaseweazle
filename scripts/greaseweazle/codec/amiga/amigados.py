@@ -25,17 +25,21 @@ class AmigaDOS:
         self.sector = [None] * nsec
         self.map = [None] * nsec
 
+
     def exists(self, sec_id, togo):
         return ((self.sector[sec_id] is not None)
                 or (self.map[self.nsec-togo] is not None))
 
+
     def nr_missing(self):
         return len([sec for sec in self.sector if sec is None])
+
 
     def add(self, sec_id, togo, label, data):
         assert not self.exists(sec_id, togo)
         self.sector[sec_id] = label, data
         self.map[self.nsec-togo] = sec_id
+
 
     def get_adf_track(self):
         tdat = bytearray()
@@ -43,46 +47,55 @@ class AmigaDOS:
             tdat += sec[1] if sec is not None else bytes(512)
         return tdat
 
+
     def set_adf_track(self, tdat):
         self.map = list(range(self.nsec))
         for sec in self.map:
             self.sector[sec] = bytes(16), tdat[sec*512:(sec+1)*512]
 
+
     def flux_for_writeout(self):
         return self.flux()
+
 
     def flux(self):
         return self
 
+
     def bits(self):
-        next_bad_sec_id = 0
-        t = encode(bytes(128))
-        for nr in range(self.nsec):
-            sec_id = self.map[nr]
-            if sec_id is None:
-                while self.sector[next_bad_sec_id] is not None:
-                    next_bad_sec_id += 1
-                sec_id = next_bad_sec_id
-                label, data = bytes(16), bytes(512)
-            else:
-                label, data = self.sector[sec_id]
-            t += sync_bytes
+
+        # List of sector IDs missing from the sector map:
+        missing = iter([x for x in range(self.nsec) if not x in self.map])
+        # Sector map with the missing entries filled in:
+        full_map = [next(missing) if x is None else x for x in self.map]
+
+        # Post-index track gap.
+        t = encode(bytes(128 * (self.nsec//11)))
+
+        for nr, sec_id in zip(range(self.nsec), full_map):
+            sector = self.sector[sec_id]
+            label, data = (bytes(16), bytes(512)) if sector is None else sector
             header = bytes([0xff, self.tracknr, sec_id, self.nsec-nr])
+            t += sync_bytes
             t += encode(header)
             t += encode(label)
             t += encode(struct.pack('>I', checksum(header + label)))
             t += encode(struct.pack('>I', checksum(data)))
             t += encode(data)
             t += encode(bytes(2))
-        tlen = 101376 if self.nsec == 11 else 202752
+
+        # Add the pre-index gap, and encode to MFM.
+        tlen = 101376 * (self.nsec//11)
         t += bytes(tlen//8-len(t))
         return mfm_encode(t)
+
 
     def verify_track(self, flux):
         cyl = self.tracknr // 2
         head = self.tracknr & 1
         readback_track = decode_track(cyl, head, flux)
         return readback_track.nr_missing() == 0
+
 
 def mfm_encode(dat):
     y = 0
@@ -95,9 +108,11 @@ def mfm_encode(dat):
         out.append(y)
     return bytes(out)
     
+
 def encode(dat):
     return bytes(it.chain(map(lambda x: (x >> 1) & 0x55, dat),
                           map(lambda x: x & 0x55, dat)))
+
 
 def decode(dat):
     length = len(dat)//2
@@ -105,11 +120,13 @@ def decode(dat):
                      it.islice(dat, 0, length),
                      it.islice(dat, length, None)))
 
+
 def checksum(dat):
     csum = 0
     for i in range(0, len(dat), 4):
         csum ^= struct.unpack('>I', dat[i:i+4])[0]
     return (csum ^ (csum>>1)) & 0x55555555
+
 
 def decode_track(cyl, head, flux):
 
