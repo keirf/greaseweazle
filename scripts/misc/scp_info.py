@@ -5,6 +5,14 @@ NO_DAT    = 0
 PRINT_DAT = 1
 PLOT_DAT  = 2
 
+def decode_flux(tdat):
+    fluxl = []
+    while tdat:
+        flux, = struct.unpack(">H", tdat[:2])
+        tdat = tdat[2:]
+        fluxl.append(flux / 40)
+    return fluxl
+
 def dump_track(dat, trk_offs, trknr, show_dat):
     print("Track %u:" % trknr)
 
@@ -20,20 +28,17 @@ def dump_track(dat, trk_offs, trknr, show_dat):
     assert tnr == trknr
     p_idx, tot = [], 0.0
     for i in range(nr_revs):
-        t,n,_ = struct.unpack("<3I", thdr[4+i*12:4+(i+1)*12])
-        print("Rev %u: time=%uus flux=%u" % (i, t//40, n))
+        t,n,off = struct.unpack("<3I", thdr[4+i*12:4+(i+1)*12])
+        flux = decode_flux(dat[trk_off+off:trk_off+off+n*2])
+        print("Rev %u: time=%.2fus nr_flux=%u tot_flux=%.2fus"
+              % (i, t/40, n, sum(flux)))
         tot += t/40
         p_idx.append(tot)
     if not show_dat:
         return
     
     _, e_nr, e_off = struct.unpack("<3I", thdr[-12:])
-    tdat = dat[trk_off+s_off:trk_off+e_off+e_nr*2]
-    fluxl = []
-    while tdat:
-        flux, = struct.unpack(">H", tdat[:2])
-        tdat = tdat[2:]
-        fluxl.append(flux / 40)
+    fluxl = decode_flux(dat[trk_off+s_off:trk_off+e_off+e_nr*2])
     tot = 0.0
     i = 0
     px, py = [], []
