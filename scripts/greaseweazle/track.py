@@ -8,7 +8,7 @@
 import binascii
 import itertools as it
 from bitarray import bitarray
-from greaseweazle.flux import Flux
+from greaseweazle.flux import WriteoutFlux
 
 # A pristine representation of a track, from a codec and/or a perfect image.
 class MasterTrack:
@@ -141,9 +141,9 @@ class MasterTrack:
             flux_list.append(flux_ticks)
 
         # Package up the flux for return.
-        flux = Flux([ticks_to_index], flux_list,
-                    ticks_to_index / self.time_per_rev)
-        flux.terminate_at_index = splice_at_index
+        flux = WriteoutFlux(ticks_to_index, flux_list,
+                            ticks_to_index / self.time_per_rev,
+                            terminate_at_index = splice_at_index)
         return flux
 
 

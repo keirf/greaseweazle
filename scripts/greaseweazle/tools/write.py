@@ -53,7 +53,7 @@ def write_from_image(usb, args, image):
     for cyl in range(args.scyl, args.ecyl+1):
         for side in range(0, args.nr_sides):
 
-            track = image.get_track(cyl, side, writeout=True)
+            track = image.get_track(cyl, side)
             if track is None and not args.erase_empty:
                 continue
 

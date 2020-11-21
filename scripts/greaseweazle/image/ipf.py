@@ -154,7 +154,7 @@ class IPF:
         return ipf
 
 
-    def get_track(self, cyl, head, writeout=False):
+    def get_track(self, cyl, head):
         pi = self.pi
         if head < pi.minhead or head > pi.maxhead:
             return None

@@ -47,7 +47,7 @@ class ADF:
         return adf
 
 
-    def get_track(self, cyl, side, writeout=False):
+    def get_track(self, cyl, side):
         off = cyl * 2 + side
         if off >= len(self.track_list):
             return None

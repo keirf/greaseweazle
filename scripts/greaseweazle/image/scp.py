@@ -111,7 +111,7 @@ class SCP:
         return scp
 
 
-    def get_track(self, cyl, side, writeout=False):
+    def get_track(self, cyl, side):
         off = cyl*2 + side
         if off >= len(self.track_list):
             return None
@@ -119,12 +119,6 @@ class SCP:
         if dat is None:
             return None
 
-        # Writeout requires only a single revolution
-        if writeout:
-            tdh = tdh[:12]
-            _, nr, _ = struct.unpack("<3I", tdh)
-            dat = dat[:nr*2]
-        
         index_list = []
         while tdh:
             ticks, _, _ = struct.unpack("<3I", tdh[:12])

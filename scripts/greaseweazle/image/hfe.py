@@ -60,7 +60,7 @@ class HFE:
         return hfe
 
 
-    def get_track(self, cyl, side, writeout=False):
+    def get_track(self, cyl, side):
         if side >= self.nr_sides or cyl < self.start_cyl:
             return None
         off = cyl * self.nr_sides + side
