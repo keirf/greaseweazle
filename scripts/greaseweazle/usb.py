@@ -290,7 +290,7 @@ class Unit:
                     if opcode == FluxOp.Index:
                         val = _read_28bit()
                         index.append(ticks_since_index + ticks + val)
-                        ticks_since_index = -val
+                        ticks_since_index = -(ticks + val)
                     elif opcode == FluxOp.Space:
                         ticks += _read_28bit()
                     else:
