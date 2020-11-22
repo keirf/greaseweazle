@@ -62,6 +62,41 @@ class AmigaDOS:
         return self.raw_track().flux()
 
 
+    def decode_raw(self, track):
+        raw = RawTrack(clock = 2e-6, data = track)
+        bits, times = raw.bitarray, raw.timearray
+
+        sectors = bits.search(sync)
+        for offs in bits.itersearch(sync):
+
+            if self.nr_missing() == 0:
+                break
+
+            sec = bits[offs:offs+544*16].tobytes()
+            if len(sec) != 1088:
+                continue
+
+            header = decode(sec[4:12])
+            format, track, sec_id, togo = tuple(header)
+            if format != 0xff or track != self.tracknr \
+               or not(sec_id < self.nsec and 0 < togo <= self.nsec) \
+               or self.exists(sec_id, togo):
+                continue
+
+            label = decode(sec[12:44])
+            hsum, = struct.unpack('>I', decode(sec[44:52]))
+            if hsum != checksum(header + label):
+                continue
+
+            dsum, = struct.unpack('>I', decode(sec[52:60]))
+            data = decode(sec[60:1084])
+            gap = decode(sec[1084:1088])
+            if dsum != checksum(data):
+                continue;
+
+            self.add(sec_id, togo, label, data)
+
+
     def raw_track(self):
 
         # List of sector IDs missing from the sector map:
@@ -134,41 +169,8 @@ def checksum(dat):
 
 
 def decode_track(cyl, head, track):
-
-    raw = RawTrack(clock = 2e-6, data = track)
-    bits, times = raw.bitarray, raw.timearray
-    tracknr = cyl*2 + head
-    ados = AmigaDOS(tracknr)
-    
-    sectors = bits.search(sync)
-    for offs in bits.itersearch(sync):
-
-        sec = bits[offs:offs+544*16].tobytes()
-        if len(sec) != 1088:
-            continue
-
-        header = decode(sec[4:12])
-        format, track, sec_id, togo = tuple(header)
-        if format != 0xff or track != tracknr \
-           or not(sec_id < ados.nsec and 0 < togo <= ados.nsec) \
-           or ados.exists(sec_id, togo):
-            continue
-
-        label = decode(sec[12:44])
-        hsum, = struct.unpack('>I', decode(sec[44:52]))
-        if hsum != checksum(header + label):
-            continue
-
-        dsum, = struct.unpack('>I', decode(sec[52:60]))
-        data = decode(sec[60:1084])
-        gap = decode(sec[1084:1088])
-        if dsum != checksum(data):
-            continue;
-
-        ados.add(sec_id, togo, label, data)
-        if ados.nr_missing() == 0:
-            break
-
+    ados = AmigaDOS(cyl*2 + head)
+    ados.decode_raw(track)
     return ados
 
 

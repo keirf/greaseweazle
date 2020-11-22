@@ -60,6 +60,43 @@ def normalise_rpm(flux, rpm):
     return Flux([norm_to_index]*len(flux.index_list), norm_flux, freq)
 
 
+def read_and_normalise(usb, args):
+    flux = usb.read_track(args.revs)
+    if args.rpm is not None:
+        flux = normalise_rpm(flux, args.rpm)
+    return flux
+
+
+class Formatter:
+    def __init__(self):
+        self.length = 0
+    def print(self, s):
+        self.erase()
+        self.length = len(s)
+        print(s, end="", flush=True)
+    def erase(self):
+        l = self.length
+        print("\b"*l + " "*l + "\b"*l, end="", flush=True)
+        self.length = 0
+
+
+def read_with_retry(usb, args, cyl, side, decoder):
+    flux = read_and_normalise(usb, args)
+    if decoder is None:
+        return flux
+    dat = decoder(cyl, side, flux)
+    if dat.nr_missing() != 0:
+        formatter = Formatter()
+        for retry in range(3):
+            formatter.print(" Retry %d" % (retry+1))
+            flux = read_and_normalise(usb, args)
+            dat.decode_raw(flux)
+            if dat.nr_missing() == 0:
+                break
+        formatter.erase()
+    return dat
+
+
 def read_to_image(usb, args, image, decoder=None):
     """Reads a floppy disk and dumps it into a new image file.
     """
@@ -68,10 +105,7 @@ def read_to_image(usb, args, image, decoder=None):
         for side in range(0, args.nr_sides):
             print("\rReading Track %u.%u..." % (cyl, side), end="")
             usb.seek((cyl, cyl*2)[args.double_step], side)
-            flux = usb.read_track(args.revs)
-            if args.rpm is not None:
-                flux = normalise_rpm(flux, args.rpm)
-            dat = flux if decoder is None else decoder(cyl, side, flux)
+            dat = read_with_retry(usb, args, cyl, side, decoder)
             image.append_track(dat)
 
     print()
