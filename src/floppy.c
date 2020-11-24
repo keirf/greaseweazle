@@ -120,22 +120,18 @@ static enum {
 static uint32_t u_cons, u_prod;
 #define U_MASK(x) ((x)&(U_BUF_SZ-1))
 
-static void step_one_out(void)
+static void step_dir_set(bool_t assert)
 {
-    write_pin(dir, FALSE);
+    write_pin(dir, assert);
     delay_us(10);
-    write_pin(step, TRUE);
-    delay_us(10);
-    write_pin(step, FALSE);
-    delay_us(delay_params.step_delay);
 }
+#define step_dir_out() step_dir_set(FALSE)
+#define step_dir_in() step_dir_set(TRUE)
 
-static void step_one_in(void)
+static void step_once(void)
 {
-    write_pin(dir, TRUE);
-    delay_us(10);
     write_pin(step, TRUE);
-    delay_us(10);
+    delay_us(15);
     write_pin(step, FALSE);
     delay_us(delay_params.step_delay);
 }
@@ -164,17 +160,18 @@ static bool_t set_bus_type(uint8_t type)
 static uint8_t floppy_seek(int cyl)
 {
     struct unit *u;
+    int nr;
 
     if (unit_nr < 0)
         return ACK_NO_UNIT;
     u = &unit[unit_nr];
 
     if (!u->initialised) {
-        unsigned int i;
-        for (i = 0; i < 256; i++) {
+        step_dir_out();
+        for (nr = 0; nr < 256; nr++) {
             if (get_trk0() == LOW)
                 goto found_trk0;
-            step_one_out();
+            step_once();
         }
         return ACK_NO_TRK0;
     found_trk0:
@@ -189,18 +186,15 @@ static uint8_t floppy_seek(int cyl)
     flippy_trk0_sensor_disable();
 
     if (u->cyl <= cyl) {
-
-        int nr = cyl - u->cyl;
-        while (nr--)
-            step_one_in();
-
+        nr = cyl - u->cyl;
+        step_dir_in();
     } else {
-
-        int nr = u->cyl - cyl;
-        while (nr--)
-            step_one_out();
-
+        nr = u->cyl - cyl;
+        step_dir_out();
     }
+
+    while (nr--)
+        step_once();
 
     flippy_trk0_sensor_enable();
 
