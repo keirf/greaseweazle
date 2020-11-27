@@ -146,11 +146,7 @@ def main(argv):
     try:
         usb = util.usb_open(args.device)
         image = open_image(args)
-        try:
-            util.with_drive_selected(write_from_image, usb, args, image)
-        except:
-            print()
-            raise
+        util.with_drive_selected(write_from_image, usb, args, image)
     except USB.CmdError as error:
         print("Command Failed: %s" % error)
 

@@ -11,6 +11,9 @@ from bitarray import bitarray
 
 from greaseweazle.track import MasterTrack, RawTrack
 
+default_cyls = (0,79)
+default_revs = 2
+
 sync_bytes = b'\x44\x89\x44\x89'
 sync = bitarray(endian='big')
 sync.frombytes(sync_bytes)
@@ -25,21 +28,26 @@ class AmigaDOS:
         self.sector = [None] * nsec
         self.map = [None] * nsec
 
+    def summary_string(self):
+        return ("AmigaDOS (%d/%d sectors)"
+                % (self.nsec - self.nr_missing(), self.nsec))
 
+    # private
     def exists(self, sec_id, togo):
         return ((self.sector[sec_id] is not None)
                 or (self.map[self.nsec-togo] is not None))
 
-
-    def nr_missing(self):
-        return len([sec for sec in self.sector if sec is None])
-
-
+    # private
     def add(self, sec_id, togo, label, data):
         assert not self.exists(sec_id, togo)
         self.sector[sec_id] = label, data
         self.map[self.nsec-togo] = sec_id
 
+    def has_sec(self, sec_id):
+        return self.sector[sec_id] is not None
+
+    def nr_missing(self):
+        return len([sec for sec in self.sector if sec is None])
 
     def get_adf_track(self):
         tdat = bytearray()
@@ -47,16 +55,13 @@ class AmigaDOS:
             tdat += sec[1] if sec is not None else bytes(512)
         return tdat
 
-
     def set_adf_track(self, tdat):
         self.map = list(range(self.nsec))
         for sec in self.map:
             self.sector[sec] = bytes(16), tdat[sec*512:(sec+1)*512]
 
-
     def flux_for_writeout(self):
         return self.raw_track().flux_for_writeout()
-
 
     def flux(self):
         return self.raw_track().flux()

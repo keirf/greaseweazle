@@ -170,13 +170,13 @@ class RawTrack:
             s += str(binascii.hexlify(b.tobytes())) + "\n"
         return s[:-1]
 
-    
+
     def get_revolution(self, nr):
         start = sum(self.revolutions[:nr])
         end = start + self.revolutions[nr]
         return self.bitarray[start:end], self.timearray[start:end]
 
-    
+
     def append_revolutions(self, data):
 
         flux = data.flux()

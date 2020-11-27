@@ -18,8 +18,7 @@ from greaseweazle import usb as USB
 from greaseweazle.flux import Flux
 
 
-def open_image(args):
-    image_class = util.get_image_class(args.file)
+def open_image(args, image_class):
     error.check(hasattr(image_class, 'to_file'),
                 "%s: Cannot create %s image files"
                 % (args.file, image_class.__name__))
@@ -60,60 +59,75 @@ def normalise_rpm(flux, rpm):
     return Flux([norm_to_index]*len(flux.index_list), norm_flux, freq)
 
 
-def read_and_normalise(usb, args):
-    flux = usb.read_track(args.revs)
+def read_and_normalise(usb, args, revs):
+    flux = usb.read_track(revs)
     if args.rpm is not None:
         flux = normalise_rpm(flux, args.rpm)
     return flux
 
 
-class Formatter:
-    def __init__(self):
-        self.length = 0
-    def print(self, s):
-        self.erase()
-        self.length = len(s)
-        print(s, end="", flush=True)
-    def erase(self):
-        l = self.length
-        print("\b"*l + " "*l + "\b"*l, end="", flush=True)
-        self.length = 0
-
-
 def read_with_retry(usb, args, cyl, side, decoder):
-    flux = read_and_normalise(usb, args)
+    flux = read_and_normalise(usb, args, args.revs)
     if decoder is None:
         return flux
     dat = decoder(cyl, side, flux)
     if dat.nr_missing() != 0:
-        formatter = Formatter()
         for retry in range(3):
-            formatter.print(" Retry %d" % (retry+1))
-            flux = read_and_normalise(usb, args)
+            print("T%u.%u: %s - %d sectors missing - Retrying (%d)"
+                  % (cyl, side, dat.summary_string(),
+                     dat.nr_missing(), retry+1))
+            flux = read_and_normalise(usb, args, max(args.revs, 3))
             dat.decode_raw(flux)
             if dat.nr_missing() == 0:
                 break
-        formatter.erase()
     return dat
+
+
+def print_summary(args, summary):
+    print("H. S: Cyls %d-%d -->" % (args.scyl, args.ecyl))
+    tot_sec = good_sec = 0
+    for side in range(0, args.nr_sides):
+        nsec = max(x.nsec for x in summary[side])
+        for sec in range(nsec):
+            print("%d.%2d: " % (side, sec), end="")
+            for cyl in range(args.scyl, args.ecyl+1):
+                s = summary[side][cyl-args.scyl]
+                if sec > s.nsec:
+                    print(" ", end="")
+                else:
+                    tot_sec += 1
+                    if s.has_sec(sec): good_sec += 1
+                    print("." if s.has_sec(sec) else "X", end="")
+            print()
+    print("Found %d sectors of %d (%d%%)" %
+          (good_sec, tot_sec, good_sec*100/tot_sec))
 
 
 def read_to_image(usb, args, image, decoder=None):
     """Reads a floppy disk and dumps it into a new image file.
     """
 
+    summary = [[],[]]
+
     for cyl in range(args.scyl, args.ecyl+1):
         for side in range(0, args.nr_sides):
-            print("\rReading Track %u.%u..." % (cyl, side), end="")
             usb.seek((cyl, cyl*2)[args.double_step], side)
             dat = read_with_retry(usb, args, cyl, side, decoder)
+            print("T%u.%u: %s" % (cyl, side, dat.summary_string()))
+            summary[side].append(dat)
             image.append_track(dat)
 
-    print()
+    if decoder is not None:
+        print_summary(args, summary)
 
     # Write the image file.
     with open(args.file, "wb") as f:
         f.write(image.get_image())
 
+def range_str(s, e):
+    str = "%d" % s
+    if s != e: str += "-%d" % e
+    return str
 
 def main(argv):
 
@@ -122,11 +136,11 @@ def main(argv):
     parser.add_argument("--drive", type=util.drive_letter, default='A',
                         help="drive to read (A,B,0,1,2)")
     parser.add_argument("--format", help="disk format")
-    parser.add_argument("--revs", type=int, default=3,
+    parser.add_argument("--revs", type=int,
                         help="number of revolutions to read per track")
-    parser.add_argument("--scyl", type=int, default=0,
+    parser.add_argument("--scyl", type=int,
                         help="first cylinder to read")
-    parser.add_argument("--ecyl", type=int, default=81,
+    parser.add_argument("--ecyl", type=int,
                         help="last cylinder to read")
     parser.add_argument("--single-sided", action="store_true",
                         help="single-sided read")
@@ -144,21 +158,32 @@ def main(argv):
 
     try:
         usb = util.usb_open(args.device)
-        image = open_image(args)
-        if not args.format and hasattr(image, 'default_format'):
-            args.format = image.default_format
+        image_class = util.get_image_class(args.file)
+        if not args.format and hasattr(image_class, 'default_format'):
+            args.format = image_class.default_format
         decoder = None
         if args.format:
-            mod = importlib.import_module('greaseweazle.codec.' + args.format)
-            decoder = mod.__dict__['decode_track']
-        try:
-            util.with_drive_selected(read_to_image, usb, args, image,
-                                     decoder=decoder)
-        except:
-            print()
-            raise
-    except USB.CmdError as error:
-        print("Command Failed: %s" % error)
+            try:
+                mod = importlib.import_module('greaseweazle.codec.'
+                                              + args.format)
+                decoder = mod.decode_track
+            except (ModuleNotFoundError, AttributeError) as ex:
+                raise error.Fatal("Unknown format '%s'" % args.format) from ex
+            if args.scyl is None: args.scyl = mod.default_cyls[0]
+            if args.ecyl is None: args.ecyl = mod.default_cyls[1]
+            if args.revs is None: args.revs = mod.default_revs
+        if args.scyl is None: args.scyl = 0
+        if args.ecyl is None: args.ecyl = 81
+        if args.revs is None: args.revs = 3
+        print("Reading c=%s s=%s revs=%d" %
+              (range_str(args.scyl, args.ecyl),
+               range_str(0, args.nr_sides-1),
+               args.revs))
+        image = open_image(args, image_class)
+        util.with_drive_selected(read_to_image, usb, args, image,
+                                 decoder=decoder)
+    except USB.CmdError as err:
+        print("Command Failed: %s" % err)
 
 
 if __name__ == "__main__":

@@ -25,6 +25,10 @@ class Flux:
             rev += 1
         return s[:-1]
 
+    def summary_string(self):
+        return ("Raw Flux (%u flux in %.2fms)"
+                % (len(self.list), sum(self.list)*1000/self.sample_freq))
+
     def flux_for_writeout(self):
         error.check(self.splice == 0,
                     "Cannot write non-index-aligned raw flux")
