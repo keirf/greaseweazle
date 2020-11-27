@@ -3,6 +3,12 @@
 ** Keir Fraser <keir.xen@gmail.com>
 ************************************
 
+** v0.22 - 27 November 2020
+ - Support read and write of Amiga ADF image files
+ - Increase /STEP pulse width to 15us (fix 5.25" drive seek for Arno Olaf)
+ - Flippy drives: support 'gw seek' down to track -8
+ - Revised USB protocol
+
 ** v0.21 - 10 September 2020
  - Support new Greaseweazle model: F7 Lightning Plus
  - Fixes for older drives
