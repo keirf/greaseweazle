@@ -10,8 +10,9 @@ import struct
 from greaseweazle import error
 from greaseweazle.track import MasterTrack, RawTrack
 from bitarray import bitarray
+from .image import Image
 
-class HFE:
+class HFE(Image):
 
     def __init__(self, start_cyl, nr_sides):
         self.start_cyl = start_cyl
@@ -23,13 +24,10 @@ class HFE:
 
 
     @classmethod
-    def to_file(cls, start_cyl, nr_sides):
-        hfe = cls(start_cyl, nr_sides)
-        return hfe
+    def from_file(cls, name):
 
-
-    @classmethod
-    def from_file(cls, dat):
+        with open(name, "rb") as f:
+            dat = f.read()
 
         (sig, f_rev, nr_cyls, nr_sides, t_enc, bitrate,
          _, _, _, tlut_base) = struct.unpack("<8s4B2H2BH", dat[:20])

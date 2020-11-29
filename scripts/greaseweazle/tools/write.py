@@ -15,16 +15,10 @@ from greaseweazle.tools import util
 from greaseweazle import error
 from greaseweazle import usb as USB
 
-
 # Read and parse the image file.
 def open_image(args):
-    image_class = util.get_image_class(args.file)
-    if hasattr(image_class, 'from_filename'):
-        image = image_class.from_filename(args.file)
-    else:
-        with open(args.file, "rb") as f:
-            image = image_class.from_file(f.read())
-    return image
+    cls = util.get_image_class(args.file)
+    return cls.from_file(args.file)
 
 class Formatter:
     def __init__(self):

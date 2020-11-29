@@ -11,6 +11,7 @@ import ctypes as ct
 from bitarray import bitarray
 from greaseweazle.track import MasterTrack
 from greaseweazle import error
+from .image import Image
 
 class CapsDateTimeExt(ct.Structure):
     _pack_ = 1
@@ -98,7 +99,9 @@ class DI_LOCK:
     def_flags = (DENVAR | UPDATEFD | TYPE | OVLBIT | TRKBIT)
 
 
-class IPF:
+class IPF(Image):
+
+    read_only = True
 
     def __init__(self, start_cyl, nr_sides):
         self.lib = get_libcaps()
@@ -135,7 +138,7 @@ class IPF:
         return s
 
     @classmethod
-    def from_filename(cls, name):
+    def from_file(cls, name):
 
         ipf = cls(0, 0)
 

@@ -19,10 +19,7 @@ from greaseweazle.flux import Flux
 
 
 def open_image(args, image_class):
-    error.check(hasattr(image_class, 'to_file'),
-                "%s: Cannot create %s image files"
-                % (args.file, image_class.__name__))
-    image = image_class.to_file(args.scyl, args.nr_sides)
+    image = image_class.to_file(args.file, args.scyl, args.nr_sides)
     if args.rate is not None:
         image.bitrate = args.rate
     for opt, val in args.file_opts.items():
@@ -120,9 +117,6 @@ def read_to_image(usb, args, image, decoder=None):
     if decoder is not None:
         print_summary(args, summary)
 
-    # Write the image file.
-    with open(args.file, "wb") as f:
-        f.write(image.get_image())
 
 def range_str(s, e):
     str = "%d" % s
@@ -179,9 +173,9 @@ def main(argv):
               (range_str(args.scyl, args.ecyl),
                range_str(0, args.nr_sides-1),
                args.revs))
-        image = open_image(args, image_class)
-        util.with_drive_selected(read_to_image, usb, args, image,
-                                 decoder=decoder)
+        with open_image(args, image_class) as image:
+            util.with_drive_selected(read_to_image, usb, args, image,
+                                     decoder=decoder)
     except USB.CmdError as err:
         print("Command Failed: %s" % err)
 

@@ -7,26 +7,23 @@
 
 from greaseweazle import error
 import greaseweazle.codec.amiga.amigados as amigados
+from .image import Image
 
-class ADF:
+class ADF(Image):
 
     default_format = 'amiga.amigados'
 
     def __init__(self, start_cyl, nr_sides):
         error.check(nr_sides == 2, "ADF: Must be double-sided")
-        self.bitrate = 253
         self.sec_per_track = 11
         self.track_list = [None] * start_cyl
 
 
     @classmethod
-    def to_file(cls, start_cyl, nr_sides):
-        adf = cls(start_cyl, nr_sides)
-        return adf
+    def from_file(cls, name):
 
-
-    @classmethod
-    def from_file(cls, dat):
+        with open(name, "rb") as f:
+            dat = f.read()
 
         adf = cls(0, 2)
 
@@ -36,7 +33,6 @@ class ADF:
         if ncyl > 90:
             ncyl //= 2
             nsec *= 2
-            adf.bitrate *= 2
             adf.sec_per_track = nsec
 
         for i in range(ncyl*2):

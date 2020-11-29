@@ -9,6 +9,7 @@ import struct, functools
 
 from greaseweazle import error
 from greaseweazle.flux import Flux
+from .image import Image
 
 class SCPOpts:
     """legacy_ss: Set to True to generate (incorrect) legacy single-sided
@@ -17,7 +18,7 @@ class SCPOpts:
     def __init__(self):
         self.legacy_ss = False
 
-class SCP:
+class SCP(Image):
 
     # 40MHz
     sample_freq = 40000000
@@ -30,13 +31,10 @@ class SCP:
 
 
     @classmethod
-    def to_file(cls, start_cyl, nr_sides):
-        scp = cls(start_cyl, nr_sides)
-        return scp
+    def from_file(cls, name):
 
-
-    @classmethod
-    def from_file(cls, dat):
+        with open(name, "rb") as f:
+            dat = f.read()
 
         header = struct.unpack("<3s9BI", dat[0:16])
         (sig, _, _, nr_revs, _, _, flags, _, single_sided, _, _) = header
