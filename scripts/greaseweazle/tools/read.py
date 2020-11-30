@@ -19,7 +19,7 @@ from greaseweazle.flux import Flux
 
 
 def open_image(args, image_class):
-    image = image_class.to_file(args.file, args.scyl, args.nr_sides)
+    image = image_class.to_file(args.file)
     if args.rate is not None:
         image.bitrate = args.rate
     for opt, val in args.file_opts.items():
@@ -112,7 +112,7 @@ def read_to_image(usb, args, image, decoder=None):
             dat = read_with_retry(usb, args, cyl, side, decoder)
             print("T%u.%u: %s" % (cyl, side, dat.summary_string()))
             summary[side].append(dat)
-            image.append_track(dat)
+            image.emit_track(cyl, side, dat)
 
     if decoder is not None:
         print_summary(args, summary)

@@ -39,6 +39,14 @@ disk-analyse a.adf a.hfe
 disk-analyse -e 2 b.hfe b.adf
 diff a.adf b.adf
 md5sum a.adf b.adf
+
+# Read Kryoflux
+mkdir a
+./gw --bt read --revs=1 --ecyl=2 a/
+disk-analyse -e 2 a/ b.adf
+diff a.adf b.adf
+md5sum a.adf b.adf
 rm -f b.adf c.adf a.hfe b.hfe
+rm -rf a
 
 rm -f a.adf

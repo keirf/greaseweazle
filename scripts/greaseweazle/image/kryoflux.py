@@ -41,11 +41,8 @@ class KryoFlux(Image):
 
 
     @classmethod
-    def to_file(cls, name, start_cyl, nr_sides):
-        cls = cls(name)
-        cls.cyl, cls.side = start_cyl, 0
-        cls.nr_sides = nr_sides
-        return cls
+    def to_file(cls, name):
+        return cls(name)
 
     @classmethod
     def from_file(cls, name):
@@ -151,7 +148,7 @@ class KryoFlux(Image):
         return Flux(index_list, flux_list, sck)
 
 
-    def append_track(self, track):
+    def emit_track(self, cyl, side, track):
         """Converts @track into a KryoFlux stream file."""
 
         # Check if we should insert an OOB record for the next index mark.
@@ -213,15 +210,10 @@ class KryoFlux(Image):
         dat += struct.pack('<2BH2I', Op.OOB, OOB.StreamEnd, 8, stream_idx, 0)
         dat += struct.pack('<2BH', Op.OOB, OOB.EOF, 0x0d0d)
 
-        name = self.basename + '%02d.%d.raw' % (self.cyl, self.side)
+        name = self.basename + '%02d.%d.raw' % (cyl, side)
         with open(name, 'wb') as f:
                 f.write(dat)
 
-        self.side += 1
-        if self.side >= self.nr_sides:
-            self.side = 0
-            self.cyl += 1
-        
 
     def __enter__(self):
         return self

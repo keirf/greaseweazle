@@ -103,10 +103,8 @@ class IPF(Image):
 
     read_only = True
 
-    def __init__(self, start_cyl, nr_sides):
+    def __init__(self):
         self.lib = get_libcaps()
-        self.start_cyl = start_cyl
-        self.nr_sides = nr_sides
 
     def __del__(self):
         try:
@@ -140,7 +138,7 @@ class IPF(Image):
     @classmethod
     def from_file(cls, name):
 
-        ipf = cls(0, 0)
+        ipf = cls()
 
         ipf.iid = ipf.lib.CAPSAddImage()
         error.check(ipf.iid >= 0, "Could not create IPF image container")

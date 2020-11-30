@@ -34,10 +34,10 @@ class Image:
 
     ## Default .to_file() constructor
     @classmethod
-    def to_file(cls, name, start_cyl, nr_sides):
+    def to_file(cls, name):
         error.check(not cls.read_only,
                     "%s: Cannot create %s image files" % (name, cls.__name__))
-        obj = cls(start_cyl, nr_sides)
+        obj = cls()
         obj.filename = name
         return obj
 
