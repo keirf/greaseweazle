@@ -8,7 +8,6 @@
 import os
 
 from greaseweazle import error
-import greaseweazle.codec.amiga.amigados as amigados
 
 class Image:
 
@@ -40,6 +39,20 @@ class Image:
         obj = cls()
         obj.filename = name
         return obj
+
+    ## Above methods and class variables can be overridden by subclasses.
+    ## Additionally, subclasses must provide following public interfaces:
+
+    ## Read support:
+    # def from_file(cls, name)
+    # def get_track(self, cyl, side)
+
+    ## Write support (if not cls.read_only):
+    # def emit_track(self, cyl, side, track)
+    ## Plus either:
+    # def get_image(self)
+    ## Or:
+    # __enter__ / __exit__
 
 
 # Local variables:
