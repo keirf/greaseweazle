@@ -205,6 +205,9 @@ class KryoFlux(Image):
         # Generate a dummy flux just enough to get us there.
         if index_idx < len(index):
             emit(math.ceil(index[index_idx] - total) + 1)
+        # A dummy cell so that we definitely have *something* after the
+        # final OOB.Index, so that all parsers should register the Index.
+        emit(round(sck*12)) # 12us
 
         # Emit StreamEnd and EOF blocks to terminate the stream.
         dat += struct.pack('<2BH2I', Op.OOB, OOB.StreamEnd, 8, stream_idx, 0)
