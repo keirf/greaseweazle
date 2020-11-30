@@ -71,7 +71,7 @@ def write_from_image(usb, args, image):
             flux_list = []
             for x in flux.list:
                 y = x * factor + rem
-                val = int(round(y))
+                val = round(y)
                 rem = y - val
                 flux_list.append(val)
 

@@ -168,7 +168,7 @@ class SCP(Image):
             while to_index < x:
                 # Append to the TDH for the previous full revolution
                 tdh += struct.pack("<III",
-                                   int(round(flux.index_list[rev]*factor)),
+                                   round(flux.index_list[rev]*factor),
                                    (len(dat) - len_at_index) // 2,
                                    4 + nr_revs*12 + len_at_index)
                 # Set up for the next revolution
@@ -183,7 +183,7 @@ class SCP(Image):
             # Process the current flux sample into SCP "bitcell" format
             to_index -= x
             y = x * factor + rem
-            val = int(round(y))
+            val = round(y)
             if (val & 65535) == 0:
                 val += 1
             rem = y - val
@@ -197,7 +197,7 @@ class SCP(Image):
         # Header for last track(s) in case we ran out of flux timings.
         while rev < nr_revs:
             tdh += struct.pack("<III",
-                               int(round(flux.index_list[rev]*factor)),
+                               round(flux.index_list[rev]*factor),
                                (len(dat) - len_at_index) // 2,
                                4 + nr_revs*12 + len_at_index)
             len_at_index = len(dat)

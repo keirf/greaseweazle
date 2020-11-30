@@ -66,11 +66,15 @@ def get_image_class(name):
     image_types = { '.adf': 'ADF',
                     '.scp': 'SCP',
                     '.hfe': 'HFE',
-                    '.ipf': 'IPF' }
-    _, ext = os.path.splitext(name)
-    error.check(ext.lower() in image_types,
-                "%s: Unrecognised file suffix '%s'" % (name, ext))
-    typename = image_types[ext.lower()]
+                    '.ipf': 'IPF',
+                    '.raw': 'KryoFlux' }
+    if os.path.isdir(name):
+        typename = 'KryoFlux'
+    else:
+        _, ext = os.path.splitext(name)
+        error.check(ext.lower() in image_types,
+                    "%s: Unrecognised file suffix '%s'" % (name, ext))
+        typename = image_types[ext.lower()]
     mod = importlib.import_module('greaseweazle.image.' + typename.lower())
     return mod.__dict__[typename]
 
