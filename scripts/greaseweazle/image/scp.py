@@ -11,31 +11,47 @@ from greaseweazle import error
 from greaseweazle.flux import Flux
 from .image import Image
 
+
 class SCPOpts:
     """legacy_ss: Set to True to generate (incorrect) legacy single-sided
     SCP image.
     """
+
     def __init__(self):
         self.legacy_ss = False
+
+
+class SCPTrack:
+
+    def __init__(self, tdh, dat, splice=None):
+        self.tdh = tdh
+        self.dat = dat
+        self.splice = splice
+
 
 class SCP(Image):
 
     # 40MHz
     sample_freq = 40000000
 
+
     def __init__(self):
         self.opts = SCPOpts()
         self.nr_revs = None
         self.to_track = dict()
 
+    
     def side_count(self):
         s = [0,0] # non-empty tracks on each side
         for tnr in self.to_track:
             s[tnr&1] += 1
         return s
 
+
     @classmethod
     def from_file(cls, name):
+
+        splices = None
 
         with open(name, "rb") as f:
             dat = f.read()
@@ -47,7 +63,7 @@ class SCP(Image):
         index_cued = flags & 1 or nr_revs == 1
         if not index_cued:
             nr_revs -= 1
-        
+
         # Some tools generate a short TLUT. We handle this by truncating the
         # TLUT at the first Track Data Header.
         trk_offs = struct.unpack("<168I", dat[16:0x2b0])
@@ -61,6 +77,23 @@ class SCP(Image):
             off = off//4 - 4
             error.check(off >= 0, "SCP: Bad Track Table")
             trk_offs = trk_offs[:off]
+
+        # Parse the extension block introduced by github:markusC64/g64conv.
+        # b'EXTS', length, <length byte Extension Area>
+        # Extension Area contains consecutive chunks of the form:
+        # ID, length, <length bytes of ID-specific dat>
+        ext_sig, ext_len = struct.unpack('<4sI', dat[0x2b0:0x2b8])
+        min_tdh = min(filter(lambda x: x != 0, trk_offs), default=0)
+        if ext_sig == b'EXTS' and 0x2b8 + ext_len <= min_tdh:
+            pos, end = 0x2b8, 0x2b8 + ext_len
+            while end - pos >= 8:
+                chk_sig, chk_len = struct.unpack('<4sI', dat[pos:pos+8])
+                pos += 8
+                if chk_sig == b'WRSP' and chk_len >= 169*4:
+                    # Write-splice positions for writing out SCP tracks
+                    # correctly to disk.
+                    splices = struct.unpack('<168I', dat[pos+4:pos+169*4])
+                pos += chk_len
 
         scp = cls()
         scp.nr_revs = nr_revs
@@ -87,7 +120,10 @@ class SCP(Image):
                 continue
 
             tdat = dat[trk_off+s_off:trk_off+e_off]
-            scp.to_track[trknr] = (thdr[4:], tdat)
+            track = SCPTrack(thdr[4:], tdat)
+            if splices is not None:
+                track.splice = splices[trknr]
+            scp.to_track[trknr] = track
 
 
         # Some tools produce (or used to produce) single-sided images using
@@ -107,7 +143,8 @@ class SCP(Image):
         tracknr = cyl * 2 + side
         if not tracknr in self.to_track:
             return None
-        tdh, dat = self.to_track[tracknr]
+        track = self.to_track[tracknr]
+        tdh, dat = track.tdh, track.dat
 
         index_list = []
         while tdh:
@@ -126,7 +163,9 @@ class SCP(Image):
             flux_list.append(val + x)
             val = 0
 
-        return Flux(index_list, flux_list, SCP.sample_freq)
+        flux = Flux(index_list, flux_list, SCP.sample_freq)
+        flux.splice = track.splice if track.splice is not None else 0
+        return flux
 
 
     def emit_track(self, cyl, side, track):
@@ -163,7 +202,7 @@ class SCP(Image):
                 rev += 1
                 if rev >= nr_revs:
                     # We're done: We simply discard any surplus flux samples
-                    self.to_track[cyl*2+side] = (tdh, dat)
+                    self.to_track[cyl*2+side] = SCPTrack(tdh, dat)
                     return
                 to_index += flux.index_list[rev]
 
@@ -190,7 +229,7 @@ class SCP(Image):
             len_at_index = len(dat)
             rev += 1
 
-        self.to_track[cyl*2+side] = (tdh, dat)
+        self.to_track[cyl*2+side] = SCPTrack(tdh, dat)
 
 
     def get_image(self):
@@ -218,9 +257,10 @@ class SCP(Image):
         trk_dat = bytearray()
         for tnr in range(ntracks):
             if tnr in to_track:
-                tdh, dat = to_track[tnr]
+                track = to_track[tnr]
                 trk_offs += struct.pack("<I", 0x2b0 + len(trk_dat))
-                trk_dat += struct.pack("<3sB", b"TRK", tnr) + tdh + dat
+                trk_dat += struct.pack("<3sB", b"TRK", tnr)
+                trk_dat += track.tdh + track.dat
             else:
                 trk_offs += struct.pack("<I", 0)
         error.check(len(trk_offs) <= 0x2a0, "SCP: Too many tracks")

@@ -7,6 +7,7 @@
 
 from greaseweazle import error
 
+
 class Flux:
 
     def __init__(self, index_list, flux_list, sample_freq):
@@ -14,6 +15,7 @@ class Flux:
         self.list = flux_list
         self.sample_freq = sample_freq
         self.splice = 0
+
 
     def __str__(self):
         s = "\nFlux: %.2f MHz" % (self.sample_freq*1e-6)
@@ -25,37 +27,53 @@ class Flux:
             rev += 1
         return s[:-1]
 
+
     def summary_string(self):
         return ("Raw Flux (%u flux in %.2fms)"
                 % (len(self.list), sum(self.list)*1000/self.sample_freq))
 
+
     def flux_for_writeout(self):
-        error.check(self.splice == 0,
-                    "Cannot write non-index-aligned raw flux")
-        # Copy the first revolution only to a fresh flux list.
+
+        error.check(self.splice == 0 or len(self.index_list) > 1,
+                    "Cannot write single-revolution unaligned raw flux")
+        splice_at_index = (self.splice == 0)
+
+        # Copy the required amount of flux to a fresh list.
         flux_list = []
-        to_index = remain = self.index_list[0]
+        to_index = self.index_list[0]
+        remain = to_index + self.splice
         for f in self.list:
             if f > remain:
                 break
             flux_list.append(f)
             remain -= f
-        # Extend with "safe" 4us sample values, to avoid unformatted area
-        # at end of track if drive motor is a little slow.
-        four_us = max(self.sample_freq * 4e-6, 1)
-        if remain > four_us:
+
+        if splice_at_index:
+            # Extend with "safe" 4us sample values, to avoid unformatted area
+            # at end of track if drive motor is a little slow.
+            four_us = max(self.sample_freq * 4e-6, 1)
+            if remain > four_us:
+                flux_list.append(remain)
+            for i in range(round(to_index/(10*four_us))):
+                flux_list.append(four_us)
+        elif remain > 0:
+            # End the write exactly where specified.
             flux_list.append(remain)
-        for i in range(round(to_index/(10*four_us))):
-            flux_list.append(four_us)
+
         return WriteoutFlux(to_index, flux_list, self.sample_freq,
-                            terminate_at_index = True)
+                            terminate_at_index = (self.splice == 0))
+
+
 
     def flux(self):
         return self
 
+
     def scale(self, factor):
         """Scale up all flux and index timings by specified factor."""
         self.sample_freq /= factor
+
 
     @property
     def mean_index_time(self):
@@ -70,6 +88,7 @@ class WriteoutFlux(Flux):
         super().__init__([ticks_to_index], flux_list, sample_freq)
         self.terminate_at_index = terminate_at_index
 
+
     def __str__(self):
         s = ("\nWriteoutFlux: %.2f MHz, %.2fms to index, %s\n"
              " Total: %u samples, %.2fms"
@@ -78,6 +97,7 @@ class WriteoutFlux(Flux):
                 ("Write all", "Terminate at index")[self.terminate_at_index],
                 len(self.list), sum(self.list)*1000/self.sample_freq))
         return s
+
 
     def flux_for_writeout(self):
         return self
