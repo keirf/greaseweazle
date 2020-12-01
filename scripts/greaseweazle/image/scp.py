@@ -61,8 +61,6 @@ class SCP(Image):
         error.check(sig == b"SCP", "SCP: Bad signature")
 
         index_cued = flags & 1 or nr_revs == 1
-        if not index_cued:
-            nr_revs -= 1
 
         # Some tools generate a short TLUT. We handle this by truncating the
         # TLUT at the first Track Data Header.
@@ -97,6 +95,8 @@ class SCP(Image):
 
         scp = cls()
         scp.nr_revs = nr_revs
+        if not index_cued:
+            scp.nr_revs -= 1
 
         for trknr in range(len(trk_offs)):
             
@@ -109,8 +109,9 @@ class SCP(Image):
             sig, tnr = struct.unpack("<3sB", thdr[:4])
             error.check(sig == b"TRK", "SCP: Missing track signature")
             error.check(tnr == trknr, "SCP: Wrong track number in header")
-            _off = 12 if index_cued else 24 # skip first partial rev
-            s_off, = struct.unpack("<I", thdr[_off:_off+4])
+            if not index_cued: # Remove first partial revolution
+                thdr = thdr[:12] + thdr[24:]
+            s_off, = struct.unpack("<I", thdr[12:16])
             _, e_nr, e_off = struct.unpack("<3I", thdr[-12:])
 
             e_off += e_nr*2
