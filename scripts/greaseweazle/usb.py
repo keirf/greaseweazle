@@ -322,7 +322,12 @@ class Unit:
             dat.append(1 | (x>>6) & 255)
             dat.append(1 | (x>>13) & 255)
             dat.append(1 | (x>>20) & 255)
-        for val in flux:
+        # Emit a dummy final flux value. This is never written to disk because
+        # the write is aborted immediately the final flux is loaded into the
+        # WDATA timer. The dummy flux is sacrificial, ensuring that the real
+        # final flux gets written in full.
+        dummy_flux = round(100e-6 * self.sample_freq)
+        for val in it.chain(flux, [dummy_flux]):
             if val == 0:
                 pass
             elif val < 250:
