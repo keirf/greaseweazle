@@ -84,12 +84,8 @@ const static struct board_config _board_config[] = {
 };
 const struct board_config *board_config;
 
-#define early_delay_ms(ms) (delay_ticks((ms)*2000))
-#define early_delay_us(ms) (delay_ticks((ms)*2))
-
 /* Blink the activity LED to indicate fatal error. */
-static void early_fatal(int blinks) __attribute__((noreturn));
-static void early_fatal(int blinks)
+void early_fatal(int blinks)
 {
     int i;
     rcc->ahb1enr |= RCC_AHB1ENR_GPIOBEN;

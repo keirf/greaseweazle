@@ -9,11 +9,10 @@
  * See the file COPYING for more details, or visit <http://unlicense.org>.
  */
 
-#define early_delay_us(ms) (delay_ticks((ms)*2))
-
 static void clock_init(void)
 {
     unsigned int hse = board_config->hse_mhz;
+    int i;
 
     /* Disable all peripheral clocks except the essentials before enabling 
      * Over-drive mode (see note in RM0431, p102). We still need access to RAM
@@ -26,8 +25,15 @@ static void clock_init(void)
     if (board_config->hse_byp)
         rcc->cr |= RCC_CR_HSEBYP;
     rcc->cr |= RCC_CR_HSEON;
-    while (!(rcc->cr & RCC_CR_HSERDY))
-        cpu_relax();
+
+    /* Wait up to approximately one second for the oscillator to start. 
+     * If it doesn't start, we indicate this via the status LED. */
+    i = 0;
+    while (!(rcc->cr & RCC_CR_HSERDY)) {
+        early_delay_ms(1);
+        if (i++ >= 1000)
+            early_fatal(3);
+    }
 
     /* Main PLL. */
     rcc->pllcfgr = (RCC_PLLCFGR_PLLSRC_HSE | /* PLLSrc = HSE */

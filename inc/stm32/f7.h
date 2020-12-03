@@ -116,6 +116,10 @@ void identify_board_config(void);
 
 GPIO gpio_from_id(uint8_t id);
 
+void early_fatal(int blinks) __attribute__((noreturn));
+#define early_delay_ms(ms) (delay_ticks((ms)*2000))
+#define early_delay_us(us) (delay_ticks((us)*2))
+
 /*
  * Local variables:
  * mode: C
