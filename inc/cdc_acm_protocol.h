@@ -14,7 +14,7 @@
  * GREASEWEAZLE COMMAND SET
  */
 
-/* CMD_GET_INFO, length=3, 0. Returns 32 bytes after ACK. */
+/* CMD_GET_INFO, length=3, idx. Returns 32 bytes after ACK. */
 #define CMD_GET_INFO        0
 /* [BOOTLOADER] CMD_UPDATE, length=6, <update_len>. 
  * Host follows with <update_len> bytes.
@@ -33,10 +33,10 @@
 #define CMD_GET_PARAMS      5
 /* CMD_MOTOR, length=4, drive#, on/off. Turn on/off a drive motor. */
 #define CMD_MOTOR           6
-/* CMD_READ_FLUX, length=2-3. Optionally include all or part of gw_read_flux.
+/* CMD_READ_FLUX, length=2-8. Argument is gw_read_flux.
  * Returns flux readings until EOStream. */
 #define CMD_READ_FLUX       7
-/* CMD_WRITE_FLUX, length=2-3. Optionally include all or part of gw_write_flux.
+/* CMD_WRITE_FLUX, length=2-4. Argument is gw_write_flux.
  * Host follows with flux readings until EOStream. */
 #define CMD_WRITE_FLUX      8
 /* CMD_GET_FLUX_STATUS, length=2. Last read/write status returned in ACK. */
@@ -152,17 +152,23 @@ struct packed gw_bw_stats {
 
 /* CMD_READ_FLUX */
 struct packed gw_read_flux {
-    uint16_t nr_idx; /* default: 2 */
+    /* Maximum ticks to read for (or 0, for no limit). */
+    uint32_t ticks;
+    /* Maximum index pulses to read (or 0, for no limit). */
+    uint16_t max_index;
 };
 
 /* CMD_WRITE_FLUX */
 struct packed gw_write_flux {
-    uint8_t terminate_at_index; /* default: 0 */
+    /* If non-zero, start the write at the index pulse. */
+    uint8_t cue_at_index;
+    /* If non-zero, terminate the write at the next index pulse. */
+    uint8_t terminate_at_index;
 };
 
 /* CMD_ERASE_FLUX */
 struct packed gw_erase_flux {
-    uint32_t erase_ticks;
+    uint32_t ticks;
 };
 
 /* CMD_SINK_SOURCE_BYTES */

@@ -324,7 +324,9 @@ static void floppy_end_command(void *ack, unsigned int ack_len)
  */
 
 static struct {
-    unsigned int idx, nr_idx;
+    unsigned int nr_index;
+    unsigned int max_index;
+    time_t deadline;
 } read;
 
 static void _write_28bit(uint32_t x)
@@ -342,7 +344,7 @@ static void rdata_encode_flux(void)
     timcnt_t prev = dma.prev_sample, curr, next;
     uint32_t ticks;
 
-    ASSERT(read.idx < read.nr_idx);
+    ASSERT(read.nr_index < read.max_index);
 
     /* We don't want to race the Index IRQ handler. */
     IRQ_global_disable();
@@ -350,10 +352,10 @@ static void rdata_encode_flux(void)
     /* Find out where the DMA engine's producer index has got to. */
     prod = ARRAY_SIZE(dma.buf) - dma_rdata.ndtr;
 
-    if (read.idx != index.count) {
+    if (read.nr_index != index.count) {
         /* We have just passed the index mark: Record information about 
          * the just-completed revolution. */
-        read.idx = index.count;
+        read.nr_index = index.count;
         ticks = (timcnt_t)(index.rdata_cnt - prev);
         IRQ_global_enable(); /* we're done reading ISR variables */
         u_buf[U_MASK(u_prod++)] = 0xff;
@@ -415,9 +417,6 @@ static void rdata_encode_flux(void)
 
 static uint8_t floppy_read_prep(const struct gw_read_flux *rf)
 {
-    if (rf->nr_idx == 0)
-        return ACK_BAD_COMMAND;
-
     /* Prepare Timer & DMA. */
     dma_rdata.mar = (uint32_t)(unsigned long)dma.buf;
     dma_rdata.ndtr = ARRAY_SIZE(dma.buf);    
@@ -437,7 +436,9 @@ static uint8_t floppy_read_prep(const struct gw_read_flux *rf)
     flux_op.start = time_now();
     flux_op.status = ACK_OKAY;
     memset(&read, 0, sizeof(read));
-    read.nr_idx = rf->nr_idx;
+    read.max_index = rf->max_index ?: INT_MAX;
+    read.deadline = flux_op.start;
+    read.deadline += rf->ticks ? time_from_samples(rf->ticks) : INT_MAX;
 
     return ACK_OKAY;
 }
@@ -476,9 +477,10 @@ static void floppy_read(void)
             floppy_state = ST_read_flux_drain;
             u_cons = u_prod = avail = 0;
 
-        } else if (read.idx >= read.nr_idx) {
+        } else if ((read.nr_index >= read.max_index)
+                   || (time_since(read.deadline) >= 0)) {
 
-            /* Read all requested revolutions. */
+            /* Read all requested data. */
             floppy_flux_end();
             floppy_state = ST_read_flux_drain;
 
@@ -523,6 +525,7 @@ static void floppy_read(void)
 
 static struct {
     bool_t is_finished;
+    bool_t cue_at_index;
     bool_t terminate_at_index;
     uint32_t astable_period;
     uint32_t ticks;
@@ -745,6 +748,7 @@ static uint8_t floppy_write_prep(const struct gw_write_flux *wf)
     flux_op.status = ACK_OKAY;
     memset(&write, 0, sizeof(write));
     write.flux_mode = FLUXMODE_idle;
+    write.cue_at_index = wf->cue_at_index;
     write.terminate_at_index = wf->terminate_at_index;
 
     return ACK_OKAY;
@@ -792,7 +796,7 @@ static void floppy_write_wait_data(void)
 
 static void floppy_write_wait_index(void)
 {
-    if (index.count == 0) {
+    if (write.cue_at_index && (index.count == 0)) {
         if (time_since(flux_op.start) > time_ms(2000)) {
             /* Timeout */
             floppy_flux_end();
@@ -900,7 +904,7 @@ static uint8_t floppy_erase_prep(const struct gw_erase_flux *ef)
 
     floppy_state = ST_erase_flux;
     flux_op.status = ACK_OKAY;
-    flux_op.end = time_now() + time_from_samples(ef->erase_ticks);
+    flux_op.end = time_now() + time_from_samples(ef->ticks);
 
     return ACK_OKAY;
 }
@@ -1145,16 +1149,18 @@ static void process_command(void)
         goto out;
     }
     case CMD_READ_FLUX: {
-        struct gw_read_flux rf = { .nr_idx = 2 };
-        if ((len < 2) || (len > (2 + sizeof(rf))))
+        struct gw_read_flux rf;
+        if (len != (2 + sizeof(rf)))
             goto bad_command;
         memcpy(&rf, &u_buf[2], len-2);
         u_buf[1] = floppy_read_prep(&rf);
         goto out;
     }
     case CMD_WRITE_FLUX: {
-        struct gw_write_flux wf = { 0 };
-        if ((len < 2) || (len > (2 + sizeof(wf))))
+        struct gw_write_flux wf = {
+            .cue_at_index = 1,
+            .terminate_at_index = 0 };
+        if (len != (2 + sizeof(wf)))
             goto bad_command;
         memcpy(&wf, &u_buf[2], len-2);
         u_buf[1] = floppy_write_prep(&wf);

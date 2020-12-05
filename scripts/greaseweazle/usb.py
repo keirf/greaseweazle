@@ -355,11 +355,12 @@ class Unit:
 
     ## _read_track:
     ## Private helper which issues command requests to Greaseweazle.
-    def _read_track(self, nr_revs):
+    def _read_track(self, revs, ticks):
 
         # Request and read all flux timings for this track.
         dat = bytearray()
-        self._send_cmd(struct.pack("<2BH", Cmd.ReadFlux, 4, nr_revs+1))
+        self._send_cmd(struct.pack("<2BIH", Cmd.ReadFlux, 8,
+                                   ticks, revs+1))
         while True:
             dat += self.ser.read(1)
             dat += self.ser.read(self.ser.in_waiting)
@@ -374,12 +375,12 @@ class Unit:
 
     ## read_track:
     ## Read and decode flux and index timings for the current track.
-    def read_track(self, nr_revs, nr_retries=5):
+    def read_track(self, revs, ticks=0, nr_retries=5):
 
         retry = 0
         while True:
             try:
-                dat = self._read_track(nr_revs)
+                dat = self._read_track(revs, ticks)
             except CmdError as error:
                 # An error occurred. We may retry on transient overflows.
                 if error.code == Ack.FluxOverflow and retry < nr_retries:
@@ -412,7 +413,8 @@ class Unit:
 
     ## write_track:
     ## Write the given flux stream to the current track via Greaseweazle.
-    def write_track(self, flux_list, terminate_at_index, nr_retries=5):
+    def write_track(self, flux_list, terminate_at_index,
+                    cue_at_index=True, nr_retries=5):
 
         # Create encoded data stream.
         dat = self._encode_flux(flux_list)
@@ -421,7 +423,8 @@ class Unit:
         while True:
             try:
                 # Write the flux stream to the track via Greaseweazle.
-                self._send_cmd(struct.pack("3B", Cmd.WriteFlux, 3,
+                self._send_cmd(struct.pack("4B", Cmd.WriteFlux, 4,
+                                           int(cue_at_index),
                                            int(terminate_at_index)))
                 self.ser.write(dat)
                 self.ser.read(1) # Sync with Greaseweazle
