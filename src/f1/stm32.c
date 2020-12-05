@@ -59,7 +59,10 @@ static void peripheral_init(void)
                     RCC_APB2ENR_TIM1EN);
     rcc->ahbenr = RCC_AHBENR_DMA1EN;
 
-    /* Turn off serial-wire JTAG and reclaim the GPIOs. */
+    /* Turn off serial-wire JTAG and reclaim the GPIOs.
+     * We cannot use SW-DP because we use PA14 for entering firmware-update
+     * mode, and that requires us to disable SW-DP and enable PA14 pull up.
+     * After SW-DP is disabled it seems impossible to re-enable until reset. */
     afio->mapr = AFIO_MAPR_SWJ_CFG_DISABLED;
 
     /* All pins in a stable state. */
