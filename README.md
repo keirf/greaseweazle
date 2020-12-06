@@ -1,9 +1,9 @@
 # Greaseweazle
 
+*Tools and USB interface for accessing a floppy drive at the raw flux level.*
+
 ![CI Badge][ci-badge]
 ![Downloads Badge][downloads-badge]
-
-Tools and USB interface for accessing a floppy drive at the raw flux level.
 
 ## Download
 - [**Download Greaseweazle**][Downloads]
