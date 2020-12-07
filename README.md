@@ -4,6 +4,7 @@
 
 ![CI Badge][ci-badge]
 ![Downloads Badge][downloads-badge]
+![Version Badge][version-badge]
 
 ## Download
 - [**Download Greaseweazle**][Downloads]
@@ -20,3 +21,4 @@ in any form. Please see the [license](COPYING).
 
 [ci-badge]: https://github.com/keirf/Greaseweazle/workflows/CI/badge.svg
 [downloads-badge]: https://img.shields.io/github/downloads/keirf/Greaseweazle/total
+[version-badge]: https://img.shields.io/github/v/release/keirf/Greaseweazle
