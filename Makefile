@@ -65,15 +65,16 @@ dist:
 	$(ZIP) $(PROJ)-$(VER).zip $(PROJ)-$(VER)
 
 windist:
-	rm -rf $(PROJ)-* ipf ipf.zip
-	wget https://github.com/keirf/Greaseweazle/releases/download/$(VER)/$(PROJ)-$(VER).zip
+	rm -rf $(PROJ)-$(VER) ipf ipf.zip
+	[ -e $(PROJ)-$(VER).zip ] || \
+	curl -L https://github.com/keirf/Greaseweazle/releases/download/$(VER)/$(PROJ)-$(VER).zip --output $(PROJ)-$(VER).zip
 	$(UNZIP) $(PROJ)-$(VER).zip
 	cp -a scripts/setup.py $(PROJ)-$(VER)/scripts
 	cd $(PROJ)-$(VER)/scripts && $(PYTHON) setup.py build
 	cp -a $(PROJ)-$(VER)/scripts/build/exe.win*/* $(PROJ)-$(VER)/
 	cp -a $(PROJ)-$(VER)/lib/bitarray/VCRUNTIME140.DLL $(PROJ)-$(VER)/
 	rm -rf $(PROJ)-$(VER)/scripts/build $(PROJ)-$(VER)/*.py $(PROJ)-$(VER)/gw
-	wget http://softpres.org/_media/files:spsdeclib_5.1_windows.zip -O ipf.zip
+	curl -L http://softpres.org/_media/files:spsdeclib_5.1_windows.zip --output ipf.zip
 	$(UNZIP) -oipf ipf.zip
 	cp -a ipf/capsimg_binary/CAPSImg.dll $(PROJ)-$(VER)/
 	rm -rf ipf ipf.zip
