@@ -1,0 +1,99 @@
+on:
+  push:
+    tags:
+    - 'v*.*'
+
+name: Release
+
+jobs:
+
+  build-ubuntu:
+    runs-on: ubuntu-20.04
+    steps:
+
+    - uses: actions/checkout@v2
+
+    - name: Set environment variables
+      id: vars
+      run: |
+        echo "::set-output name=ref::$(echo ${{ github.ref }} | sed -e's#.*/##')"
+
+    - name: Dependency packages (apt)
+      run: |
+        sudo apt update
+        sudo apt -y install git gcc-arm-none-eabi python3-pip srecord stm32flash zip
+
+    - name: Dependency packages (pip)
+      run: python3 -m pip install --user bitarray crcmod pyserial
+
+    - name: Build dist
+      run: make dist
+
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v2
+      with:
+        name: Greaseweazle.CI.${{ steps.vars.outputs.ref }}
+        path: Greaseweazle-${{ steps.vars.outputs.ref }}.zip
+
+  build-windows:
+    needs: build-ubuntu
+    runs-on: windows-2019
+    steps:
+
+    - uses: actions/checkout@v2
+
+    - name: Set environment variables
+      id: vars
+      run: |
+        echo "::set-output name=ref::$(echo ${{ github.ref }} | sed -e's#.*/##')"
+
+    - name: Download Ubuntu build
+      uses: actions/download-artifact@v2
+      with:
+        name: Greaseweazle.CI.${{ steps.vars.outputs.ref }}
+
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.8
+        architecture: x86
+
+    - name: Dependency packages (pip)
+      run: |
+        python -m pip install --upgrade pip setuptools wheel
+        python -m pip install --user bitarray crcmod pyserial cx_Freeze
+
+    - name: Build dist
+      run: make windist
+
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref }}
+        release_name: ${{ steps.vars.outputs.ref }}
+        body: "[**Release Notes:**](https://github.com/keirf/Greaseweazle/blob/master/RELEASE_NOTES)"
+        draft: false
+        prerelease: false
+
+    - name: Upload Release Asset (Windows)
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: Greaseweazle-${{ steps.vars.outputs.ref }}-win.zip
+        asset_name: Greaseweazle-${{ steps.vars.outputs.ref }}-win.zip
+        asset_content_type: application/zip
+
+    - name: Upload Release Asset (Other)
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: Greaseweazle-${{ steps.vars.outputs.ref }}.zip
+        asset_name: Greaseweazle-${{ steps.vars.outputs.ref }}.zip
+        asset_content_type: application/zip
