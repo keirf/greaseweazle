@@ -32,6 +32,7 @@ jobs:
         mv Greaseweazle-v* Greaseweazle-$VER
         rm Greaseweazle-$VER/RELEASE_NOTES
         git rev-parse HEAD >Greaseweazle-$VER/COMMIT
+        echo "commit = '$(git rev-parse HEAD)'" >>Greaseweazle-$VER/scripts/greaseweazle/version.py 
         zip -r Greaseweazle-$VER.zip Greaseweazle-$VER
         mv Greaseweazle-$VER.zip _cidist/
 
@@ -44,6 +45,7 @@ jobs:
         rm Greaseweazle-$VER/RELEASE_NOTES
         git rev-parse HEAD >Greaseweazle-$VER/COMMIT
         echo debug >>Greaseweazle-$VER/COMMIT
+        echo "commit = '$(git rev-parse HEAD)'" >>Greaseweazle-$VER/scripts/greaseweazle/version.py 
         zip -r Greaseweazle-$VER.zip Greaseweazle-$VER
         mv Greaseweazle-$VER.zip _cidist/
 

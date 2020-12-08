@@ -12,6 +12,12 @@
 import sys
 import importlib
 
+from greaseweazle import version
+if hasattr(version, 'commit'):
+    print("""*** TEST/PRE-RELEASE: commit %s
+*** Use these tools and firmware ONLY for test and development!!"""
+          % version.commit)
+
 missing_modules = []
 
 try:
