@@ -81,14 +81,14 @@ def read_with_retry(usb, args, cyl, side, decoder):
 
 
 def print_summary(args, summary):
-    print("H. S: Cyls %d-%d -->" % (args.scyl, args.ecyl))
+    print("H. S: Cyls %d-%d -->" % args.tracks.cyl)
     tot_sec = good_sec = 0
-    for side in range(0, args.nr_sides):
+    for side in range(args.tracks.side[0], args.tracks.side[1]+1):
         nsec = max(x.nsec for x in summary[side])
         for sec in range(nsec):
             print("%d.%2d: " % (side, sec), end="")
-            for cyl in range(args.scyl, args.ecyl+1):
-                s = summary[side][cyl-args.scyl]
+            for cyl in range(args.tracks.cyl[0], args.tracks.cyl[1]+1):
+                s = summary[side][cyl-args.tracks.cyl[0]]
                 if sec > s.nsec:
                     print(" ", end="")
                 else:
@@ -106,9 +106,9 @@ def read_to_image(usb, args, image, decoder=None):
 
     summary = [[],[]]
 
-    for cyl in range(args.scyl, args.ecyl+1):
-        for side in range(0, args.nr_sides):
-            usb.seek((cyl, cyl*2)[args.double_step], side)
+    for cyl in range(args.tracks.cyl[0], args.tracks.cyl[1]+1):
+        for side in range(args.tracks.side[0], args.tracks.side[1]+1):
+            usb.seek((cyl, cyl*2)[args.tracks.double_step], side)
             dat = read_with_retry(usb, args, cyl, side, decoder)
             print("T%u.%u: %s" % (cyl, side, dat.summary_string()))
             summary[side].append(dat)
@@ -117,11 +117,6 @@ def read_to_image(usb, args, image, decoder=None):
     if decoder is not None:
         print_summary(args, summary)
 
-
-def range_str(s, e):
-    str = "%d" % s
-    if s != e: str += "-%d" % e
-    return str
 
 def main(argv):
 
@@ -132,21 +127,14 @@ def main(argv):
     parser.add_argument("--format", help="disk format")
     parser.add_argument("--revs", type=int,
                         help="number of revolutions to read per track")
-    parser.add_argument("--scyl", type=int,
-                        help="first cylinder to read")
-    parser.add_argument("--ecyl", type=int,
-                        help="last cylinder to read")
-    parser.add_argument("--single-sided", action="store_true",
-                        help="single-sided read")
-    parser.add_argument("--double-step", action="store_true",
-                        help="double-step drive heads")
+    parser.add_argument("--tracks", type=util.trackset,
+                        help="which tracks to read")
     parser.add_argument("--rate", type=int, help="data rate (kbit/s)")
     parser.add_argument("--rpm", type=int, help="convert drive speed to RPM")
     parser.add_argument("file", help="output filename")
     parser.description = description
     parser.prog += ' ' + argv[1]
     args = parser.parse_args(argv[2:])
-    args.nr_sides = 1 if args.single_sided else 2
 
     args.file, args.file_opts = util.split_opts(args.file)
 
@@ -163,16 +151,14 @@ def main(argv):
                 decoder = mod.decode_track
             except (ModuleNotFoundError, AttributeError) as ex:
                 raise error.Fatal("Unknown format '%s'" % args.format) from ex
-            if args.scyl is None: args.scyl = mod.default_cyls[0]
-            if args.ecyl is None: args.ecyl = mod.default_cyls[1]
+            if args.tracks is None:
+                args.tracks = util.trackset('c=0-81:s=0-1')
+                args.tracks.cyl = mod.default_cyls
             if args.revs is None: args.revs = mod.default_revs
-        if args.scyl is None: args.scyl = 0
-        if args.ecyl is None: args.ecyl = 81
+        if args.tracks is None:
+            args.tracks = util.trackset('c=0-81:s=0-1')
         if args.revs is None: args.revs = 3
-        print("Reading c=%s s=%s revs=%d" %
-              (range_str(args.scyl, args.ecyl),
-               range_str(0, args.nr_sides-1),
-               args.revs))
+        print("Reading %s revs=%d" % (args.tracks, args.revs))
         with open_image(args, image_class) as image:
             util.with_drive_selected(read_to_image, usb, args, image,
                                      decoder=decoder)

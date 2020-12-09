@@ -44,8 +44,8 @@ def write_from_image(usb, args, image):
 
     verified_count, not_verified_count = 0, 0
 
-    for cyl in range(args.scyl, args.ecyl+1):
-        for side in range(0, args.nr_sides):
+    for cyl in range(args.tracks.cyl[0], args.tracks.cyl[1]+1):
+        for side in range(args.tracks.side[0], args.tracks.side[1]+1):
 
             track = image.get_track(cyl, side)
             if track is None and not args.erase_empty:
@@ -54,7 +54,7 @@ def write_from_image(usb, args, image):
             print("\r%sing Track %u.%u..." %
                   ("Writ" if track is not None else "Eras", cyl, side),
                   end="", flush=True)
-            usb.seek((cyl, cyl*2)[args.double_step], side)
+            usb.seek((cyl, cyl*2)[args.tracks.double_step], side)
             
             if track is None:
                 usb.erase_track(drive_ticks * 1.1)
@@ -119,14 +119,9 @@ def main(argv):
     parser.add_argument("--device", help="greaseweazle device name")
     parser.add_argument("--drive", type=util.drive_letter, default='A',
                         help="drive to write (A,B,0,1,2)")
-    parser.add_argument("--scyl", type=int, default=0,
-                        help="first cylinder to write")
-    parser.add_argument("--ecyl", type=int, default=81,
-                        help="last cylinder to write")
-    parser.add_argument("--single-sided", action="store_true",
-                        help="single-sided write")
-    parser.add_argument("--double-step", action="store_true",
-                        help="double-step drive heads")
+    parser.add_argument("--tracks", type=util.trackset,
+                        default='c=0-81:s=0-1',
+                        help="which tracks to read")
     parser.add_argument("--erase-empty", action="store_true",
                         help="erase empty tracks (default: skip)")
     parser.add_argument("--no-verify", action="store_true",
@@ -135,11 +130,11 @@ def main(argv):
     parser.description = description
     parser.prog += ' ' + argv[1]
     args = parser.parse_args(argv[2:])
-    args.nr_sides = 1 if args.single_sided else 2
 
     try:
         usb = util.usb_open(args.device)
         image = open_image(args)
+        print("Writing %s" % (args.tracks))
         util.with_drive_selected(write_from_image, usb, args, image)
     except USB.CmdError as error:
         print("Command Failed: %s" % error)

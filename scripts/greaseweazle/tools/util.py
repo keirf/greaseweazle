@@ -7,7 +7,7 @@
 # This is free and unencumbered software released into the public domain.
 # See the file COPYING for more details, or visit <http://unlicense.org>.
 
-import argparse, os, sys, serial, struct, time
+import argparse, os, sys, serial, struct, time, re
 import importlib
 import serial.tools.list_ports
 
@@ -45,6 +45,44 @@ def drive_letter(letter):
     if not letter.upper() in types:
         raise argparse.ArgumentTypeError("invalid drive letter: '%s'" % letter)
     return types[letter.upper()]
+
+def range_str(s, e):
+    str = "%d" % s
+    if s != e: str += "-%d" % e
+    return str
+
+def trackset(tracks):
+    class TrackSet:
+        def __init__(self):
+            self.cyl = (0,79)
+            self.side = (0,1)
+            self.double_step = False
+        def __str__(self):
+            s = 'c=%s' % range_str(self.cyl[0], self.cyl[1])
+            if self.double_step:
+                s += 'x2'
+            s += ':s=%s' % range_str(self.side[0], self.side[1])
+            return s
+    ts = TrackSet()
+    for x in tracks.split(':'):
+        k,v = x.split('=')
+        if k == 'c':
+            m = re.match('(\d+)(-(\d+))?(x2)?', v)
+            if m is None: raise ValueError()
+            if m.group(3) is None:
+                ts.cyl = int(m.group(1)), int(m.group(1))
+            else:
+                ts.cyl = int(m.group(1)), int(m.group(3))
+            if m.group(4) is not None:
+                ts.double_step = True
+        elif k == 's':
+            m = re.match('(\d+)(-(\d+))?', v)
+            if m is None: raise ValueError()
+            if m.group(3) is None:
+                ts.side = int(m.group(1)), int(m.group(1))
+            else:
+                ts.side = int(m.group(1)), int(m.group(3))
+    return ts
 
 
 def split_opts(seq):

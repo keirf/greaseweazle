@@ -22,10 +22,10 @@ def erase(usb, args):
     drive_ticks = (flux.index_list[0] + flux.index_list[1]) / 2
     del flux
 
-    for cyl in range(args.scyl, args.ecyl+1):
-        for side in range(0, args.nr_sides):
+    for cyl in range(args.tracks.cyl[0], args.tracks.cyl[1]+1):
+        for side in range(args.tracks.side[0], args.tracks.side[1]+1):
             print("\rErasing Track %u.%u..." % (cyl, side), end="")
-            usb.seek(cyl, side)
+            usb.seek((cyl, cyl*2)[args.tracks.double_step], side)
             usb.erase_track(drive_ticks * 1.1)
 
     print()
@@ -37,19 +37,16 @@ def main(argv):
     parser.add_argument("--device", help="greaseweazle device name")
     parser.add_argument("--drive", type=util.drive_letter, default='A',
                         help="drive to write (A,B,0,1,2)")
-    parser.add_argument("--scyl", type=int, default=0,
-                        help="first cylinder to write")
-    parser.add_argument("--ecyl", type=int, default=81,
-                        help="last cylinder to write")
-    parser.add_argument("--single-sided", action="store_true",
-                        help="single-sided write")
+    parser.add_argument("--tracks", type=util.trackset,
+                        default='c=0-81:s=0-1',
+                        help="which tracks to read")
     parser.description = description
     parser.prog += ' ' + argv[1]
     args = parser.parse_args(argv[2:])
-    args.nr_sides = 1 if args.single_sided else 2
 
     try:
         usb = util.usb_open(args.device)
+        print("Erasing %s" % (args.tracks))
         util.with_drive_selected(erase, usb, args)
     except USB.CmdError as error:
         print("Command Failed: %s" % error)
