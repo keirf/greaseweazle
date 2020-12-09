@@ -106,13 +106,13 @@ def read_to_image(usb, args, image, decoder=None):
 
     summary = [[],[]]
 
-    for cyl in range(args.tracks.cyl[0], args.tracks.cyl[1]+1):
-        for side in range(args.tracks.side[0], args.tracks.side[1]+1):
-            usb.seek((cyl, cyl*2)[args.tracks.double_step], side)
-            dat = read_with_retry(usb, args, cyl, side, decoder)
-            print("T%u.%u: %s" % (cyl, side, dat.summary_string()))
-            summary[side].append(dat)
-            image.emit_track(cyl, side, dat)
+    for t in args.tracks:
+        cyl, side = t.cyl, t.side
+        usb.seek(t.physical_cyl, side)
+        dat = read_with_retry(usb, args, cyl, side, decoder)
+        print("T%u.%u: %s" % (cyl, side, dat.summary_string()))
+        summary[side].append(dat)
+        image.emit_track(cyl, side, dat)
 
     if decoder is not None:
         print_summary(args, summary)

@@ -44,60 +44,61 @@ def write_from_image(usb, args, image):
 
     verified_count, not_verified_count = 0, 0
 
-    for cyl in range(args.tracks.cyl[0], args.tracks.cyl[1]+1):
-        for side in range(args.tracks.side[0], args.tracks.side[1]+1):
+    for t in args.tracks:
 
-            track = image.get_track(cyl, side)
-            if track is None and not args.erase_empty:
-                continue
+        cyl, side = t.cyl, t.side
 
-            print("\r%sing Track %u.%u..." %
-                  ("Writ" if track is not None else "Eras", cyl, side),
-                  end="", flush=True)
-            usb.seek((cyl, cyl*2)[args.tracks.double_step], side)
+        track = image.get_track(cyl, side)
+        if track is None and not args.erase_empty:
+            continue
+
+        print("\r%sing Track %u.%u..." %
+              ("Writ" if track is not None else "Eras", cyl, side),
+              end="", flush=True)
+        usb.seek(t.physical_cyl, side)
             
-            if track is None:
-                usb.erase_track(drive_ticks * 1.1)
-                continue
+        if track is None:
+            usb.erase_track(drive_ticks * 1.1)
+            continue
 
-            flux = track.flux_for_writeout()
+        flux = track.flux_for_writeout()
             
-            # @factor adjusts flux times for speed variations between the
-            # read-in and write-out drives.
-            factor = drive_ticks / flux.index_list[0]
+        # @factor adjusts flux times for speed variations between the
+        # read-in and write-out drives.
+        factor = drive_ticks / flux.index_list[0]
 
-            # Convert the flux samples to Greaseweazle sample frequency.
-            rem = 0.0
-            flux_list = []
-            for x in flux.list:
-                y = x * factor + rem
-                val = round(y)
-                rem = y - val
-                flux_list.append(val)
+        # Convert the flux samples to Greaseweazle sample frequency.
+        rem = 0.0
+        flux_list = []
+        for x in flux.list:
+            y = x * factor + rem
+            val = round(y)
+            rem = y - val
+            flux_list.append(val)
 
-            # Encode the flux times for Greaseweazle, and write them out.
-            formatter = Formatter()
-            verified = False
-            for retry in range(3):
-                usb.write_track(flux_list, flux.terminate_at_index)
-                try:
-                    no_verify = args.no_verify or track.verify is None
-                except AttributeError: # track.verify undefined
-                    no_verify = True
-                if no_verify:
-                    not_verified_count += 1
-                    verified = True
-                    break
-                v_revs = 1 if track.splice == 0 else 2
-                v_flux = usb.read_track(v_revs)
-                v_flux.scale(flux.mean_index_time / v_flux.mean_index_time)
-                verified = track.verify.verify_track(v_flux)
-                if verified:
-                    verified_count += 1
-                    break
-                formatter.print(" Retry %d" % (retry + 1))
-            formatter.erase()
-            error.check(verified, "Failed to write Track %u.%u" % (cyl, side))
+        # Encode the flux times for Greaseweazle, and write them out.
+        formatter = Formatter()
+        verified = False
+        for retry in range(3):
+            usb.write_track(flux_list, flux.terminate_at_index)
+            try:
+                no_verify = args.no_verify or track.verify is None
+            except AttributeError: # track.verify undefined
+                no_verify = True
+            if no_verify:
+                not_verified_count += 1
+                verified = True
+                break
+            v_revs = 1 if track.splice == 0 else 2
+            v_flux = usb.read_track(v_revs)
+            v_flux.scale(flux.mean_index_time / v_flux.mean_index_time)
+            verified = track.verify.verify_track(v_flux)
+            if verified:
+                verified_count += 1
+                break
+            formatter.print(" Retry %d" % (retry + 1))
+        formatter.erase()
+        error.check(verified, "Failed to write Track %u.%u" % (cyl, side))
 
     print()
     if not_verified_count == 0:

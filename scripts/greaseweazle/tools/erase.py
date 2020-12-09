@@ -22,11 +22,11 @@ def erase(usb, args):
     drive_ticks = (flux.index_list[0] + flux.index_list[1]) / 2
     del flux
 
-    for cyl in range(args.tracks.cyl[0], args.tracks.cyl[1]+1):
-        for side in range(args.tracks.side[0], args.tracks.side[1]+1):
-            print("\rErasing Track %u.%u..." % (cyl, side), end="")
-            usb.seek((cyl, cyl*2)[args.tracks.double_step], side)
-            usb.erase_track(drive_ticks * 1.1)
+    for t in args.tracks:
+        cyl, side = t.cyl, t.side
+        print("\rErasing Track %u.%u..." % (cyl, side), end="")
+        usb.seek(t.physical_cyl, side)
+        usb.erase_track(drive_ticks * 1.1)
 
     print()
 
