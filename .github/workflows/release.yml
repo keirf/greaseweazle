@@ -66,6 +66,37 @@ jobs:
     - name: Build dist
       run: make windist
 
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v2
+      with:
+        name: Greaseweazle.CI.${{ steps.vars.outputs.ref }}
+        path: Greaseweazle-${{ steps.vars.outputs.ref }}-win.zip
+
+  finalise:
+    needs: build-windows
+    runs-on: ubuntu-20.04
+    steps:
+
+    - uses: actions/checkout@v2
+
+    - name: Set environment variables
+      id: vars
+      run: |
+        echo "::set-output name=ref::$(echo ${{ github.ref }} | sed -e's#.*/##')"
+
+    - name: Download artifacts
+      uses: actions/download-artifact@v2
+      with:
+        name: Greaseweazle.CI.${{ steps.vars.outputs.ref }}
+
+    - name: Remove 64-bit DLLS
+      run: |
+        export VER=${{ steps.vars.outputs.ref }}
+        unzip Greaseweazle-$VER-win.zip
+        find . -name 'api-ms-win-crt-*' | xargs rm
+        rm Greaseweazle-$VER-win.zip
+        zip -r Greaseweazle-$VER-win.zip Greaseweazle-$VER
+
     - name: Create Release
       id: create_release
       uses: actions/create-release@v1
