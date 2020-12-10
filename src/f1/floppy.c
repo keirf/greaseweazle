@@ -37,8 +37,8 @@ static unsigned int GPI_bus;
 #define pin_step   13 /* PB13 */
 #define gpio_wgate gpiob
 #define pin_wgate  14 /* PB14 */
-#define gpio_side  gpiob
-#define pin_side   15 /* PB15 */
+#define gpio_head  gpiob
+#define pin_head   15 /* PB15 */
 
 /* RDATA: Pin B3, Timer 2 Channel 2, DMA1 Channel 7. */
 #define gpio_rdata  gpiob

@@ -43,8 +43,8 @@ static unsigned int AFO_bus;
 #define pin_step   7  /* PA7 */
 #define gpio_wgate gpioa
 #define pin_wgate  6  /* PA6 */
-#define gpio_side  gpioc
-#define pin_side   3  /* PC3 */
+#define gpio_head  gpioc
+#define pin_head   3  /* PC3 */
 
 /* RDATA: Pin A0, Timer 2 Channel 1, DMA1 Stream 5 Channel 3. */
 #define gpio_rdata  gpioa

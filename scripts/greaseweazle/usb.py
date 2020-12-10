@@ -22,7 +22,7 @@ class Cmd:
     GetInfo         =  0
     Update          =  1
     Seek            =  2
-    Side            =  3
+    Head            =  3
     SetParams       =  4
     GetParams       =  5
     Motor           =  6
@@ -43,7 +43,7 @@ class Cmd:
         GetInfo: "GetInfo",
         Update: "Update",
         Seek: "Seek",
-        Side: "Side",
+        Head: "Head",
         SetParams: "SetParams",
         GetParams: "GetParams",
         Motor: "Motor",
@@ -202,10 +202,10 @@ class Unit:
 
 
     ## seek:
-    ## Seek the selected drive's heads to the specified track (cyl, side).
-    def seek(self, cyl, side):
+    ## Seek the selected drive's heads to the specified track (cyl, head).
+    def seek(self, cyl, head):
         self._send_cmd(struct.pack("2Bb", Cmd.Seek, 3, cyl))
-        self._send_cmd(struct.pack("3B", Cmd.Side, 3, side))
+        self._send_cmd(struct.pack("3B", Cmd.Head, 3, head))
 
 
     ## set_bus_type:

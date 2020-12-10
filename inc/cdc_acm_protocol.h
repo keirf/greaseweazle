@@ -25,8 +25,8 @@
 #define CMD_UPDATE          1
 /* CMD_SEEK, length=3, cyl#. Seek to cyl# on selected drive. */
 #define CMD_SEEK            2
-/* CMD_SIDE, length=3, side# (0=bottom) */
-#define CMD_SIDE            3
+/* CMD_HEAD, length=3, head# (0=bottom) */
+#define CMD_HEAD            3
 /* CMD_SET_PARAMS, length=3+nr, idx, <nr bytes> */
 #define CMD_SET_PARAMS      4
 /* CMD_GET_PARAMS, length=4, idx, nr_bytes. Returns nr_bytes after ACK. */

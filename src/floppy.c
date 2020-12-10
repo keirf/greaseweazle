@@ -267,7 +267,7 @@ void floppy_init(void)
     configure_pin(dir,    GPO_bus);
     configure_pin(step,   GPO_bus);
     configure_pin(wgate,  GPO_bus);
-    configure_pin(side,   GPO_bus);
+    configure_pin(head,   GPO_bus);
     configure_pin(wdata,  GPO_bus);
 
     /* Input pins. */
@@ -1116,11 +1116,11 @@ static void process_command(void)
         u_buf[1] = floppy_seek(cyl);
         goto out;
     }
-    case CMD_SIDE: {
-        uint8_t side = u_buf[2];
-        if ((len != 3) || (side > 1))
+    case CMD_HEAD: {
+        uint8_t head = u_buf[2];
+        if ((len != 3) || (head > 1))
             goto bad_command;
-        write_pin(side, side);
+        write_pin(head, head);
         break;
     }
     case CMD_SET_PARAMS: {
