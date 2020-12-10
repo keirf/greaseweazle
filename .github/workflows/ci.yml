@@ -92,3 +92,34 @@ jobs:
       with:
         name: Greaseweazle.CI.${{ steps.vars.outputs.sha_short }}
         path: Greaseweazle-${{ steps.vars.outputs.sha_short }}-win.zip
+
+  finalise:
+    needs: build-windows
+    runs-on: ubuntu-20.04
+    steps:
+
+    - uses: actions/checkout@v2
+
+    - name: Set environment variables
+      id: vars
+      run: |
+        echo "::set-output name=sha_short::$(git rev-parse --short HEAD)"
+
+    - name: Download artifacts
+      uses: actions/download-artifact@v2
+      with:
+        name: Greaseweazle.CI.${{ steps.vars.outputs.sha_short }}
+
+    - name: Remove 64-bit DLLS
+      run: |
+        export VER=${{ steps.vars.outputs.sha_short }}
+        unzip Greaseweazle-$VER-win.zip
+        find . -name 'api-ms-win-crt-*' | xargs rm
+        rm Greaseweazle-$VER-win.zip
+        zip -r Greaseweazle-$VER-win.zip Greaseweazle-$VER
+
+    - name: Upload finalised artifacts
+      uses: actions/upload-artifact@v2
+      with:
+        name: Greaseweazle.CI.${{ steps.vars.outputs.sha_short }}
+        path: Greaseweazle-${{ steps.vars.outputs.sha_short }}-win.zip
