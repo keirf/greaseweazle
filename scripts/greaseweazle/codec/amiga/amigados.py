@@ -11,7 +11,7 @@ from bitarray import bitarray
 
 from greaseweazle.track import MasterTrack, RawTrack
 
-default_cyls = (0,79)
+default_trackset = 'c=0-79:h=0-1'
 default_revs = 2
 
 sync_bytes = b'\x44\x89\x44\x89'

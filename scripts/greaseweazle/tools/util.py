@@ -46,74 +46,100 @@ def drive_letter(letter):
         raise argparse.ArgumentTypeError("invalid drive letter: '%s'" % letter)
     return types[letter.upper()]
 
-def range_str(s, e):
-    str = "%d" % s
-    if s != e: str += "-%d" % e
+def range_str(l):
+    if len(l) == 0:
+        return '<none>'
+    p, str = None, ''
+    for i in l:
+        if p is not None and i == p[1]+1:
+            p = p[0], i
+            continue
+        if p is not None:
+            str += ('%d,' % p[0]) if p[0] == p[1] else ('%d-%d,' % p)
+        p = (i,i)
+    if p is not None:
+        str += ('%d' % p[0]) if p[0] == p[1] else ('%d-%d' % p)
     return str
 
 class TrackSet:
 
     class TrackIter:
+        """Iterate over a TrackSet in physical <cyl,head> order."""
         def __init__(self, ts):
             l = []
-            for c in range(ts.cyl[0], ts.cyl[1]+1):
-                for s in range(ts.side[0], ts.side[1]+1):
-                    pc = (c, c*2)[ts.double_step]
-                    pc += ts.side_off[0] if s == ts.side[0] else ts.side_off[1]
-                    l.append((pc, s, c))
+            for c in ts.cyls:
+                for h in ts.heads:
+                    pc = c*ts.step + ts.h_off[h]
+                    l.append((pc, h, c))
             l.sort()
             self.l = iter(l)
         def __next__(self):
-            self.physical_cyl, self.side, self.cyl = next(self.l)
+            self.physical_cyl, self.head, self.cyl = next(self.l)
             return self
     
-    def __init__(self):
-        self.cyl = (0,79)
-        self.side = (0,1)
-        self.double_step = False
+    def __init__(self, trackspec):
+        self.cyls = list()
+        self.heads = list()
+        self.h_off = [0]*2
+        self.step = 1
+        self.trackspec = ''
+        self.update_from_trackspec(trackspec)
 
+    def update_from_trackspec(self, trackspec):
+        """Update a TrackSet based on a trackspec."""
+        self.trackspec += trackspec
+        for x in trackspec.split(':'):
+            k,v = x.split('=')
+            if k == 'c':
+                cyls = [False]*100
+                for crange in v.split(','):
+                    m = re.match('(\d\d?)(-(\d\d?))?$', crange)
+                    if m is None: raise ValueError()
+                    if m.group(3) is None:
+                        s,e = int(m.group(1)), int(m.group(1))
+                    else:
+                        s,e = int(m.group(1)), int(m.group(3))
+                    for c in range(s, e+1):
+                        cyls[c] = True
+                self.cyls = []
+                for c in range(len(cyls)):
+                    if cyls[c]: self.cyls.append(c)
+            elif k == 'h':
+                heads = [False]*2
+                for hrange in v.split(','):
+                    m = re.match('([01])(-([01]))?$', hrange)
+                    if m is None: raise ValueError()
+                    if m.group(3) is None:
+                        s,e = int(m.group(1)), int(m.group(1))
+                    else:
+                        s,e = int(m.group(1)), int(m.group(3))
+                    for h in range(s, e+1):
+                        heads[h] = True
+                self.heads = []
+                for h in range(len(heads)):
+                    if heads[h]: self.heads.append(h)
+            elif k == 'h_off':
+                m = re.match('([01])([+-][\d])$', v)
+                if m is None: raise ValueError()
+                self.h_off[int(m.group(1))] = int(m.group(2))
+            elif k == 'step':
+                self.step = int(v)
+                if self.step <= 0: raise ValueError()
+            else:
+                raise ValueError()
+        
     def __str__(self):
-        a, b = self.cyl
-        s = 'c=%d' % a
-        if a != b: s += '-%d' % b
-        if self.double_step: s += 'x2'
-        a, c = self.side
-        b, d = self.side_off
-        s += ':s=%d' % a
-        if b != 0: s += '[%s%d]' % ('+' if b >= 0 else '', b)
-        if a != c:
-            s += '-%d' % c
-            if d != 0: s += '[%s%d]' % ('+' if d >= 0 else '', d)
+        s = 'c=%s' % range_str(self.cyls)
+        s += ':h=%s' % range_str(self.heads)
+        for i in range(len(self.h_off)):
+            x = self.h_off[i]
+            if x != 0:
+                s += ':h_off=%d%s%d' % (i, '+' if x >= 0 else '', x)
+        if self.step != 1: s += ':step=%d' % self.step
         return s
 
     def __iter__(self):
         return self.TrackIter(self)
-
-def trackset(tracks):
-    ts = TrackSet()
-    for x in tracks.split(':'):
-        k,v = x.split('=')
-        if k == 'c':
-            m = re.match('(\d+)(-(\d+))?(x2)?$', v)
-            if m is None: raise ValueError()
-            if m.group(3) is None:
-                ts.cyl = int(m.group(1)), int(m.group(1))
-            else:
-                ts.cyl = int(m.group(1)), int(m.group(3))
-            if m.group(4) is not None:
-                ts.double_step = True
-        elif k == 's':
-            m = re.match('(?P<s>\d+)(\[(?P<s_off>[-+]\d)\])?'
-                         '(-(?P<e>\d+)(\[(?P<e_off>[-+]\d)\])?)?$', v)
-            if m is None: raise ValueError()
-            s, e = m.group('s'), m.group('e')
-            ts.side = int(s), int(e if e is not None else s)
-            s, e = m.group('s_off'), m.group('e_off')
-            s = int(s) if s is not None else 0
-            e = int(e) if e is not None else 0
-            ts.side_off = s,e
-    return ts
-
 
 def split_opts(seq):
     """Splits a name from its list of options."""

@@ -63,15 +63,15 @@ def read_and_normalise(usb, args, revs):
     return flux
 
 
-def read_with_retry(usb, args, cyl, side, decoder):
+def read_with_retry(usb, args, cyl, head, decoder):
     flux = read_and_normalise(usb, args, args.revs)
     if decoder is None:
         return flux
-    dat = decoder(cyl, side, flux)
+    dat = decoder(cyl, head, flux)
     if dat.nr_missing() != 0:
         for retry in range(3):
             print("T%u.%u: %s - %d sectors missing - Retrying (%d)"
-                  % (cyl, side, dat.summary_string(),
+                  % (cyl, head, dat.summary_string(),
                      dat.nr_missing(), retry+1))
             flux = read_and_normalise(usb, args, max(args.revs, 3))
             dat.decode_raw(flux)
@@ -81,14 +81,23 @@ def read_with_retry(usb, args, cyl, side, decoder):
 
 
 def print_summary(args, summary):
-    print("H. S: Cyls %d-%d -->" % args.tracks.cyl)
+    s = 'Cyl-> '
+    p = -1
+    for c in args.tracks.cyls:
+        s += ' ' if c//10==p else str(c//10)
+        p = c//10
+    print(s)
+    s = 'H. S: '
+    for c in args.tracks.cyls:
+        s += str(c%10)
+    print(s)
     tot_sec = good_sec = 0
-    for side in range(args.tracks.side[0], args.tracks.side[1]+1):
-        nsec = max(x.nsec for x in summary[side])
+    for head in args.tracks.heads:
+        nsec = max(summary[x].nsec for x in summary if x[1] == head)
         for sec in range(nsec):
-            print("%d.%2d: " % (side, sec), end="")
-            for cyl in range(args.tracks.cyl[0], args.tracks.cyl[1]+1):
-                s = summary[side][cyl-args.tracks.cyl[0]]
+            print("%d.%2d: " % (head, sec), end="")
+            for cyl in args.tracks.cyls:
+                s = summary[cyl,head]
                 if sec > s.nsec:
                     print(" ", end="")
                 else:
@@ -96,23 +105,24 @@ def print_summary(args, summary):
                     if s.has_sec(sec): good_sec += 1
                     print("." if s.has_sec(sec) else "X", end="")
             print()
-    print("Found %d sectors of %d (%d%%)" %
-          (good_sec, tot_sec, good_sec*100/tot_sec))
+    if tot_sec != 0:
+        print("Found %d sectors of %d (%d%%)" %
+              (good_sec, tot_sec, good_sec*100/tot_sec))
 
 
 def read_to_image(usb, args, image, decoder=None):
     """Reads a floppy disk and dumps it into a new image file.
     """
 
-    summary = [[],[]]
+    summary = dict()
 
     for t in args.tracks:
-        cyl, side = t.cyl, t.side
-        usb.seek(t.physical_cyl, side)
-        dat = read_with_retry(usb, args, cyl, side, decoder)
-        print("T%u.%u: %s" % (cyl, side, dat.summary_string()))
-        summary[side].append(dat)
-        image.emit_track(cyl, side, dat)
+        cyl, head = t.cyl, t.head
+        usb.seek(t.physical_cyl, head)
+        dat = read_with_retry(usb, args, cyl, head, decoder)
+        print("T%u.%u: %s" % (cyl, head, dat.summary_string()))
+        summary[cyl,head] = dat
+        image.emit_track(cyl, head, dat)
 
     if decoder is not None:
         print_summary(args, summary)
@@ -127,7 +137,7 @@ def main(argv):
     parser.add_argument("--format", help="disk format")
     parser.add_argument("--revs", type=int,
                         help="number of revolutions to read per track")
-    parser.add_argument("--tracks", type=util.trackset,
+    parser.add_argument("--tracks", type=util.TrackSet,
                         help="which tracks to read")
     parser.add_argument("--rate", type=int, help="data rate (kbit/s)")
     parser.add_argument("--rpm", type=int, help="convert drive speed to RPM")
@@ -143,7 +153,7 @@ def main(argv):
         image_class = util.get_image_class(args.file)
         if not args.format and hasattr(image_class, 'default_format'):
             args.format = image_class.default_format
-        decoder = None
+        decoder, def_tracks = None, None
         if args.format:
             try:
                 mod = importlib.import_module('greaseweazle.codec.'
@@ -151,13 +161,15 @@ def main(argv):
                 decoder = mod.decode_track
             except (ModuleNotFoundError, AttributeError) as ex:
                 raise error.Fatal("Unknown format '%s'" % args.format) from ex
-            if args.tracks is None:
-                args.tracks = util.trackset('c=0-81:s=0-1')
-                args.tracks.cyl = mod.default_cyls
+            def_tracks = util.TrackSet(mod.default_trackset)
             if args.revs is None: args.revs = mod.default_revs
-        if args.tracks is None:
-            args.tracks = util.trackset('c=0-81:s=0-1')
+        if def_tracks is None:
+            def_tracks = util.TrackSet('c=0-81:h=0-1')
         if args.revs is None: args.revs = 3
+        if args.tracks is not None:
+            def_tracks.update_from_trackspec(args.tracks.trackspec)
+        args.tracks = def_tracks
+        
         print("Reading %s revs=%d" % (args.tracks, args.revs))
         with open_image(args, image_class) as image:
             util.with_drive_selected(read_to_image, usb, args, image,

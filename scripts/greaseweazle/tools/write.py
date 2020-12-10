@@ -46,16 +46,16 @@ def write_from_image(usb, args, image):
 
     for t in args.tracks:
 
-        cyl, side = t.cyl, t.side
+        cyl, head = t.cyl, t.head
 
-        track = image.get_track(cyl, side)
+        track = image.get_track(cyl, head)
         if track is None and not args.erase_empty:
             continue
 
         print("\r%sing Track %u.%u..." %
-              ("Writ" if track is not None else "Eras", cyl, side),
+              ("Writ" if track is not None else "Eras", cyl, head),
               end="", flush=True)
-        usb.seek(t.physical_cyl, side)
+        usb.seek(t.physical_cyl, head)
             
         if track is None:
             usb.erase_track(drive_ticks * 1.1)
@@ -98,7 +98,7 @@ def write_from_image(usb, args, image):
                 break
             formatter.print(" Retry %d" % (retry + 1))
         formatter.erase()
-        error.check(verified, "Failed to write Track %u.%u" % (cyl, side))
+        error.check(verified, "Failed to write Track %u.%u" % (cyl, head))
 
     print()
     if not_verified_count == 0:
@@ -120,9 +120,8 @@ def main(argv):
     parser.add_argument("--device", help="greaseweazle device name")
     parser.add_argument("--drive", type=util.drive_letter, default='A',
                         help="drive to write (A,B,0,1,2)")
-    parser.add_argument("--tracks", type=util.trackset,
-                        default='c=0-81:s=0-1',
-                        help="which tracks to read")
+    parser.add_argument("--tracks", type=util.TrackSet,
+                        help="which tracks to write")
     parser.add_argument("--erase-empty", action="store_true",
                         help="erase empty tracks (default: skip)")
     parser.add_argument("--no-verify", action="store_true",
@@ -135,6 +134,10 @@ def main(argv):
     try:
         usb = util.usb_open(args.device)
         image = open_image(args)
+        tracks = util.TrackSet('c=0-81:h=0-1')
+        if args.tracks is not None:
+            tracks.update_from_trackspec(args.tracks.trackspec)
+        args.tracks = tracks
         print("Writing %s" % (args.tracks))
         util.with_drive_selected(write_from_image, usb, args, image)
     except USB.CmdError as error:

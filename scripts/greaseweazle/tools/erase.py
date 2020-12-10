@@ -23,9 +23,9 @@ def erase(usb, args):
     del flux
 
     for t in args.tracks:
-        cyl, side = t.cyl, t.side
-        print("\rErasing Track %u.%u..." % (cyl, side), end="")
-        usb.seek(t.physical_cyl, side)
+        cyl, head = t.cyl, t.head
+        print("\rErasing Track %u.%u..." % (cyl, head), end="")
+        usb.seek(t.physical_cyl, head)
         usb.erase_track(drive_ticks * 1.1)
 
     print()
@@ -37,15 +37,18 @@ def main(argv):
     parser.add_argument("--device", help="greaseweazle device name")
     parser.add_argument("--drive", type=util.drive_letter, default='A',
                         help="drive to write (A,B,0,1,2)")
-    parser.add_argument("--tracks", type=util.trackset,
-                        default='c=0-81:s=0-1',
-                        help="which tracks to read")
+    parser.add_argument("--tracks", type=util.TrackSet,
+                        help="which tracks to erase")
     parser.description = description
     parser.prog += ' ' + argv[1]
     args = parser.parse_args(argv[2:])
 
     try:
         usb = util.usb_open(args.device)
+        tracks = util.TrackSet('c=0-81:h=0-1')
+        if args.tracks is not None:
+            tracks.update_from_trackspec(args.tracks.trackspec)
+        args.tracks = tracks
         print("Erasing %s" % (args.tracks))
         util.with_drive_selected(erase, usb, args)
     except USB.CmdError as error:
