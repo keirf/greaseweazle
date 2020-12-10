@@ -118,10 +118,11 @@ class TrackSet:
                 self.heads = []
                 for h in range(len(heads)):
                     if heads[h]: self.heads.append(h)
-            elif k == 'h_off':
-                m = re.match('([01])([+-][\d])$', v)
+            elif re.match('h[01].off$', k):
+                h = int(re.match('h([01]).off$', k).group(1))
+                m = re.match('([+-][\d])$', v)
                 if m is None: raise ValueError()
-                self.h_off[int(m.group(1))] = int(m.group(2))
+                self.h_off[h] = int(m.group(1))
             elif k == 'step':
                 self.step = int(v)
                 if self.step <= 0: raise ValueError()
@@ -134,7 +135,7 @@ class TrackSet:
         for i in range(len(self.h_off)):
             x = self.h_off[i]
             if x != 0:
-                s += ':h_off=%d%s%d' % (i, '+' if x >= 0 else '', x)
+                s += ':h%d.off=%s%d' % (i, '+' if x >= 0 else '', x)
         if self.step != 1: s += ':step=%d' % self.step
         return s
 
