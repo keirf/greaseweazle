@@ -7,8 +7,8 @@ disk-analyse -e 2 b.adf a.adf
 rm -f b.adf
 
 # Write and verify ADF, Read ADF
-./gw --bt write --ecyl=2 a.adf
-./gw --bt read --revs=1 --ecyl=2 b.adf
+./gw --bt write --tracks="c=0-2" a.adf
+./gw --bt read --revs=1 --tracks="c=0-2" b.adf
 disk-analyse -e 2 b.adf c.adf
 diff a.adf c.adf
 md5sum a.adf c.adf
@@ -16,8 +16,8 @@ rm -f b.adf c.adf
 
 # Write SCP, Read SCP
 disk-analyse a.adf a.scp
-./gw --bt write --ecyl=2 a.scp
-./gw --bt read --revs=1 --ecyl=2 b.scp
+./gw --bt write --tracks="c=0-2" a.scp
+./gw --bt read --revs=1 --tracks="c=0-2" b.scp
 disk-analyse -e 2 b.scp b.adf
 diff a.adf b.adf
 md5sum a.adf b.adf
@@ -25,8 +25,8 @@ rm -f b.adf a.scp b.scp
 
 # Write IPF, Read HFE
 disk-analyse a.adf a.ipf
-./gw --bt write --ecyl=2 a.ipf
-./gw --bt read --revs=1 --ecyl=2 b.hfe
+./gw --bt write --tracks="c=0-2" a.ipf
+./gw --bt read --revs=1 --tracks="c=0-2" b.hfe
 disk-analyse -e 2 b.hfe b.adf
 diff a.adf b.adf
 md5sum a.adf b.adf
@@ -34,15 +34,15 @@ rm -f b.adf a.ipf b.hfe
 
 # Write HFE, Read HFE
 disk-analyse a.adf a.hfe
-./gw --bt write --ecyl=2 a.hfe
-./gw --bt read --revs=1 --ecyl=2 b.hfe
+./gw --bt write --tracks="c=0-2" a.hfe
+./gw --bt read --revs=1 --tracks="c=0-2" b.hfe
 disk-analyse -e 2 b.hfe b.adf
 diff a.adf b.adf
 md5sum a.adf b.adf
 
 # Read Kryoflux
 mkdir a
-./gw --bt read --revs=1 --ecyl=2 a/
+./gw --bt read --revs=1 --tracks="c=0-2" a/
 disk-analyse -e 2 a/ b.adf
 diff a.adf b.adf
 md5sum a.adf b.adf
