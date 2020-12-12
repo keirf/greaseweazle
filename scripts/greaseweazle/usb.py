@@ -394,21 +394,8 @@ class Unit:
         # Decode the flux list and read the index-times list.
         flux_list, index_list = self._decode_flux(dat)
 
-        # Clip the initial partial revolution.
-        to_index = index_list[0]
-        for i in range(len(flux_list)):
-            to_index -= flux_list[i]
-            if to_index < 0:
-                flux_list[i] = -to_index
-                flux_list = flux_list[i:]
-                break
-        if to_index >= 0:
-            # We ran out of flux.
-            flux_list = []
-        index_list = index_list[1:]
-
         # Success: Return the requested full index-to-index revolutions.
-        return Flux(index_list, flux_list, self.sample_freq)
+        return Flux(index_list, flux_list, self.sample_freq, index_cued=False)
 
 
     ## write_track:

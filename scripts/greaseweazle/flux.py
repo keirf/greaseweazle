@@ -10,11 +10,12 @@ from greaseweazle import error
 
 class Flux:
 
-    def __init__(self, index_list, flux_list, sample_freq):
+    def __init__(self, index_list, flux_list, sample_freq, index_cued=True):
         self.index_list = index_list
         self.list = flux_list
         self.sample_freq = sample_freq
         self.splice = 0
+        self.index_cued = index_cued
 
 
     def __str__(self):
@@ -31,6 +32,25 @@ class Flux:
     def summary_string(self):
         return ("Raw Flux (%u flux in %.2fms)"
                 % (len(self.list), sum(self.list)*1000/self.sample_freq))
+
+
+    def cue_at_index(self):
+
+        if self.index_cued:
+            return
+
+        # Clip the initial partial revolution.
+        to_index = self.index_list[0]
+        for i in range(len(self.list)):
+            to_index -= self.list[i]
+            if to_index < 0:
+                break
+        if to_index < 0:
+            self.list = [-to_index] + self.list[i+1:]
+        else: # we ran out of flux
+            self.list = []
+        self.index_list = self.index_list[1:]
+        self.index_cued = True
 
 
     def flux_for_writeout(self):
@@ -62,6 +82,7 @@ class Flux:
             flux_list.append(remain)
 
         return WriteoutFlux(to_index, flux_list, self.sample_freq,
+                            index_cued = True,
                             terminate_at_index = (self.splice == 0))
 
 
@@ -76,16 +97,26 @@ class Flux:
 
 
     @property
-    def mean_index_time(self):
+    def ticks_per_rev(self):
+        """Mean time between index pulses, in sample ticks"""
+        index_list = self.index_list
+        if not self.index_cued:
+            index_list = index_list[1:]
+        return sum(index_list) / len(index_list)
+
+
+    @property
+    def time_per_rev(self):
         """Mean time between index pulses, in seconds (float)"""
-        return sum(self.index_list) / (len(self.index_list) * self.sample_freq)
+        return self.ticks_per_rev / self.sample_freq
 
 
 class WriteoutFlux(Flux):
 
     def __init__(self, ticks_to_index, flux_list, sample_freq,
-                 terminate_at_index):
+                 index_cued, terminate_at_index):
         super().__init__([ticks_to_index], flux_list, sample_freq)
+        self.index_cued = index_cued
         self.terminate_at_index = terminate_at_index
 
 

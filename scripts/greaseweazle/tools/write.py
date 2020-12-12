@@ -38,9 +38,7 @@ def write_from_image(usb, args, image):
 
     # @drive_ticks is the time in Greaseweazle ticks between index pulses.
     # We will adjust the flux intervals per track to allow for this.
-    flux = usb.read_track(2)
-    drive_ticks = (flux.index_list[0] + flux.index_list[1]) / 2
-    del flux
+    drive_ticks = usb.read_track(2).ticks_per_rev
 
     verified_count, not_verified_count = 0, 0
 
@@ -80,7 +78,9 @@ def write_from_image(usb, args, image):
         formatter = Formatter()
         verified = False
         for retry in range(3):
-            usb.write_track(flux_list, flux.terminate_at_index)
+            usb.write_track(flux_list = flux_list,
+                            cue_at_index = flux.index_cued,
+                            terminate_at_index = flux.terminate_at_index)
             try:
                 no_verify = args.no_verify or track.verify is None
             except AttributeError: # track.verify undefined
@@ -91,7 +91,8 @@ def write_from_image(usb, args, image):
                 break
             v_revs = 1 if track.splice == 0 else 2
             v_flux = usb.read_track(v_revs)
-            v_flux.scale(flux.mean_index_time / v_flux.mean_index_time)
+            v_flux.cue_at_index()
+            v_flux.scale(flux.time_per_rev / v_flux.time_per_rev)
             verified = track.verify.verify_track(v_flux)
             if verified:
                 verified_count += 1

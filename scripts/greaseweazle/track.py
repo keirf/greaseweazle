@@ -143,6 +143,7 @@ class MasterTrack:
         # Package up the flux for return.
         flux = WriteoutFlux(ticks_to_index, flux_list,
                             ticks_to_index / self.time_per_rev,
+                            index_cued = True,
                             terminate_at_index = splice_at_index)
         return flux
 

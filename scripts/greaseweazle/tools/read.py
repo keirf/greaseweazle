@@ -58,6 +58,7 @@ def normalise_rpm(flux, rpm):
 
 def read_and_normalise(usb, args, revs):
     flux = usb.read_track(revs)
+    flux.cue_at_index()
     if args.rpm is not None:
         flux = normalise_rpm(flux, args.rpm)
     return flux

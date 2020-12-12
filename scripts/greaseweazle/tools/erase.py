@@ -18,9 +18,7 @@ def erase(usb, args):
 
     # @drive_ticks is the time in Greaseweazle ticks between index pulses.
     # We will adjust the flux intervals per track to allow for this.
-    flux = usb.read_track(2)
-    drive_ticks = (flux.index_list[0] + flux.index_list[1]) / 2
-    del flux
+    drive_ticks = usb.read_track(2).ticks_per_rev
 
     for t in args.tracks:
         cyl, head = t.cyl, t.head
