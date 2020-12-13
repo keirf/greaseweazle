@@ -39,6 +39,7 @@ class SCP(Image):
         self.opts = SCPOpts()
         self.nr_revs = None
         self.to_track = dict()
+        self.index_cued = True
 
     
     def side_count(self):
@@ -175,6 +176,8 @@ class SCP(Image):
         """
 
         flux = track.flux()
+        if not flux.index_cued:
+            self.index_cued = False
 
         nr_revs = len(flux.index_list)
         if not self.nr_revs:
@@ -275,12 +278,15 @@ class SCP(Image):
             csum += x
 
         # Generate the image header.
+        flags = 2 # 96TPI
+        if self.index_cued:
+            flags |= 1 # Index-Cued
         header = struct.pack("<3s9BI",
                              b"SCP",    # Signature
                              0,         # Version
                              0x80,      # DiskType = Other
                              self.nr_revs, 0, ntracks-1,
-                             0x03,      # Flags = Index, 96TPI
+                             flags,
                              0,         # 16-bit cell width
                              single_sided,
                              0,         # 25ns capture

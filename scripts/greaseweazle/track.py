@@ -48,10 +48,10 @@ class MasterTrack:
         #s += str(binascii.hexlify(self.bits.tobytes()))
         return s
 
-    def flux_for_writeout(self):
-        return self.flux(for_writeout=True)
+    def flux_for_writeout(self, cue_at_index=True):
+        return self.flux(for_writeout=True, cue_at_index=cue_at_index)
 
-    def flux(self, for_writeout=False):
+    def flux(self, for_writeout=False, cue_at_index=True):
 
         # We're going to mess with the track data, so take a copy.
         bits = self.bits.copy()
@@ -91,19 +91,32 @@ class MasterTrack:
             # Similarly modify the last bit of the weak region.
             bits[e-1] = not(bits[e-2] or bits[e])
 
-        # Rotate data to start at the index (writes are always aligned there).
-        index = -self.splice % bitlen
-        if index != 0:
-            bits = bits[index:] + bits[:index]
-            bit_ticks = bit_ticks[index:] + bit_ticks[:index]
-        splice_at_index = index < 4 or bitlen - index < 4
+        if cue_at_index:
+            # Rotate data to start at the index.
+            index = -self.splice % bitlen
+            if index != 0:
+                bits = bits[index:] + bits[:index]
+                bit_ticks = bit_ticks[index:] + bit_ticks[:index]
+            splice_at_index = index < 4 or bitlen - index < 4
+        else:
+            splice_at_index = False
 
         if not for_writeout:
             # Do not extend the track for reliable writeout to disk.
             pass
+        elif not cue_at_index:
+            # We write the track wherever it may fall (uncued).
+            # We stretch the track with extra header gap bytes, in case the
+            # drive spins slow and we need more length to create an overlap.
+            # Thus if the drive spins slow, the track gets a longer header.
+            pos = 4
+            # We stretch by 10 percent, which is way more than enough.
+            rep = bitlen // (10 * 32)
+            bit_ticks = bit_ticks[pos:pos+32] * rep + bit_ticks[pos:]
+            bits = bits[pos:pos+32] * rep + bits[pos:]
         elif splice_at_index:
             # Splice is at the index (or within a few bitcells of it).
-            # We stretch the track with extra bytes of filler, in case the
+            # We stretch the track with extra footer gap bytes, in case the
             # drive motor spins slower than expected and we need more filler
             # to get us to the index pulse (where the write will terminate).
             # Thus if the drive spins slow, the track gets a longer footer.
@@ -143,7 +156,7 @@ class MasterTrack:
         # Package up the flux for return.
         flux = WriteoutFlux(ticks_to_index, flux_list,
                             ticks_to_index / self.time_per_rev,
-                            index_cued = True,
+                            index_cued = cue_at_index,
                             terminate_at_index = splice_at_index)
         return flux
 
@@ -151,7 +164,7 @@ class MasterTrack:
 # Track data generated from flux.
 class RawTrack:
 
-    def __init__(self, clock = 2e-6, data = None):
+    def __init__(self, clock, data):
         self.clock = clock
         self.clock_max_adj = 0.10
         self.pll_period_adj = 0.05
@@ -159,16 +172,18 @@ class RawTrack:
         self.bitarray = bitarray(endian='big')
         self.timearray = []
         self.revolutions = []
-        if data is not None:
-            self.append_revolutions(data)
+        self.import_flux_data(data)
 
 
     def __str__(self):
         s = "\nRaw Track: %d revolutions\n" % len(self.revolutions)
         for rev in range(len(self.revolutions)):
             b, _ = self.get_revolution(rev)
-            s += "Revolution %u: " % rev
+            s += "Revolution %u (%u bits): " % (rev, len(b))
             s += str(binascii.hexlify(b.tobytes())) + "\n"
+        b = self.bitarray[sum(self.revolutions):]
+        s += "Tail (%u bits): " % (len(b))
+        s += str(binascii.hexlify(b.tobytes())) + "\n"
         return s[:-1]
 
 
@@ -178,7 +193,11 @@ class RawTrack:
         return self.bitarray[start:end], self.timearray[start:end]
 
 
-    def append_revolutions(self, data):
+    def get_all_data(self):
+        return self.bitarray, self.timearray
+
+
+    def import_flux_data(self, data):
 
         flux = data.flux()
         freq = flux.sample_freq
@@ -188,14 +207,16 @@ class RawTrack:
         clock_max = self.clock * (1 + self.clock_max_adj)
         ticks = 0.0
 
-        index_iter = iter(map(lambda x: x/freq, flux.index_list))
+        index_iter = it.chain(iter(map(lambda x: x/freq, flux.index_list)),
+                              [float('inf')])
 
         bits, times = bitarray(endian='big'), []
         to_index = next(index_iter)
 
         # Make sure there's enough time in the flux list to cover all
         # revolutions by appending a "large enough" final flux value.
-        for x in it.chain(flux.list, [sum(flux.index_list)]):
+        tail = max(0, sum(flux.index_list) - sum(flux.list) + clock*freq*2)
+        for x in it.chain(flux.list, [tail]):
 
             # Gather enough ticks to generate at least one bitcell.
             ticks += x / freq
@@ -213,10 +234,7 @@ class RawTrack:
                     self.timearray += times
                     self.revolutions.append(len(times))
                     assert len(times) == len(bits)
-                    try:
-                        to_index += next(index_iter)
-                    except StopIteration:
-                        return
+                    to_index += next(index_iter)
                     bits, times = bitarray(endian='big'), []
 
                 ticks -= clock
@@ -242,9 +260,9 @@ class RawTrack:
             times[-1] += ticks - new_ticks
             ticks = new_ticks
 
-        # We can't get here: We should run out of indexes before we run
-        # out of flux.
-        assert False
+        # Append trailing bits.
+        self.bitarray += bits
+        self.timearray += times
 
 
 # Local variables:

@@ -36,9 +36,10 @@ class Formatter:
 # Writes the specified image file to floppy disk.
 def write_from_image(usb, args, image):
 
-    # @drive_ticks is the time in Greaseweazle ticks between index pulses.
+    # Measure drive RPM.
     # We will adjust the flux intervals per track to allow for this.
-    drive_ticks = usb.read_track(2).ticks_per_rev
+    drive = usb.read_track(2)
+    del drive.list
 
     verified_count, not_verified_count = 0, 0
 
@@ -54,16 +55,16 @@ def write_from_image(usb, args, image):
               ("Writ" if track is not None else "Eras", cyl, head),
               end="", flush=True)
         usb.seek(t.physical_cyl, head)
-            
+
         if track is None:
-            usb.erase_track(drive_ticks * 1.1)
+            usb.erase_track(drive.ticks_per_rev * 1.1)
             continue
 
         flux = track.flux_for_writeout()
-            
+
         # @factor adjusts flux times for speed variations between the
         # read-in and write-out drives.
-        factor = drive_ticks / flux.index_list[0]
+        factor = drive.ticks_per_rev / flux.index_list[0]
 
         # Convert the flux samples to Greaseweazle sample frequency.
         rem = 0.0
@@ -89,10 +90,12 @@ def write_from_image(usb, args, image):
                 not_verified_count += 1
                 verified = True
                 break
-            v_revs = 1 if track.splice == 0 else 2
-            v_flux = usb.read_track(v_revs)
-            v_flux.cue_at_index()
-            v_flux.scale(flux.time_per_rev / v_flux.time_per_rev)
+            v_revs, v_ticks = track.verify_revs, 0
+            if isinstance(v_revs, float):
+                v_ticks = int(drive.ticks_per_rev * v_revs)
+                v_revs = 2
+            v_flux = usb.read_track(revs = v_revs, ticks = v_ticks)
+            v_flux.scale(flux.time_per_rev / drive.time_per_rev)
             verified = track.verify.verify_track(v_flux)
             if verified:
                 verified_count += 1

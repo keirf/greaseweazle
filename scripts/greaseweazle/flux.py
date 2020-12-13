@@ -133,6 +133,13 @@ class WriteoutFlux(Flux):
     def flux_for_writeout(self):
         return self
  
+
+    @property
+    def ticks_per_rev(self):
+        """Mean time between index pulses, in sample ticks"""
+        return sum(self.index_list) / len(self.index_list)
+
+
 # Local variables:
 # python-indent: 4
 # End:

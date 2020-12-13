@@ -69,7 +69,9 @@ class HFE(Image):
 
 
     def emit_track(self, cyl, side, track):
-        raw = RawTrack(clock = 5e-4 / self.bitrate, data = track)
+        flux = track.flux()
+        flux.cue_at_index()
+        raw = RawTrack(clock = 5e-4 / self.bitrate, data = flux)
         bits, _ = raw.get_revolution(0)
         bits.bytereverse()
         self.to_track[cyl,side] = (len(bits), bits.tobytes())

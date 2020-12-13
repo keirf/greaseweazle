@@ -12,7 +12,7 @@ from bitarray import bitarray
 from greaseweazle.track import MasterTrack, RawTrack
 
 default_trackset = 'c=0-79:h=0-1'
-default_revs = 2
+default_revs = 1.1
 
 sync_bytes = b'\x44\x89\x44\x89'
 sync = bitarray(endian='big')
@@ -60,18 +60,17 @@ class AmigaDOS:
         for sec in self.map:
             self.sector[sec] = bytes(16), tdat[sec*512:(sec+1)*512]
 
-    def flux_for_writeout(self):
-        return self.raw_track().flux_for_writeout()
+    def flux_for_writeout(self, *args, **kwargs):
+        return self.raw_track().flux_for_writeout(args, kwargs)
 
-    def flux(self):
-        return self.raw_track().flux()
+    def flux(self, *args, **kwargs):
+        return self.raw_track().flux(args, kwargs)
 
 
     def decode_raw(self, track):
         raw = RawTrack(clock = 2e-6, data = track)
-        bits, times = raw.bitarray, raw.timearray
+        bits, _ = raw.get_all_data()
 
-        sectors = bits.search(sync)
         for offs in bits.itersearch(sync):
 
             if self.nr_missing() == 0:
@@ -132,6 +131,7 @@ class AmigaDOS:
             bits = mfm_encode(t),
             time_per_rev = 0.2)
         track.verify = self
+        track.verify_revs = default_revs
         return track
 
 

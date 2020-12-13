@@ -29,43 +29,15 @@ def open_image(args, image_class):
     return image
 
 
-def normalise_rpm(flux, rpm):
-    """Adjust all revolutions in Flux object to have specified rotation speed.
-    """
-
-    index_list, freq = flux.index_list, flux.sample_freq
-    
-    norm_to_index = 60/rpm * flux.sample_freq
-    norm_flux = []
-
-    to_index, index_list = index_list[0], index_list[1:]
-    factor = norm_to_index / to_index
-    
-    for x in flux.list:
-        to_index -= x
-        if to_index >= 0:
-            norm_flux.append(x*factor)
-            continue
-        if not index_list:
-            break
-        n_to_index, index_list = index_list[0], index_list[1:]
-        n_factor = norm_to_index / n_to_index
-        norm_flux.append((x+to_index)*factor - to_index*n_factor)
-        to_index, factor = n_to_index, n_factor
-
-    return Flux([norm_to_index]*len(flux.index_list), norm_flux, freq)
-
-
-def read_and_normalise(usb, args, revs):
-    flux = usb.read_track(revs)
-    flux.cue_at_index()
+def read_and_normalise(usb, args, revs, ticks=0):
+    flux = usb.read_track(revs=revs, ticks=ticks)
     if args.rpm is not None:
-        flux = normalise_rpm(flux, args.rpm)
+        flux.scale((60/args.rpm) / flux.time_per_rev)
     return flux
 
 
 def read_with_retry(usb, args, cyl, head, decoder):
-    flux = read_and_normalise(usb, args, args.revs)
+    flux = read_and_normalise(usb, args, args.revs, args.ticks)
     if decoder is None:
         return flux
     dat = decoder(cyl, head, flux)
@@ -114,6 +86,13 @@ def print_summary(args, summary):
 def read_to_image(usb, args, image, decoder=None):
     """Reads a floppy disk and dumps it into a new image file.
     """
+
+    args.ticks = 0
+    if isinstance(args.revs, float):
+        # Measure drive RPM.
+        # We will adjust the flux intervals per track to allow for this.
+        args.ticks = int(usb.read_track(2).ticks_per_rev * args.revs)
+        args.revs = 2
 
     summary = dict()
 
@@ -171,7 +150,7 @@ def main(argv):
             def_tracks.update_from_trackspec(args.tracks.trackspec)
         args.tracks = def_tracks
         
-        print("Reading %s revs=%d" % (args.tracks, args.revs))
+        print(("Reading %s revs=" % args.tracks) + str(args.revs))
         with open_image(args, image_class) as image:
             util.with_drive_selected(read_to_image, usb, args, image,
                                      decoder=decoder)
