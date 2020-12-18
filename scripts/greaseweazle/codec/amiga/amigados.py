@@ -139,7 +139,8 @@ class AmigaDOS:
         cyl = self.tracknr // 2
         head = self.tracknr & 1
         readback_track = decode_track(cyl, head, flux)
-        return readback_track.nr_missing() == 0
+        return (readback_track.nr_missing() == 0
+                and self.sector == readback_track.sector)
 
 
 def mfm_encode(dat):
