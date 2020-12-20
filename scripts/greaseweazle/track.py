@@ -9,6 +9,7 @@ import binascii
 import itertools as it
 from bitarray import bitarray
 from greaseweazle.flux import WriteoutFlux
+from greaseweazle import optimised
 
 # A pristine representation of a track, from a codec and/or a perfect image.
 class MasterTrack:
@@ -205,65 +206,80 @@ class RawTrack:
         clock = self.clock
         clock_min = self.clock * (1 - self.clock_max_adj)
         clock_max = self.clock * (1 + self.clock_max_adj)
-        ticks = 0.0
 
         index_iter = it.chain(iter(map(lambda x: x/freq, flux.index_list)),
                               [float('inf')])
 
-        bits, times = bitarray(endian='big'), []
-        to_index = next(index_iter)
-
         # Make sure there's enough time in the flux list to cover all
         # revolutions by appending a "large enough" final flux value.
         tail = max(0, sum(flux.index_list) - sum(flux.list) + clock*freq*2)
-        for x in it.chain(flux.list, [tail]):
+        flux_iter = it.chain(flux.list, [tail])
 
-            # Gather enough ticks to generate at least one bitcell.
-            ticks += x / freq
-            if ticks < clock/2:
-                continue
+        try:
+            optimised.flux_to_bitcells(
+                self.bitarray, self.timearray, self.revolutions,
+                index_iter, flux_iter,
+                freq, clock, clock_min, clock_max,
+                self.pll_period_adj, self.pll_phase_adj)
+        except AttributeError:
+            flux_to_bitcells(
+                self.bitarray, self.timearray, self.revolutions,
+                index_iter, flux_iter,
+                freq, clock, clock_min, clock_max,
+                self.pll_period_adj, self.pll_phase_adj)
 
-            # Clock out zero or more 0s, followed by a 1.
-            zeros = 0
-            while True:
+            
+def flux_to_bitcells(bit_array, time_array, revolutions,
+                     index_iter, flux_iter,
+                     freq, clock_centre, clock_min, clock_max,
+                     pll_period_adj, pll_phase_adj):
 
-                # Check if we cross the index mark.
-                to_index -= clock
-                if to_index < 0:
-                    self.bitarray += bits
-                    self.timearray += times
-                    self.revolutions.append(len(times))
-                    assert len(times) == len(bits)
-                    to_index += next(index_iter)
-                    bits, times = bitarray(endian='big'), []
+    nbits = 0
+    ticks = 0.0
+    clock = clock_centre
+    to_index = next(index_iter)
 
-                ticks -= clock
-                times.append(clock)
-                if ticks >= clock/2:
-                    zeros += 1
-                    bits.append(False)
-                else:
-                    bits.append(True)
-                    break
+    for x in flux_iter:
 
-            # PLL: Adjust clock frequency according to phase mismatch.
-            if zeros <= 3:
-                # In sync: adjust clock by a fraction of the phase mismatch.
-                clock += ticks * self.pll_period_adj
+        # Gather enough ticks to generate at least one bitcell.
+        ticks += x / freq
+        if ticks < clock/2:
+            continue
+
+        # Clock out zero or more 0s, followed by a 1.
+        zeros = 0
+        while True:
+
+            # Check if we cross the index mark.
+            to_index -= clock
+            if to_index < 0:
+                revolutions.append(nbits)
+                nbits = 0
+                to_index += next(index_iter)
+
+            nbits += 1
+            ticks -= clock
+            time_array.append(clock)
+            if ticks >= clock/2:
+                zeros += 1
+                bit_array.append(False)
             else:
-                # Out of sync: adjust clock towards centre.
-                clock += (self.clock - clock) * self.pll_period_adj
-            # Clamp the clock's adjustment range.
-            clock = min(max(clock, clock_min), clock_max)
-            # PLL: Adjust clock phase according to mismatch.
-            new_ticks = ticks * (1 - self.pll_phase_adj)
-            times[-1] += ticks - new_ticks
-            ticks = new_ticks
+                bit_array.append(True)
+                break
 
-        # Append trailing bits.
-        self.bitarray += bits
-        self.timearray += times
-
+        # PLL: Adjust clock frequency according to phase mismatch.
+        if zeros <= 3:
+            # In sync: adjust clock by a fraction of the phase mismatch.
+            clock += ticks * pll_period_adj
+        else:
+            # Out of sync: adjust clock towards centre.
+            clock += (clock_centre - clock) * pll_period_adj
+        # Clamp the clock's adjustment range.
+        clock = min(max(clock, clock_min), clock_max)
+        # PLL: Adjust clock phase according to mismatch.
+        new_ticks = ticks * (1 - pll_phase_adj)
+        time_array[-1] += ticks - new_ticks
+        ticks = new_ticks
 
 # Local variables:
 # python-indent: 4

@@ -2,7 +2,7 @@
 export FW_MAJOR := 0
 export FW_MINOR := 23
 
-TARGETS := all blinky clean dist windist mrproper ocd flash start serial
+TARGETS := all blinky clean dist windist mrproper ocd flash start serial pysetup
 .PHONY: $(TARGETS)
 
 ifneq ($(RULES_MK),y)
@@ -33,6 +33,7 @@ blinky:
 		Blinky.elf Blinky.bin Blinky.hex
 
 clean::
+	rm -rf scripts/greaseweazle/optimised/optimised* scripts/c_ext/build
 	rm -f *.hex *.upd scripts/greaseweazle/*.pyc
 	rm -f scripts/greaseweazle/version.py
 	find . -name __pycache__ | xargs rm -rf
@@ -52,8 +53,10 @@ dist:
 	cp -a README.md $(PROJ)-$(VER)/
 	cp -a gw $(PROJ)-$(VER)/
 	cp -a scripts/49-greaseweazle.rules $(PROJ)-$(VER)/scripts/
+	cp -a scripts/setup.sh $(PROJ)-$(VER)/scripts/
 	cp -a scripts/gw.py $(PROJ)-$(VER)/scripts/
 	cp -a scripts/greaseweazle $(PROJ)-$(VER)/scripts
+	cp -a scripts/c_ext $(PROJ)-$(VER)/scripts
 	cp -a scripts/misc/*.py $(PROJ)-$(VER)/scripts/misc/
 	cp -a RELEASE_NOTES $(PROJ)-$(VER)/
 	$(MAKE) clean
@@ -64,12 +67,13 @@ dist:
 	$(MAKE) clean
 	$(ZIP) $(PROJ)-$(VER).zip $(PROJ)-$(VER)
 
-windist:
+windist: pysetup
 	rm -rf $(PROJ)-$(VER) ipf ipf.zip
 	[ -e $(PROJ)-$(VER).zip ] || \
 	curl -L https://github.com/keirf/Greaseweazle/releases/download/$(VER)/$(PROJ)-$(VER).zip --output $(PROJ)-$(VER).zip
 	$(UNZIP) $(PROJ)-$(VER).zip
 	cp -a scripts/setup.py $(PROJ)-$(VER)/scripts
+	cp -a scripts/greaseweazle/optimised/optimised* $(PROJ)-$(VER)/scripts/greaseweazle/optimised
 	cd $(PROJ)-$(VER)/scripts && $(PYTHON) setup.py build
 	cp -a $(PROJ)-$(VER)/scripts/build/exe.win*/* $(PROJ)-$(VER)/
 	cp -a $(PROJ)-$(VER)/lib/bitarray/VCRUNTIME140.DLL $(PROJ)-$(VER)/
@@ -86,6 +90,9 @@ mrproper: clean
 scripts/greaseweazle/version.py: Makefile
 	echo "major = $(FW_MAJOR)" >$@
 	echo "minor = $(FW_MINOR)" >>$@
+
+pysetup:
+	PYTHON=$(PYTHON) . ./scripts/setup.sh
 
 BAUD=115200
 DEV=/dev/ttyUSB0

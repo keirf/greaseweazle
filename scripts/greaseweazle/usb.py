@@ -10,6 +10,7 @@ import itertools as it
 from greaseweazle import version
 from greaseweazle import error
 from greaseweazle.flux import Flux
+from greaseweazle import optimised
 
 ## Control-Path command set
 class ControlCmd:
@@ -391,8 +392,11 @@ class Unit:
                 # Success!
                 break
 
-        # Decode the flux list and read the index-times list.
-        flux_list, index_list = self._decode_flux(dat)
+        try:
+            # Decode the flux list and read the index-times list.
+            flux_list, index_list = optimised.decode_flux(dat)
+        except AttributeError:
+            flux_list, index_list = self._decode_flux(dat)
 
         # Success: Return the requested full index-to-index revolutions.
         return Flux(index_list, flux_list, self.sample_freq, index_cued=False)
