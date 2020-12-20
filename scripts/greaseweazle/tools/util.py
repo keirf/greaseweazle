@@ -161,6 +161,8 @@ def get_image_class(name):
     image_types = { '.adf': 'ADF',
                     '.scp': 'SCP',
                     '.hfe': 'HFE',
+                    '.ima': 'IMG',
+                    '.img': 'IMG',
                     '.ipf': 'IPF',
                     '.raw': 'KryoFlux' }
     if os.path.isdir(name):
