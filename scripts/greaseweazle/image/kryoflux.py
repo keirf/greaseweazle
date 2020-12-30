@@ -184,11 +184,11 @@ class KryoFlux(Image):
 
         flux = track.flux()
         factor = sck / flux.sample_freq
-
-        # Start the data stream with a dummy index because our Flux objects
-        # are cued to index.
         dat = bytearray()
-        dat += struct.pack('<2BH3I', Op.OOB, OOB.Index, 12, 0, 0, 0)
+
+        # Start the data stream with a dummy index if our Flux is index cued.
+        if flux.index_cued:
+            dat += struct.pack('<2BH3I', Op.OOB, OOB.Index, 12, 0, 0, 0)
 
         # Prefix-sum list of resampled index timings.
         index = list(it.accumulate(map(lambda x: x*factor, flux.index_list)))
