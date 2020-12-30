@@ -267,11 +267,12 @@ class IBM_MFM_Formatted(IBM_MFM):
             pos += self.gap_presync
             idam = IDAM(pos*16, (pos+10)*16, 0xffff,
                         c=cyl, h=head, r=self.id0+i, n = self.sz)
-            pos += 10 + self.gap_2
+            pos += 10 + self.gap_2 + self.gap_presync
             size = 128 << self.sz
             dam = DAM(pos*16, (pos+4+size+2)*16, 0xffff,
                       mark=self.DAM, data=bytes(size))
             self.sectors.append(Sector(idam, dam))
+            pos += 4 + size + 2 + self.gap_3
 
     def decode_raw(self, track):
         iams, sectors = self.iams, self.sectors
