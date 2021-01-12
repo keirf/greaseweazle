@@ -21,7 +21,8 @@ model_id = { 1: { 0: 'F1' },
                   2: 'F7 Lightning',
                   3: 'F7 (version 2)',
                   4: 'F7 Plus (Ant Goffart, version 2)',
-                  5: 'F7 Lightning Plus' } }
+                  5: 'F7 Lightning Plus',
+                  6: 'F7 Slim' } }
 
 speed_id = { 0: 'Full Speed (12 Mbit/s)',
              1: 'High Speed (480 Mbit/s)' }

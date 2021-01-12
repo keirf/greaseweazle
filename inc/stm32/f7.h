@@ -95,9 +95,10 @@ enum {
     F7SM_basic_v2,
     F7SM_ant_goffart_f7_plus_v2,
     F7SM_lightning_plus,
+    F7SM_slim,
 };
 
-struct user_pin {
+struct pin_mapping {
     uint8_t pin_id;
     uint8_t gpio_bank;
     uint8_t gpio_pin;
@@ -108,13 +109,16 @@ struct board_config {
     uint8_t hse_mhz;
     bool_t hse_byp;
     bool_t hs_usb;
-    const struct user_pin *user_pins;
+    const struct pin_mapping *user_pins;
+    const struct pin_mapping *msel_pins;
 };
 
 extern const struct board_config *board_config;
 void identify_board_config(void);
 
 GPIO gpio_from_id(uint8_t id);
+uint8_t write_mapped_pin(
+    const struct pin_mapping *map, int pin_id, bool_t level);
 
 void early_fatal(int blinks) __attribute__((noreturn));
 #define early_delay_ms(ms) (delay_ticks((ms)*2000))

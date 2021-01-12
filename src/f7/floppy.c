@@ -29,14 +29,6 @@ static unsigned int AFO_bus;
 #define pin_wrprot  1 /* PA1 */
 
 /* Output pins. */
-#define gpio_pin10 gpiob
-#define pin_pin10  1  /* PB1 */
-#define gpio_pin12 gpiob
-#define pin_pin12  0  /* PB0 */
-#define gpio_pin14 gpiob
-#define pin_pin14  11 /* PB11 */
-#define gpio_pin16 gpiob
-#define pin_pin16  10 /* PB10 */
 #define gpio_dir   gpioc
 #define pin_dir    4  /* PC4 */
 #define gpio_step  gpioa
@@ -69,7 +61,8 @@ static uint8_t u_buf[U_BUF_SZ] aligned(4) section_ext_ram;
 
 static void floppy_mcu_init(void)
 {
-    const struct user_pin *upin;
+    const struct pin_mapping *mpin;
+    const struct pin_mapping *upin;
 
     /* Enable clock for Timer 2. */
     rcc->apb1enr |= RCC_APB1ENR_TIM2EN;
@@ -91,10 +84,10 @@ static void floppy_mcu_init(void)
     AFO_bus = upin->push_pull ? AFO_bus_pp : AFO_bus_od;
 
     /* Configure SELECT/MOTOR lines. */
-    configure_pin(pin10, GPO_bus);
-    configure_pin(pin12, GPO_bus);
-    configure_pin(pin14, GPO_bus);
-    configure_pin(pin16, GPO_bus);
+    for (mpin = board_config->msel_pins; mpin->pin_id != 0; mpin++) {
+        gpio_configure_pin(gpio_from_id(mpin->gpio_bank), mpin->gpio_pin,
+                           GPO_bus);
+    }
 
     /* Set up EXTI mapping for INDEX: PB[3:0] -> EXT[3:0] */
     syscfg->exticr1 = 0x1111;
@@ -163,30 +156,39 @@ static void dma_wdata_start(void)
 
 static void drive_deselect(void)
 {
+    int pin = -1;
+    uint8_t rc;
+
     if (unit_nr == -1)
         return;
 
     switch (bus_type) {
     case BUS_IBMPC:
         switch (unit_nr) {
-        case 0: write_pin(pin14, FALSE); break;
-        case 1: write_pin(pin12, FALSE); break;
+        case 0: pin = 14; break;
+        case 1: pin = 12; break;
         }
         break;
     case BUS_SHUGART:
         switch (unit_nr) {
-        case 0: write_pin(pin10, FALSE); break;
-        case 1: write_pin(pin12, FALSE); break;
-        case 2: write_pin(pin14, FALSE); break;
+        case 0: pin = 10; break;
+        case 1: pin = 12; break;
+        case 2: pin = 14; break;
         }
         break;
     }
+
+    rc = write_mapped_pin(board_config->msel_pins, pin, O_FALSE);
+    ASSERT(rc == ACK_OKAY);
 
     unit_nr = -1;
 }
 
 static uint8_t drive_select(uint8_t nr)
 {
+    int pin = -1;
+    uint8_t rc;
+
     if (nr == unit_nr)
         return ACK_OKAY;
 
@@ -195,22 +197,26 @@ static uint8_t drive_select(uint8_t nr)
     switch (bus_type) {
     case BUS_IBMPC:
         switch (nr) {
-        case 0: write_pin(pin14, TRUE); break;
-        case 1: write_pin(pin12, TRUE); break;
+        case 0: pin = 14; break;
+        case 1: pin = 12; break;
         default: return ACK_BAD_UNIT;
         }
         break;
     case BUS_SHUGART:
         switch (nr) {
-        case 0: write_pin(pin10, TRUE); break;
-        case 1: write_pin(pin12, TRUE); break;
-        case 2: write_pin(pin14, TRUE); break;
+        case 0: pin = 10; break;
+        case 1: pin = 12; break;
+        case 2: pin = 14; break;
         default: return ACK_BAD_UNIT;
         }
         break;
     default:
         return ACK_NO_BUS;
     }
+
+    rc = write_mapped_pin(board_config->msel_pins, pin, O_TRUE);
+    if (rc != ACK_OKAY)
+        return ACK_BAD_UNIT;
 
     unit_nr = nr;
     delay_us(delay_params.select_delay);
@@ -220,6 +226,9 @@ static uint8_t drive_select(uint8_t nr)
 
 static uint8_t drive_motor(uint8_t nr, bool_t on)
 {
+    int pin = -1;
+    uint8_t rc;
+
     switch (bus_type) {
     case BUS_IBMPC:
         if (nr >= 2) 
@@ -227,8 +236,8 @@ static uint8_t drive_motor(uint8_t nr, bool_t on)
         if (unit[nr].motor == on)
             return ACK_OKAY;
         switch (nr) {
-        case 0: write_pin(pin10, on); break;
-        case 1: write_pin(pin16, on); break;
+        case 0: pin = 10; break;
+        case 1: pin = 16; break;
         }
         break;
     case BUS_SHUGART:
@@ -238,11 +247,15 @@ static uint8_t drive_motor(uint8_t nr, bool_t on)
         nr = 0;
         if (unit[nr].motor == on)
             return ACK_OKAY;
-        write_pin(pin16, on);
+        pin = 16;
         break;
     default:
         return ACK_NO_BUS;
     }
+
+    rc = write_mapped_pin(board_config->msel_pins, pin, on ? O_TRUE : O_FALSE);
+    if (rc != ACK_OKAY)
+        return ACK_BAD_UNIT;
 
     unit[nr].motor = on;
     if (on)
@@ -254,15 +267,15 @@ static uint8_t drive_motor(uint8_t nr, bool_t on)
 
 static void reset_bus(void)
 {
-    write_pin(pin10, FALSE);
-    write_pin(pin12, FALSE);
-    write_pin(pin14, FALSE);
-    write_pin(pin16, FALSE);
+    const struct pin_mapping *mpin;
+
+    for (mpin = board_config->msel_pins; mpin->pin_id != 0; mpin++)
+        gpio_write_pin(gpio_from_id(mpin->gpio_bank), mpin->gpio_pin, O_FALSE);
 }
 
 static uint8_t set_user_pin(unsigned int pin, unsigned int level)
 {
-    const struct user_pin *upin;
+    const struct pin_mapping *upin;
 
     for (upin = board_config->user_pins; upin->pin_id != 0; upin++) {
         if (upin->pin_id == pin)
@@ -277,7 +290,7 @@ found:
 
 static void reset_user_pins(void)
 {
-    const struct user_pin *upin;
+    const struct pin_mapping *upin;
 
     for (upin = board_config->user_pins; upin->pin_id != 0; upin++)
         gpio_write_pin(gpio_from_id(upin->gpio_bank), upin->gpio_pin, O_FALSE);
