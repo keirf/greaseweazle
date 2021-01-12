@@ -12,7 +12,7 @@ description = "Write a disk from the specified image file."
 import sys
 
 from greaseweazle.tools import util
-from greaseweazle import error
+from greaseweazle import error, track
 from greaseweazle import usb as USB
 
 # Read and parse the image file.
@@ -60,6 +60,8 @@ def write_from_image(usb, args, image):
             usb.erase_track(drive.ticks_per_rev * 1.1)
             continue
 
+        if args.precomp is not None:
+            track.precomp = args.precomp.track_precomp(cyl)
         flux = track.flux_for_writeout()
 
         # @factor adjusts flux times for speed variations between the
@@ -118,6 +120,37 @@ def write_from_image(usb, args, image):
         print(s)
 
 
+class PrecompSpec:
+    def __str__(self):
+        s = "Precomp %s" % track.Precomp.TYPESTRING[self.type]
+        for e in self.list:
+            s += ", %d-:%dns" % e
+        return s
+
+    def track_precomp(self, cyl):
+        for c,s in reversed(self.list):
+            if cyl >= c:
+                return track.Precomp(self.type, s)
+        return None
+
+    def importspec(self, spec):
+        self.list = []
+        self.type = track.Precomp.MFM
+        for x in spec.split(':'):
+            k,v = x.split('=')
+            if k == 'type':
+                self.type = track.Precomp.TYPESTRING.index(v.upper())
+            else:
+                self.list.append((int(k), int(v)))
+        self.list.sort()
+
+    def __init__(self, spec):
+        try:
+            self.importspec(spec)
+        except:
+            raise ValueError
+        
+
 def main(argv):
 
     parser = util.ArgumentParser(usage='%(prog)s [options] file')
@@ -130,6 +163,8 @@ def main(argv):
                         help="erase empty tracks (default: skip)")
     parser.add_argument("--no-verify", action="store_true",
                         help="disable verify")
+    parser.add_argument("--precomp", type=PrecompSpec,
+                        help="write precompensation")
     parser.add_argument("file", help="input filename")
     parser.description = description
     parser.prog += ' ' + argv[1]
@@ -142,7 +177,10 @@ def main(argv):
         if args.tracks is not None:
             tracks.update_from_trackspec(args.tracks.trackspec)
         args.tracks = tracks
-        print("Writing %s" % (args.tracks))
+        s = str(args.tracks)
+        if args.precomp is not None:
+            s += "; %s" % args.precomp
+        print("Writing %s" % s)
         util.with_drive_selected(write_from_image, usb, args, image)
     except USB.CmdError as error:
         print("Command Failed: %s" % error)

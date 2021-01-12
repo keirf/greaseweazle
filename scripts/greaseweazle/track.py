@@ -11,6 +11,38 @@ from bitarray import bitarray
 from greaseweazle.flux import WriteoutFlux
 from greaseweazle import optimised
 
+# Precompensation to apply to a MasterTrack for writeout.
+class Precomp:
+    MFM = 0
+    FM  = 1
+    GCR = 2
+    TYPESTRING = [ 'MFM', 'FM', 'GCR' ]
+    def __str__(self):
+        return "Precomp: %s, %dns" % (Precomp.TYPESTRING[self.type], self.ns)
+    def __init__(self, type, ns):
+        self.type = type
+        self.ns = ns
+    def apply(self, bits, bit_ticks, scale):
+        t = self.ns * scale
+        if self.type == Precomp.MFM:
+            for i in bits.itersearch(bitarray('10100', endian='big')):
+                bit_ticks[i+2] -= t
+                bit_ticks[i+3] += t
+            for i in bits.itersearch(bitarray('00101', endian='big')):
+                bit_ticks[i+2] += t
+                bit_ticks[i+3] -= t
+        # This is primarily for GCR and FM which permit adjacent 1s (and
+        # have correspondingly slower bit times). However it may be useful
+        # for illegal MFM sequences too, especially on Amiga (custom syncwords,
+        # 4us-bitcell tracks). Normal MFM should not trigger these patterns.
+        for i in bits.itersearch(bitarray('110', endian='big')):
+            bit_ticks[i+1] -= t
+            bit_ticks[i+2] += t
+        for i in bits.itersearch(bitarray('011', endian='big')):
+            bit_ticks[i+1] += t
+            bit_ticks[i+2] -= t
+
+
 # A pristine representation of a track, from a codec and/or a perfect image.
 class MasterTrack:
 
@@ -33,6 +65,7 @@ class MasterTrack:
         self.bit_ticks = bit_ticks
         self.splice = splice
         self.weak = weak
+        self.precomp = None
 
     def __str__(self):
         s = "\nMaster Track: splice @ %d\n" % self.splice
@@ -141,6 +174,10 @@ class MasterTrack:
             while pos >= 32:
                 pos -= 32
                 bits[pos:pos+32] = fill_pattern
+
+        if for_writeout and self.precomp is not None:
+            self.precomp.apply(bits, bit_ticks,
+                               ticks_to_index / (self.time_per_rev*1e9))
 
         # Convert the stretched track data into flux.
         bit_ticks_i = iter(bit_ticks)
