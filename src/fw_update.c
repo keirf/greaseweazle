@@ -105,6 +105,7 @@ static void update_continue(void)
     int len;
 
     if ((len = ep_rx_ready(EP_RX)) >= 0) {
+        len = min_t(int, len, update.len - update.cur);
         usb_read(EP_RX, &u_buf[u_prod], len);
         u_prod += len;
     }

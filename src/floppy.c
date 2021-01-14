@@ -1038,6 +1038,7 @@ static void update_continue(void)
 
     /* Read entire new bootloader into the u_buf[] ring. */
     if ((len = ep_rx_ready(EP_RX)) >= 0) {
+        len = min_t(int, len, update.len - u_prod);
         usb_read(EP_RX, &u_buf[u_prod], len);
         u_prod += len;
     }
