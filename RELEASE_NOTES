@@ -3,6 +3,13 @@
 ** Keir Fraser <keir.xen@gmail.com>
 ************************************
 
+** v0.24 - 14 January 2021
+ - Index-cue generated Kryoflux and SCP image files
+   - Most external tools and emulators fail with non-cued streams
+ - gw write: New precomp command-line option (see the wiki)
+ - gw: Backward compatibility with older firmware (only back to v0.23)
+ - Safer bootloader update (CRC check before erasing existing bootloader)
+
 ** v0.23 - 13 January 2021
  - Support new Greaseweazle model: F7 Slim
  - Read/write/verify 1.44M IMG image files
