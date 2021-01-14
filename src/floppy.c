@@ -1014,7 +1014,6 @@ static void sink_bytes(void)
 
 static struct {
     uint32_t len;
-    uint32_t cur;
 } update;
 
 static void erase_old_bootloader(void)
@@ -1026,11 +1025,7 @@ static void erase_old_bootloader(void)
 
 static void update_prep(uint32_t len)
 {
-    fpec_init();
-    erase_old_bootloader();
-
     floppy_state = ST_update_bootloader;
-    update.cur = 0;
     update.len = len;
 
     printk("Update Bootloader: %u bytes\n", len);
@@ -1038,28 +1033,40 @@ static void update_prep(uint32_t len)
 
 static void update_continue(void)
 {
-    int len;
+    uint16_t crc;
+    int len, retry;
 
+    /* Read entire new bootloader into the u_buf[] ring. */
     if ((len = ep_rx_ready(EP_RX)) >= 0) {
         usb_read(EP_RX, &u_buf[u_prod], len);
         u_prod += len;
     }
 
-    if ((len = u_prod) >= 2) {
-        int nr = len & ~1;
-        fpec_write(u_buf, nr, BL_START + update.cur);
-        update.cur += nr;
-        u_prod -= nr;
-        memcpy(u_buf, &u_buf[nr], u_prod);
+    /* Keep going until we have the entire bootloader. */
+    if ((u_prod < update.len) || !ep_tx_ready(EP_TX))
+        return;
+
+    /* Validate the new bootloader before erasing the existing one! */
+    crc = crc16_ccitt(u_buf, update.len, 0xffff);
+    if (crc != 0)
+        goto done;
+
+    /* We are now committed to overwriting the existing bootloader. 
+     * Try really hard to write the new bootloader (including retries). */
+    fpec_init();
+    for (retry = 0; retry < 3; retry++) {
+        erase_old_bootloader();
+        fpec_write(u_buf, update.len, BL_START);
+        crc = crc16_ccitt((void *)BL_START, update.len, 0xffff);
+        if (crc == 0)
+            goto done;
     }
 
-    if ((update.cur >= update.len) && ep_tx_ready(EP_TX)) {
-        uint16_t crc = crc16_ccitt((void *)BL_START, update.len, 0xffff);
-        printk("Final CRC: %04x (%s)\n", crc, crc ? "FAIL" : "OK");
-        u_buf[0] = !!crc;
-        floppy_state = ST_command_wait;
-        floppy_end_command(u_buf, 1);
-    }
+done:
+    printk("Final CRC: %04x (%s)\n", crc, crc ? "FAIL" : "OK");
+    u_buf[0] = !!crc;
+    floppy_state = ST_command_wait;
+    floppy_end_command(u_buf, 1);
 }
 
 
