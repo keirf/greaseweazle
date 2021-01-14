@@ -176,6 +176,12 @@ class SCP(Image):
         """
 
         flux = track.flux()
+
+        # External tools and emulators generally seem to work best (or only)
+        # with index-cued SCP image files. So let's make sure we give them
+        # what they want.
+        flux.cue_at_index()
+
         if not flux.index_cued:
             self.index_cued = False
 

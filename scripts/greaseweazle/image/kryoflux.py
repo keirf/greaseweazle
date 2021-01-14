@@ -183,6 +183,11 @@ class KryoFlux(Image):
             check_index(f)
 
         flux = track.flux()
+
+        # HxC crashes or fails to load non-index-cued stream files.
+        # So let's give it what it wants.
+        flux.cue_at_index()
+
         factor = sck / flux.sample_freq
         dat = bytearray()
 
