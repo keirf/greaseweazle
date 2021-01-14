@@ -300,12 +300,12 @@ If the problem persists, install the Update Jumper (across RX/TX).""")
         sys.exit(1)
 
     if not usb.update_mode and usb.update_needed:
-        print("Firmware is out of date: Require v%u.%u"
-              % (version.major, version.minor))
-        if usb.hw_model == 7:
-            print("Run \"update <update_file>\"")
-        else:
-            print("Install the Update Jumper and \"update <update_file>\"")
+        print("ERROR: Greaseweazle firmware v%u.%u is unsupported"
+              % (usb.major, usb.minor))
+        if usb.hw_model != 7:
+            print("Install the Update Jumper; ", end="")
+        print("Run \"gw update\" to install firmware v%u.%u" %
+              (version.major, version.minor))
         sys.exit(1)
 
     return usb

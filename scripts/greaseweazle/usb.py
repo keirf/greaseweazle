@@ -12,6 +12,8 @@ from greaseweazle import error
 from greaseweazle.flux import Flux
 from greaseweazle import optimised
 
+EARLIEST_SUPPORTED_FIRMWARE = (0, 23)
+
 ## Control-Path command set
 class ControlCmd:
     ClearComms      = 10000
@@ -159,6 +161,7 @@ class Unit:
         (self.major, self.minor, is_main_firmware,
          self.max_cmd, self.sample_freq, self.hw_model,
          self.hw_submodel, self.usb_speed) = x
+        self.version = (self.major, self.minor)
         # Old firmware doesn't report HW type but runs on STM32F1 only.
         if self.hw_model == 0:
             self.hw_model = 1
@@ -170,8 +173,8 @@ class Unit:
             return
         # We are running main firmware: Check whether an update is needed.
         # We can use only the GetInfo command if the firmware is out of date.
-        self.update_needed = (version.major != self.major
-                              or version.minor != self.minor)
+        self.update_needed = (self.version < EARLIEST_SUPPORTED_FIRMWARE or
+                              self.version > (version.major, version.minor))
         if self.update_needed:
             return
         # Initialise the delay properties with current firmware values.
