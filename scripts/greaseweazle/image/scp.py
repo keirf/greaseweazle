@@ -110,9 +110,10 @@ class SCP(Image):
             sig, tnr = struct.unpack("<3sB", thdr[:4])
             error.check(sig == b"TRK", "SCP: Missing track signature")
             error.check(tnr == trknr, "SCP: Wrong track number in header")
+            thdr = thdr[4:] # Remove TRK header
             if not index_cued: # Remove first partial revolution
-                thdr = thdr[:12] + thdr[24:]
-            s_off, = struct.unpack("<I", thdr[12:16])
+                thdr = thdr[12:]
+            s_off, = struct.unpack("<I", thdr[8:12])
             _, e_nr, e_off = struct.unpack("<3I", thdr[-12:])
 
             e_off += e_nr*2
@@ -122,7 +123,7 @@ class SCP(Image):
                 continue
 
             tdat = dat[trk_off+s_off:trk_off+e_off]
-            track = SCPTrack(thdr[4:], tdat)
+            track = SCPTrack(thdr, tdat)
             if splices is not None:
                 track.splice = splices[trknr]
             scp.to_track[trknr] = track
