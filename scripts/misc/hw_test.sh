@@ -6,8 +6,8 @@
 dd if=/dev/urandom of=a.adf bs=512 count=1760
 disk-analyse -e 2 a.adf b.adf
 disk-analyse a.adf a.scp
-./gw write --ecyl=2 a.scp
-./gw read --revs=1 --ecyl=2 b.scp
+./gw write --tracks=c=0-2 a.scp
+./gw read --revs=1 --tracks=c=0-2 b.scp
 disk-analyse -e 2 b.scp c.adf
 diff b.adf c.adf
 md5sum b.adf c.adf
