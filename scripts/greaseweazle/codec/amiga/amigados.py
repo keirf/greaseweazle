@@ -31,8 +31,11 @@ class AmigaDOS:
         self.map = [None] * nsec
 
     def summary_string(self):
-        return ("AmigaDOS (%d/%d sectors)"
-                % (self.nsec - self.nr_missing(), self.nsec))
+        nsec, nbad = self.nsec, self.nr_missing()
+        s = "AmigaDOS (%d/%d sectors)" % (nsec - nbad, nsec)
+        if nbad != 0:
+            s += " - %d sectors missing" % nbad
+        return s
 
     # private
     def exists(self, sec_id, togo):

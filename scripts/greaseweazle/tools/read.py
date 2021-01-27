@@ -42,10 +42,9 @@ def read_with_retry(usb, args, cyl, head, decoder):
         return flux
     dat = decoder(cyl, head, flux)
     if dat.nr_missing() != 0:
-        for retry in range(3):
-            print("T%u.%u: %s - %d sectors missing - Retrying (%d)"
-                  % (cyl, head, dat.summary_string(),
-                     dat.nr_missing(), retry+1))
+        for retry in range(args.retries):
+            print("T%u.%u: %s - Retrying (%d)"
+                  % (cyl, head, dat.summary_string(), retry+1))
             flux = read_and_normalise(usb, args, max(args.revs, 3))
             dat.decode_raw(flux)
             if dat.nr_missing() == 0:
@@ -100,7 +99,10 @@ def read_to_image(usb, args, image, decoder=None):
         cyl, head = t.cyl, t.head
         usb.seek(t.physical_cyl, head)
         dat = read_with_retry(usb, args, cyl, head, decoder)
-        print("T%u.%u: %s" % (cyl, head, dat.summary_string()))
+        s = "T%u.%u: %s" % (cyl, head, dat.summary_string())
+        if hasattr(dat, 'nr_missing') and dat.nr_missing() != 0:
+            s += " - Giving up"
+        print(s)
         summary[cyl,head] = dat
         image.emit_track(cyl, head, dat)
 
@@ -121,6 +123,8 @@ def main(argv):
                         help="which tracks to read")
     parser.add_argument("--rate", type=int, help="data rate (kbit/s)")
     parser.add_argument("--rpm", type=int, help="convert drive speed to RPM")
+    parser.add_argument("--retries", type=int, default=3,
+                        help="number of retries on decode failure")
     parser.add_argument("file", help="output filename")
     parser.description = description
     parser.prog += ' ' + argv[1]

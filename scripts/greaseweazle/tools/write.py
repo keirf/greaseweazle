@@ -20,18 +20,6 @@ def open_image(args):
     cls = util.get_image_class(args.file)
     return cls.from_file(args.file)
 
-class Formatter:
-    def __init__(self):
-        self.length = 0
-    def print(self, s):
-        self.erase()
-        self.length = len(s)
-        print(s, end="", flush=True)
-    def erase(self):
-        l = self.length
-        print("\b"*l + " "*l + "\b"*l, end="", flush=True)
-        self.length = 0
-
 # write_from_image:
 # Writes the specified image file to floppy disk.
 def write_from_image(usb, args, image):
@@ -78,9 +66,11 @@ def write_from_image(usb, args, image):
             flux_list.append(val)
 
         # Encode the flux times for Greaseweazle, and write them out.
-        formatter = Formatter()
         verified = False
-        for retry in range(3):
+        for retry in range(args.retries+1):
+            if retry != 0:
+                print("T%u.%u: Verify Failure - Retry (%d)"
+                      % (cyl, head, retry))
             usb.write_track(flux_list = flux_list,
                             cue_at_index = flux.index_cued,
                             terminate_at_index = flux.terminate_at_index)
@@ -102,9 +92,9 @@ def write_from_image(usb, args, image):
             if verified:
                 verified_count += 1
                 break
-            formatter.print(" Retry %d" % (retry + 1))
-        formatter.erase()
-        error.check(verified, "Failed to write Track %u.%u" % (cyl, head))
+            if retry == 0:
+                print()
+        error.check(verified, "Failed to verify Track %u.%u" % (cyl, head))
 
     print()
     if not_verified_count == 0:
@@ -163,6 +153,8 @@ def main(argv):
                         help="erase empty tracks (default: skip)")
     parser.add_argument("--no-verify", action="store_true",
                         help="disable verify")
+    parser.add_argument("--retries", type=int, default=3,
+                        help="number of retries on verify failure")
     parser.add_argument("--precomp", type=PrecompSpec,
                         help="write precompensation")
     parser.add_argument("file", help="input filename")
