@@ -56,7 +56,6 @@ class ADF(Image):
 
     def get_image(self):
 
-        tlen = self.sec_per_track * 512
         tdat = bytearray()
 
         ntracks = max(self.to_track, default=0) + 1
@@ -67,13 +66,13 @@ class ADF(Image):
                 tdat += t.get_adf_track()
             elif tnr < 160:
                 # Pad empty/damaged tracks.
-                tdat += bytes(tlen)
+                tdat += amigados.bad_sector * self.sec_per_track
             else:
                 # Do not extend past 160 tracks unless there is data.
                 break
 
         if ntracks < 160:
-            tdat += bytes(tlen * (160 - ntracks))
+            tdat += amigados.bad_sector * self.sec_per_track * (160 - ntracks)
 
         return tdat
 

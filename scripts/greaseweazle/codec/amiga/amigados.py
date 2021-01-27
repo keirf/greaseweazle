@@ -18,6 +18,8 @@ sync_bytes = b'\x44\x89\x44\x89'
 sync = bitarray(endian='big')
 sync.frombytes(sync_bytes)
 
+bad_sector = b'-=[BAD SECTOR]=-' * 32
+
 class AmigaDOS:
 
     DDSEC = 11
@@ -52,7 +54,7 @@ class AmigaDOS:
     def get_adf_track(self):
         tdat = bytearray()
         for sec in self.sector:
-            tdat += sec[1] if sec is not None else bytes(512)
+            tdat += sec[1] if sec is not None else bad_sector
         return tdat
 
     def set_adf_track(self, tdat):
@@ -113,7 +115,7 @@ class AmigaDOS:
 
         for nr, sec_id in zip(range(self.nsec), full_map):
             sector = self.sector[sec_id]
-            label, data = (bytes(16), bytes(512)) if sector is None else sector
+            label, data = (bytes(16), bad_sector) if sector is None else sector
             header = bytes([0xff, self.tracknr, sec_id, self.nsec-nr])
             t += sync_bytes
             t += encode(header)
