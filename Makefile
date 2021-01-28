@@ -91,7 +91,7 @@ scripts/greaseweazle/version.py: Makefile
 	echo "major = $(FW_MAJOR)" >$@
 	echo "minor = $(FW_MINOR)" >>$@
 
-pysetup:
+pysetup: scripts/greaseweazle/version.py
 	PYTHON=$(PYTHON) . ./scripts/setup.sh
 
 BAUD=115200
