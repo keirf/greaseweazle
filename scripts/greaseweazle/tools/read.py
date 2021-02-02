@@ -11,6 +11,7 @@ description = "Read a disk to the specified image file."
 
 import sys
 import importlib
+import time
 
 from greaseweazle.tools import util
 from greaseweazle import error
@@ -99,7 +100,8 @@ def read_to_image(usb, args, image, decoder=None):
         cyl, head = t.cyl, t.head
         usb.seek(t.physical_cyl, head)
         dat = read_with_retry(usb, args, cyl, head, decoder)
-        s = "T%u.%u: %s" % (cyl, head, dat.summary_string())
+        cyl_string = '{:02}'.format(cyl)
+        s = "T%s.%u: %s" % (cyl_string, head, dat.summary_string())
         if hasattr(dat, 'nr_missing') and dat.nr_missing() != 0:
             s += " - Giving up"
         print(s)
@@ -134,6 +136,7 @@ def main(argv):
 
     try:
         usb = util.usb_open(args.device)
+        start = time.time()
         image_class = util.get_image_class(args.file)
         if not args.format and hasattr(image_class, 'default_format'):
             args.format = image_class.default_format
@@ -158,6 +161,8 @@ def main(argv):
         with open_image(args, image_class) as image:
             util.with_drive_selected(read_to_image, usb, args, image,
                                      decoder=decoder)
+        print('\nCompleted in : {0:0.2f} seconds'.format(time.time() - start))
+    
     except USB.CmdError as err:
         print("Command Failed: %s" % err)
 
