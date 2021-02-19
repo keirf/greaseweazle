@@ -12,6 +12,13 @@ from greaseweazle.flux import Flux
 from .image import Image
 
 
+# Names for disktype byte in SCP file header
+DiskType = {
+    'amiga': 0x04,
+    'c64':   0x00
+}
+
+
 class SCPOpts:
     """legacy_ss: Set to True to generate (incorrect) legacy single-sided
     SCP image.
@@ -19,6 +26,20 @@ class SCPOpts:
 
     def __init__(self):
         self.legacy_ss = False
+        self._disktype = 0x80 # Other
+
+    @property
+    def disktype(self):
+        return self._disktype
+    @disktype.setter
+    def disktype(self, disktype):
+        try:
+            self._disktype = DiskType[disktype.lower()]
+        except KeyError:
+            try:
+                self._disktype = int(disktype, 0)
+            except ValueError:
+                raise error.Fatal("Bad SCP disktype: '%s'" % disktype)
 
 
 class SCPTrack:
@@ -291,7 +312,7 @@ class SCP(Image):
         header = struct.pack("<3s9BI",
                              b"SCP",    # Signature
                              0,         # Version
-                             0x80,      # DiskType = Other
+                             self.opts.disktype,
                              self.nr_revs, 0, ntracks-1,
                              flags,
                              0,         # 16-bit cell width
