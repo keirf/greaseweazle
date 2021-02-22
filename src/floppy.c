@@ -136,27 +136,6 @@ static void step_once(void)
     delay_us(delay_params.step_delay);
 }
 
-static void _set_bus_type(uint8_t type)
-{
-    bus_type = type;
-    unit_nr = -1;
-    memset(unit, 0, sizeof(unit));
-    reset_bus();
-}
-
-static bool_t set_bus_type(uint8_t type)
-{
-    if (type == bus_type)
-        return TRUE;
-
-    if (type > BUS_SHUGART)
-        return FALSE;
-
-    _set_bus_type(type);
-
-    return TRUE;
-}
-
 static uint8_t floppy_seek(int cyl)
 {
     struct unit *u;
@@ -234,10 +213,8 @@ static void do_auto_off(void)
     for (i = 0; i < ARRAY_SIZE(unit); i++) {
 
         struct unit *u = &unit[i];
-        if (!u->initialised)
-            continue;
 
-        if (u->cyl < 0) {
+        if (u->initialised && (u->cyl < 0)) {
             drive_select(i);
             floppy_seek(0);
         }
@@ -250,6 +227,27 @@ static void do_auto_off(void)
     drive_deselect();
 
     auto_off.armed = FALSE;
+}
+
+static void _set_bus_type(uint8_t type)
+{
+    do_auto_off();
+    bus_type = type;
+    unit_nr = -1;
+    memset(unit, 0, sizeof(unit));
+}
+
+static bool_t set_bus_type(uint8_t type)
+{
+    if (type == bus_type)
+        return TRUE;
+
+    if (type > BUS_SHUGART)
+        return FALSE;
+
+    _set_bus_type(type);
+
+    return TRUE;
 }
 
 static void floppy_reset(void)

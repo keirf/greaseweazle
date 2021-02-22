@@ -173,12 +173,6 @@ static uint8_t drive_motor(uint8_t nr, bool_t on)
     return ACK_OKAY;
 }
 
-static void reset_bus(void)
-{
-    write_pin(sel, FALSE);
-    write_pin(mot, FALSE);
-}
-
 static uint8_t set_user_pin(unsigned int pin, unsigned int level)
 {
     if (pin != 2)

@@ -265,14 +265,6 @@ static uint8_t drive_motor(uint8_t nr, bool_t on)
 
 }
 
-static void reset_bus(void)
-{
-    const struct pin_mapping *mpin;
-
-    for (mpin = board_config->msel_pins; mpin->pin_id != 0; mpin++)
-        gpio_write_pin(gpio_from_id(mpin->gpio_bank), mpin->gpio_pin, O_FALSE);
-}
-
 static uint8_t set_user_pin(unsigned int pin, unsigned int level)
 {
     const struct pin_mapping *upin;
