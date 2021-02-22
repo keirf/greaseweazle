@@ -326,6 +326,7 @@ static void floppy_end_command(void *ack, unsigned int ack_len)
 static struct {
     unsigned int nr_index;
     unsigned int max_index;
+    uint32_t max_index_linger;
     time_t deadline;
 } read;
 
@@ -437,6 +438,7 @@ static uint8_t floppy_read_prep(const struct gw_read_flux *rf)
     read.max_index = rf->max_index ?: INT_MAX;
     read.deadline = flux_op.start;
     read.deadline += rf->ticks ? time_from_samples(rf->ticks) : INT_MAX;
+    read.max_index_linger = time_from_samples(rf->max_index_linger);
 
     return ACK_OKAY;
 }
@@ -477,17 +479,18 @@ static void floppy_read(void)
 
         } else if (read.nr_index >= read.max_index) {
 
-            /* Read all requested indexes. Allow for a short tail of data. */
-            time_t deadline = time_now() + time_us(500);
+            /* Index limit is reached: Now linger for the specified time. */
+            time_t deadline = time_now() + read.max_index_linger;
             if (time_diff(deadline, read.deadline) > 0)
                 read.deadline = deadline;
+            /* Disable max_index check: It's now become a linger deadline. */
             read.max_index = INT_MAX;
 
         }
 
         else if (time_since(read.deadline) >= 0) {
 
-            /* Read all requested data. */
+            /* Deadline is reached: End the read now. */
             floppy_flux_end();
             floppy_state = ST_read_flux_drain;
 
@@ -1164,17 +1167,18 @@ static void process_command(void)
         goto out;
     }
     case CMD_READ_FLUX: {
-        struct gw_read_flux rf;
-        if (len != (2 + sizeof(rf)))
+        struct gw_read_flux rf = {
+            .max_index_linger = sample_us(500)
+        };
+        if ((len < (2 + offsetof(struct gw_read_flux, max_index_linger)))
+            || (len > (2 + sizeof(rf))))
             goto bad_command;
         memcpy(&rf, &u_buf[2], len-2);
         u_buf[1] = floppy_read_prep(&rf);
         goto out;
     }
     case CMD_WRITE_FLUX: {
-        struct gw_write_flux wf = {
-            .cue_at_index = 1,
-            .terminate_at_index = 0 };
+        struct gw_write_flux wf;
         if (len != (2 + sizeof(wf)))
             goto bad_command;
         memcpy(&wf, &u_buf[2], len-2);
