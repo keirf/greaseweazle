@@ -22,7 +22,7 @@ FLAGS += -Wall -Werror -Wno-format -Wdeclaration-after-statement
 FLAGS += -Wstrict-prototypes -Wredundant-decls -Wnested-externs
 FLAGS += -fno-common -fno-exceptions -fno-strict-aliasing
 FLAGS += -mlittle-endian -mthumb -mfloat-abi=soft
-FLAGS += -Wno-unused-value
+FLAGS += -Wno-unused-value -ffunction-sections
 
 ifeq ($(stm32),f1)
 FLAGS += -mcpu=cortex-m3 -DSTM32F=1
