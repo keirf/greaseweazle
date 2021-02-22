@@ -344,8 +344,6 @@ static void rdata_encode_flux(void)
     timcnt_t prev = dma.prev_sample, curr, next;
     uint32_t ticks;
 
-    ASSERT(read.nr_index < read.max_index);
-
     /* We don't want to race the Index IRQ handler. */
     IRQ_global_disable();
 
@@ -477,8 +475,17 @@ static void floppy_read(void)
             floppy_state = ST_read_flux_drain;
             u_cons = u_prod = avail = 0;
 
-        } else if ((read.nr_index >= read.max_index)
-                   || (time_since(read.deadline) >= 0)) {
+        } else if (read.nr_index >= read.max_index) {
+
+            /* Read all requested indexes. Allow for a short tail of data. */
+            time_t deadline = time_now() + time_us(500);
+            if (time_diff(deadline, read.deadline) > 0)
+                read.deadline = deadline;
+            read.max_index = INT_MAX;
+
+        }
+
+        else if (time_since(read.deadline) >= 0) {
 
             /* Read all requested data. */
             floppy_flux_end();
