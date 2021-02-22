@@ -204,7 +204,7 @@ static void floppy_flux_end(void)
         continue;
 }
 
-static void do_auto_off(void)
+static void quiesce_drives(void)
 {
     int i;
 
@@ -231,7 +231,7 @@ static void do_auto_off(void)
 
 static void _set_bus_type(uint8_t type)
 {
-    do_auto_off();
+    quiesce_drives();
     bus_type = type;
     unit_nr = -1;
     memset(unit, 0, sizeof(unit));
@@ -253,7 +253,7 @@ static bool_t set_bus_type(uint8_t type)
 static void floppy_reset(void)
 {
     floppy_state = ST_inactive;
-    do_auto_off();
+    quiesce_drives();
     act_led(FALSE);
 }
 
@@ -1287,7 +1287,7 @@ void floppy_process(void)
     int len;
 
     if (auto_off.armed && (time_since(auto_off.deadline) >= 0))
-        do_auto_off();
+        quiesce_drives();
 
     switch (floppy_state) {
 
