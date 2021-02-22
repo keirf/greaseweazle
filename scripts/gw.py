@@ -9,7 +9,7 @@
 # This is free and unencumbered software released into the public domain.
 # See the file COPYING for more details, or visit <http://unlicense.org>.
 
-import sys
+import sys, time
 import importlib
 
 from greaseweazle import version
@@ -56,19 +56,30 @@ actions = [ 'info',
             'bandwidth' ]
 argv = sys.argv
 
-backtrace = False
-if len(argv) > 1 and argv[1] == '--bt':
-    backtrace = True
-    argv = [argv[0]] + argv[2:]
-
-if len(argv) < 2 or argv[1] not in actions:
-    print("Usage: %s [action] [-h] ..." % (argv[0]))
+def usage():
+    print("Usage: %s [--time] [action] [-h] ..." % (argv[0]))
+    print("  --time      Print elapsed time after action is executed")
     print("  -h, --help  Show help message for specified action")
     print("Actions:")
     for a in actions:
         mod = importlib.import_module('greaseweazle.tools.' + a)
         print('  %-12s%s' % (a, mod.__dict__['description']))
     sys.exit(1)
+
+backtrace = False
+start_time = None
+
+while len(argv) > 1 and argv[1].startswith('--'):
+    if argv[1] == '--bt':
+        backtrace = True
+    elif argv[1] == '--time':
+        start_time = time.time()
+    else:
+        usage()
+    argv = [argv[0]] + argv[2:]
+
+if len(argv) < 2 or argv[1] not in actions:
+    usage()
 
 mod = importlib.import_module('greaseweazle.tools.' + argv[1])
 main = mod.__dict__['main']
@@ -86,6 +97,11 @@ except Exception as err:
     print("** FATAL ERROR:")
     print(err)
     res = 1
+
+if start_time is not None:
+    elapsed = time.time() - start_time
+    print("Time elapsed: %.2f seconds" % elapsed)
+
 sys.exit(res)
     
 # Local variables:
