@@ -1286,8 +1286,10 @@ void floppy_process(void)
 {
     int len;
 
-    if (auto_off.armed && (time_since(auto_off.deadline) >= 0))
+    if (auto_off.armed && (time_since(auto_off.deadline) >= 0)) {
+        floppy_configure();
         quiesce_drives();
+    }
 
     switch (floppy_state) {
 
