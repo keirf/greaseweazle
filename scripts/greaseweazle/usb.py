@@ -191,6 +191,8 @@ class Unit:
         self.ser.baudrate = ControlCmd.ClearComms
         self.ser.baudrate = ControlCmd.Normal
         self.ser.reset_input_buffer()
+        self.ser.close()
+        self.ser.open()
 
 
     ## _send_cmd:
