@@ -164,6 +164,7 @@ def get_image_class(name):
                     '.ima': 'IMG',
                     '.img': 'IMG',
                     '.ipf': 'IPF',
+                    '.dsk': 'EDSK',
                     '.raw': 'KryoFlux' }
     if os.path.isdir(name):
         typename = 'KryoFlux'

@@ -5,7 +5,7 @@
 # This is free and unencumbered software released into the public domain.
 # See the file COPYING for more details, or visit <http://unlicense.org>.
 
-import heapq, struct
+import copy, heapq, struct
 import itertools as it
 from bitarray import bitarray
 import crcmod.predefined
@@ -54,6 +54,9 @@ class IDAM(TrackArea):
         return (super().__eq__(x)
                 and self.c == x.c and self.h == x.h
                 and self.r == x.r and self.n == x.n)
+    def __copy__(self):
+        return IDAM(self.start, self.end, self.crc,
+                    self.c, self.h, self.r, self.n)
 
 class DAM(TrackArea):
     def __init__(self, start, end, crc, mark, data=None):
@@ -66,6 +69,8 @@ class DAM(TrackArea):
         return (super().__eq__(x)
                 and self.mark == x.mark
                 and self.data == x.data)
+    def __copy__(self):
+        return DAM(self.start, self.end, self.crc, self.mark, self.data)
 
 class Sector(TrackArea):
     def __init__(self, idam, dam):
@@ -89,6 +94,8 @@ class Sector(TrackArea):
 class IAM(TrackArea):
     def __str__(self):
         return "IAM: %6d-%6d" % (self.start, self.end)
+    def __copy__(self):
+        return IAM(self.start, self.end)
     
 class IBM_MFM:
 
@@ -98,10 +105,12 @@ class IBM_MFM:
     DDAM = 0xf8
 
     gap_presync = 12
-    filler = 0x4e
     
     def __init__(self, cyl, head):
         self.cyl, self.head = cyl, head
+        self.filler = 0x4e
+        self.time_per_rev = 0.2
+        self.clock = 1e-6
         self.sectors = []
         self.iams = []
 
@@ -127,7 +136,7 @@ class IBM_MFM:
 
     def decode_raw(self, track):
         track.cue_at_index()
-        raw = RawTrack(clock = 1e-6, data = track)
+        raw = RawTrack(clock = self.clock, data = track)
         bits, _ = raw.get_all_data()
 
         areas = []
@@ -232,23 +241,16 @@ class IBM_MFM:
                 t += encode(dam[3:])
 
         # Add the pre-index gap.
-        tlen = 200000//16
+        tlen = int((self.time_per_rev / self.clock) // 16)
         gap = max(tlen - len(t)//2, 0)
         t += encode(bytes([self.filler] * gap))
 
         track = MasterTrack(
             bits = mfm_encode(t),
-            time_per_rev = 0.2)
+            time_per_rev = self.time_per_rev)
         track.verify = self
         track.verify_revs = default_revs
         return track
-
-
-    def verify_track(self, flux):
-        readback_track = decode_track(self.cyl, self.head, flux)
-        if readback_track.nr_missing() != 0:
-            return False
-        return self.sectors == readback_track.sectors
 
 
 class IBM_MFM_Formatted(IBM_MFM):
@@ -261,22 +263,6 @@ class IBM_MFM_Formatted(IBM_MFM):
 
         super().__init__(cyl, head)
         self.raw_iams, self.raw_sectors = [], []
-
-        pos = self.gap_4a
-        if self.gap_1 is not None:
-            self.iams = [IAM(pos*16,(pos+4)*16)]
-            pos += self.gap_1
-
-        for i in range(self.nsec):
-            pos += self.gap_presync
-            idam = IDAM(pos*16, (pos+10)*16, 0xffff,
-                        c=cyl, h=head, r=self.id0+i, n = self.sz)
-            pos += 10 + self.gap_2 + self.gap_presync
-            size = 128 << self.sz
-            dam = DAM(pos*16, (pos+4+size+2)*16, 0xffff,
-                      mark=self.DAM, data=bytes(size))
-            self.sectors.append(Sector(idam, dam))
-            pos += 4 + size + 2 + self.gap_3
 
     def decode_raw(self, track):
         iams, sectors = self.iams, self.sectors
@@ -314,8 +300,46 @@ class IBM_MFM_Formatted(IBM_MFM):
             tdat += s.dam.data
         return tdat
         
-    
-class IBM_MFM_1M44(IBM_MFM_Formatted):
+    def verify_track(self, flux):
+        readback_track = IBM_MFM_Formatted(self.cyl, self.head)
+        readback_track.clock = self.clock
+        readback_track.time_per_rev = self.time_per_rev
+        for x in self.iams:
+            readback_track.iams.append(copy.copy(x))
+        for x in self.sectors:
+            idam, dam = copy.copy(x.idam), copy.copy(x.dam)
+            idam.crc, dam.crc = 0xffff, 0xffff
+            readback_track.sectors.append(Sector(idam, dam))
+        readback_track.decode_raw(flux)
+        if readback_track.nr_missing() != 0:
+            return False
+        return self.sectors == readback_track.sectors
+
+
+class IBM_MFM_Predefined(IBM_MFM_Formatted):
+
+    def __init__(self, cyl, head):
+
+        super().__init__(cyl, head)
+
+        pos = self.gap_4a
+        if self.gap_1 is not None:
+            self.iams = [IAM(pos*16,(pos+4)*16)]
+            pos += 4 + self.gap_1
+
+        for i in range(self.nsec):
+            pos += self.gap_presync
+            idam = IDAM(pos*16, (pos+10)*16, 0xffff,
+                        c=cyl, h=head, r=self.id0+i, n = self.sz)
+            pos += 10 + self.gap_2 + self.gap_presync
+            size = 128 << self.sz
+            dam = DAM(pos*16, (pos+4+size+2)*16, 0xffff,
+                      mark=self.DAM, data=bytes(size))
+            self.sectors.append(Sector(idam, dam))
+            pos += 4 + size + 2 + self.gap_3
+
+
+class IBM_MFM_1M44(IBM_MFM_Predefined):
 
     gap_3  = 84 # Post-DAM
     nsec   = 18
