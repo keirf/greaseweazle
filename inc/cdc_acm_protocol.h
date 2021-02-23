@@ -192,7 +192,7 @@ struct packed gw_delay {
     uint16_t step_delay;   /* usec */
     uint16_t seek_settle;  /* msec */
     uint16_t motor_delay;  /* msec */
-    uint16_t auto_off;     /* msec */
+    uint16_t watchdog;     /* msec */
 };
 
 /* CMD_SWITCH_FW_MODE */

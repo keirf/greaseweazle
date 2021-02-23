@@ -27,8 +27,8 @@ def main(argv):
                         help="settle delay after seek (msecs)")
     parser.add_argument("--motor", type=int,
                         help="delay after motor on (msecs)")
-    parser.add_argument("--auto-off", type=int,
-                        help="quiescent time until auto deselect (msecs)")
+    parser.add_argument("--watchdog", type=int,
+                        help="quiescent time until drives reset (msecs)")
     parser.description = description
     parser.prog += ' ' + argv[1]
     args = parser.parse_args(argv[2:])
@@ -45,14 +45,14 @@ def main(argv):
             usb.seek_settle_delay = args.settle
         if args.motor:
             usb.motor_delay = args.motor
-        if args.auto_off:
-            usb.auto_off_delay = args.auto_off
+        if args.watchdog:
+            usb.watchdog_delay = args.watchdog
 
         print("Select Delay: %uus" % usb.select_delay)
         print("Step Delay: %uus" % usb.step_delay)
         print("Settle Time: %ums" % usb.seek_settle_delay)
         print("Motor Delay: %ums" % usb.motor_delay)
-        print("Auto Off: %ums" % usb.auto_off_delay)
+        print("Watchdog: %ums" % usb.watchdog_delay)
 
     except USB.CmdError as error:
         print("Command Failed: %s" % error)

@@ -42,7 +42,7 @@ static const struct gw_delay factory_delay_params = {
     .step_delay = 5000,
     .seek_settle = 15,
     .motor_delay = 750,
-    .auto_off = 10000
+    .watchdog = 10000
 };
 
 #if STM32F == 1
@@ -81,7 +81,7 @@ static struct dma_ring {
 static struct {
     time_t deadline;
     bool_t armed;
-} auto_off;
+} watchdog;
 
 /* Marshalling and unmarshalling of USB packets. */
 static struct {
@@ -226,7 +226,7 @@ static void quiesce_drives(void)
 
     drive_deselect();
 
-    auto_off.armed = FALSE;
+    watchdog.armed = FALSE;
 }
 
 static void _set_bus_type(uint8_t type)
@@ -293,20 +293,20 @@ struct gw_info gw_info = {
     .hw_model = STM32F
 };
 
-static void auto_off_nudge(void)
+static void watchdog_kick(void)
 {
-    auto_off.deadline = time_now() + time_ms(delay_params.auto_off);
+    watchdog.deadline = time_now() + time_ms(delay_params.watchdog);
 }
 
-static void auto_off_arm(void)
+static void watchdog_arm(void)
 {
-    auto_off.armed = TRUE;
-    auto_off_nudge();
+    watchdog.armed = TRUE;
+    watchdog_kick();
 }
 
 static void floppy_end_command(void *ack, unsigned int ack_len)
 {
-    auto_off_arm();
+    watchdog_arm();
     usb_write(EP_TX, ack, ack_len);
     u_cons = u_prod = 0;
     if (floppy_state == ST_command_wait)
@@ -358,9 +358,9 @@ static void rdata_encode_flux(void)
         u_buf[U_MASK(u_prod++)] = 0xff;
         u_buf[U_MASK(u_prod++)] = FLUXOP_INDEX;
         _write_28bit(ticks);
-        /* Defer auto-off while read is progressing (as measured by index
+        /* Defer watchdog while read is progressing (as measured by index
          * pulses).  */
-        auto_off_nudge();
+        watchdog_kick();
     }
 
     IRQ_global_enable();
@@ -1085,7 +1085,7 @@ static void process_command(void)
     uint8_t len = u_buf[1];
     uint8_t resp_sz = 2;
 
-    auto_off_arm();
+    watchdog_arm();
     act_led(TRUE);
 
     switch (cmd) {
@@ -1275,7 +1275,7 @@ bad_command:
 
 static void floppy_configure(void)
 {
-    auto_off_arm();
+    watchdog_arm();
     floppy_flux_end();
     floppy_state = ST_command_wait;
     u_cons = u_prod = 0;
@@ -1286,7 +1286,7 @@ void floppy_process(void)
 {
     int len;
 
-    if (auto_off.armed && (time_since(auto_off.deadline) >= 0)) {
+    if (watchdog.armed && (time_since(watchdog.deadline) >= 0)) {
         floppy_configure();
         quiesce_drives();
     }

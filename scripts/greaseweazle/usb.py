@@ -181,7 +181,7 @@ class Unit:
         self._send_cmd(struct.pack("4B", Cmd.GetParams, 4, Params.Delays, 10))
         (self._select_delay, self._step_delay,
          self._seek_settle_delay, self._motor_delay,
-         self._auto_off_delay) = struct.unpack("<5H", self.ser.read(10))
+         self._watchdog_delay) = struct.unpack("<5H", self.ser.read(10))
 
 
     ## reset:
@@ -485,7 +485,7 @@ class Unit:
     ##  step_delay:        Delay (usec) after issuing a head-step command
     ##  seek_settle_delay: Delay (msec) after completing a head-seek operation
     ##  motor_delay:       Delay (msec) after turning on drive spindle motor
-    ##  auto_off_delay:    Timeout (msec) since last command upon which all
+    ##  watchdog_delay:    Timeout (msec) since last command upon which all
     ##                     drives are deselected and spindle motors turned off
     ##
 
@@ -494,7 +494,7 @@ class Unit:
                                    3+5*2, Params.Delays,
                                    self._select_delay, self._step_delay,
                                    self._seek_settle_delay,
-                                   self._motor_delay, self._auto_off_delay))
+                                   self._motor_delay, self._watchdog_delay))
 
     @property
     def select_delay(self):
@@ -529,11 +529,11 @@ class Unit:
         self._set_delays()
 
     @property
-    def auto_off_delay(self):
-        return self._auto_off_delay
-    @auto_off_delay.setter
-    def auto_off_delay(self, auto_off_delay):
-        self._auto_off_delay = auto_off_delay
+    def watchdog_delay(self):
+        return self._watchdog_delay
+    @watchdog_delay.setter
+    def watchdog_delay(self, watchdog_delay):
+        self._watchdog_delay = watchdog_delay
         self._set_delays()
 
 # Local variables:
