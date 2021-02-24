@@ -136,6 +136,48 @@ static void step_once(void)
     delay_us(delay_params.step_delay);
 }
 
+static uint8_t floppy_seek_initialise(struct unit *u)
+{
+    int nr;
+
+    /* Synchronise to cylinder 0. */
+    step_dir_out();
+    for (nr = 0; nr < 256; nr++) {
+        if (get_trk0() == LOW)
+            goto found_cyl0;
+        step_once();
+    }
+    return ACK_NO_TRK0;
+
+found_cyl0:
+
+    u->cyl = 0;
+    u->is_flippy = flippy_detect();
+
+    if (u->is_flippy) {
+
+        /* Trk0 sensor can be asserted at negative cylinder offsets. Seek
+         * inwards until the sensor is deasserted. */
+        step_dir_in();
+        for (nr = 0; nr < 10; nr++) {
+            step_once();
+            if (get_trk0() == HIGH) {
+                /* We are now at real cylinder 1. */
+                u->cyl = 1;
+                break;
+            }
+        }
+
+        /* Bail if we didn't find cylinder 1. */
+        if (u->cyl != 1)
+            return ACK_NO_TRK0;
+
+    }
+
+    u->initialised = TRUE;
+    return ACK_OKAY;
+}
+
 static uint8_t floppy_seek(int cyl)
 {
     struct unit *u;
@@ -146,28 +188,20 @@ static uint8_t floppy_seek(int cyl)
     u = &unit[unit_nr];
 
     if (!u->initialised) {
-        step_dir_out();
-        for (nr = 0; nr < 256; nr++) {
-            if (get_trk0() == LOW)
-                goto found_trk0;
-            step_once();
-        }
-        return ACK_NO_TRK0;
-    found_trk0:
-        u->is_flippy = flippy_detect();
-        u->initialised = TRUE;
-        u->cyl = 0;
+        uint8_t rc = floppy_seek_initialise(u);
+        if (rc != ACK_OKAY)
+            return rc;
     }
 
     if ((cyl < (u->is_flippy ? -8 : 0)) || (cyl > 100))
         return ACK_BAD_CYLINDER;
 
-    flippy_trk0_sensor_disable();
-
     if (u->cyl <= cyl) {
         nr = cyl - u->cyl;
         step_dir_in();
     } else {
+        if (cyl < 0)
+            flippy_trk0_sensor_disable();
         nr = u->cyl - cyl;
         step_dir_out();
     }
