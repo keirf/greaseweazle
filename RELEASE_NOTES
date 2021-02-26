@@ -3,6 +3,18 @@
 ** Keir Fraser <keir.xen@gmail.com>
 ************************************
 
+** v0.25 - TBA
+ - EDSK: Support for writing unprotected EDSK files
+ - SCP: Allow disktype header byte to be specified (eg "a.scp::disktype=amiga")
+ - SCP: Fix import of non-index-cued SCP imnage files
+ - AmigaDOS: Mark bad sectors with explicit pattern "-=[BAD SECTOR]=-"
+ - read/write: Add a --retries parameter used if analyse/verify stage fails
+ - clean: New command to clean a drive using a cleaning disk
+ - gw: New global option --time to print elapsed time taken by an operation
+ - gw: Improve reliability of USB connection reset when starting an operation
+ - flippy: Improve reliability for Panasonic modded drives (find true trk0)
+ - Linux/Mac: setup.sh better error reporting when run from wrong folder
+
 ** v0.24 - 14 January 2021
  - Index-cue generated Kryoflux and SCP image files
    - Most external tools and emulators fail with non-cued streams
