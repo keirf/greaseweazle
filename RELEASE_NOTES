@@ -3,7 +3,7 @@
 ** Keir Fraser <keir.xen@gmail.com>
 ************************************
 
-** v0.25 - TBA
+** v0.25 - 27 February 2021
  - EDSK: Support for writing unprotected EDSK files
  - SCP: Allow disktype header byte to be specified (eg "a.scp::disktype=amiga")
  - SCP: Fix import of non-index-cued SCP imnage files

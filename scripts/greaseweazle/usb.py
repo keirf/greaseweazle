@@ -12,7 +12,7 @@ from greaseweazle import error
 from greaseweazle.flux import Flux
 from greaseweazle import optimised
 
-EARLIEST_SUPPORTED_FIRMWARE = (0, 23)
+EARLIEST_SUPPORTED_FIRMWARE = (0, 25)
 
 ## Control-Path command set
 class ControlCmd:
