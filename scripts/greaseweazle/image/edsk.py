@@ -58,7 +58,6 @@ class EDSK(Image):
                         'EDSK: Track specified twice')
             while True:
                 track = mfm.IBM_MFM_Formatted(cyl, head)
-                track.filler = filler
                 track.clock = cls().clock
                 track.time_per_rev = cls().time_per_rev
                 pos = track.gap_4a
