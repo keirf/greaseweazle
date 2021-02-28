@@ -205,7 +205,7 @@ class IBM_MFM:
                 if abs(s.start - a.start) < 1000:
                     match = True
                     break
-            if match and list == self.sectors and s.crc != 0 and a.crc == 0:
+            if match and isinstance(a, Sector) and s.crc != 0 and a.crc == 0:
                 self.sectors = [x for x in self.sectors if x != a]
                 match = False
             if not match:
