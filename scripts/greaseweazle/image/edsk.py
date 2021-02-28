@@ -195,18 +195,17 @@ class EDSK(Image):
                     # IDAM
                     t += mfm.encode(bytes(track.gap_presync))
                     t += mfm.sync_bytes
-                    idam = bytes([0xa1, 0xa1, 0xa1, mfm.IBM_MFM.IDAM,
-                                  c, h, r, n])
-                    idam += struct.pack('>H', mfm.crc16.new(idam).crcValue)
-                    t += mfm.encode(idam[3:])
+                    am = bytes([0xa1, 0xa1, 0xa1, imark, c, h, r, n])
+                    am += struct.pack('>H', mfm.crc16.new(am).crcValue^icrc)
+                    t += mfm.encode(am[3:])
                     t += mfm.encode(bytes([track.gapbyte] * track.gap_2))
                     # DAM
                     t += mfm.encode(bytes(track.gap_presync))
                     t += mfm.sync_bytes
                     track.weak += [((s+len(t)//2+4)*16, n*16) for s,n in weak]
-                    dam = bytes([0xa1, 0xa1, 0xa1, dmark]) + sec_data
-                    dam += struct.pack('>H', mfm.crc16.new(dam).crcValue^dcrc)
-                    t += mfm.encode(dam[3:])
+                    am = bytes([0xa1, 0xa1, 0xa1, dmark]) + sec_data
+                    am += struct.pack('>H', mfm.crc16.new(am).crcValue^dcrc)
+                    t += mfm.encode(am[3:])
                     t += mfm.encode(bytes([track.gapbyte] * gap_3))
 
                 # Some EDSK images have bogus GAP3 values. If the track is too
