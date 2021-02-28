@@ -105,10 +105,11 @@ class IBM_MFM:
     DDAM = 0xf8
 
     gap_presync = 12
-    
+
+    gapbyte = 0x4e
+
     def __init__(self, cyl, head):
         self.cyl, self.head = cyl, head
-        self.filler = 0x4e
         self.time_per_rev = 0.2
         self.clock = 1e-6
         self.sectors = []
@@ -220,7 +221,7 @@ class IBM_MFM:
         for a in areas:
             start = a.start//16 - self.gap_presync
             gap = max(start - len(t)//2, 0)
-            t += encode(bytes([self.filler] * gap))
+            t += encode(bytes([self.gapbyte] * gap))
             t += encode(bytes(self.gap_presync))
             if isinstance(a, IAM):
                 t += iam_sync_bytes
@@ -233,7 +234,7 @@ class IBM_MFM:
                 t += encode(idam[3:])
                 start = a.dam.start//16 - self.gap_presync
                 gap = max(start - len(t)//2, 0)
-                t += encode(bytes([self.filler] * gap))
+                t += encode(bytes([self.gapbyte] * gap))
                 t += encode(bytes(self.gap_presync))
                 t += sync_bytes
                 dam = bytes([0xa1, 0xa1, 0xa1, a.dam.mark]) + a.dam.data
@@ -243,7 +244,7 @@ class IBM_MFM:
         # Add the pre-index gap.
         tlen = int((self.time_per_rev / self.clock) // 16)
         gap = max(tlen - len(t)//2, 0)
-        t += encode(bytes([self.filler] * gap))
+        t += encode(bytes([self.gapbyte] * gap))
 
         track = MasterTrack(
             bits = mfm_encode(t),
