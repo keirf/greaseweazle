@@ -41,7 +41,8 @@
 #define CMD_READ_FLUX       7
 /* CMD_WRITE_FLUX, length=4. Argument is gw_write_flux.
  * Host follows the ACK with flux values terminating with EOStream (NUL).
- * Device finally returns a status byte, 0 on success. */
+ * Device finally returns a status byte, 0 on success.
+ * No further commands should be issued until the status byte is received. */
 #define CMD_WRITE_FLUX      8
 /* CMD_GET_FLUX_STATUS, length=2. Last read/write status returned in ACK. */
 #define CMD_GET_FLUX_STATUS 9
@@ -58,7 +59,9 @@
 #define CMD_SET_PIN        15
 /* CMD_RESET, length=2. Reset all state to initial (power on) values. */
 #define CMD_RESET          16
-/* CMD_ERASE_FLUX, length=6. Argument is gw_erase_flux. */
+/* CMD_ERASE_FLUX, length=6. Argument is gw_erase_flux. 
+ * Device returns a status byte when erasure is completed, 0 on success. 
+ * No further commands should be issued until the status byte is received. */
 #define CMD_ERASE_FLUX     17
 /* CMD_SOURCE_BYTES, length=6. Argument is gw_sink_source_bytes. */
 #define CMD_SOURCE_BYTES   18
