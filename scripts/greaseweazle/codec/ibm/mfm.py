@@ -26,7 +26,7 @@ sync.frombytes(sync_bytes)
 crc16 = crcmod.predefined.Crc('crc-ccitt-false')
 
 def sec_sz(n):
-    return 128 << n if n <= 7 else 128 <= 8
+    return 128 << n if n <= 7 else 128 << 8
 
 class TrackArea:
     def __init__(self, start, end, crc=None):

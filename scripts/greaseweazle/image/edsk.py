@@ -1,5 +1,8 @@
 # greaseweazle/image/edsk.py
 #
+# Some of the code here is heavily inspired by Simon Owen's SAMdisk:
+# https://simonowen.com/samdisk/
+#
 # Written & released by Keir Fraser <keir.xen@gmail.com>
 # 
 # This is free and unencumbered software released into the public domain.
@@ -14,6 +17,64 @@ from greaseweazle.codec.ibm import mfm
 from greaseweazle.track import MasterTrack, RawTrack
 from .image import Image
 
+class SR1:
+    SUCCESS                   = 0x00
+    CANNOT_FIND_ID_ADDRESS    = 0x01
+    WRITE_PROTECT_DETECTED    = 0x02
+    CANNOT_FIND_SECTOR_ID     = 0x04
+    RESERVED1                 = 0x08
+    OVERRUN                   = 0x10
+    CRC_ERROR                 = 0x20
+    RESERVED2                 = 0x40
+    END_OF_CYLINDER           = 0x80
+
+class SR2:
+    SUCCESS                   = 0x00
+    MISSING_ADDRESS_MARK      = 0x01
+    BAD_CYLINDER              = 0x02
+    SCAN_COMMAND_FAILED       = 0x04
+    SCAN_COMMAND_EQUAL        = 0x08
+    WRONG_CYLINDER_DETECTED   = 0x10
+    CRC_ERROR_IN_SECTOR_DATA  = 0x20
+    SECTOR_WITH_DELETED_DATA  = 0x40
+    RESERVED                  = 0x80
+
+class SectorErrors:
+    def __init__(self, sr1, sr2):
+        self.id_crc_error = (sr1 & SR1.CRC_ERROR) != 0
+        self.data_not_found = (sr2 & SR2.MISSING_ADDRESS_MARK) != 0
+        self.data_crc_error = (sr2 & SR2.CRC_ERROR_IN_SECTOR_DATA) != 0
+        self.deleted_dam = (sr2 & SR2.SECTOR_WITH_DELETED_DATA) != 0
+        if self.data_crc_error:
+            # uPD765 sets both id and data flags for data CRC errors
+            self.id_crc_error = False
+        if (# normal data
+            (sr1 == SR1.SUCCESS and sr2 == SR2.SUCCESS) or
+            # deleted data
+            (sr1 == SR1.SUCCESS and sr2 == SR2.SECTOR_WITH_DELETED_DATA) or
+            # end of track
+            (sr1 == SR1.END_OF_CYLINDER and sr2 == SR2.SUCCESS) or
+            # id crc error
+            (sr1 == SR1.CRC_ERROR and sr2 == SR2.SUCCESS) or
+            # normal data crc error
+            (sr1 == SR1.CRC_ERROR and sr2 == SR2.CRC_ERROR_IN_SECTOR_DATA) or
+            # deleted data crc error
+            (sr1 == SR1.CRC_ERROR and sr2 == (SR2.CRC_ERROR_IN_SECTOR_DATA |
+                                              SR2.SECTOR_WITH_DELETED_DATA)) or
+            # data field missing (some FDCs set AM in ST1)
+            (sr1 == SR1.CANNOT_FIND_ID_ADDRESS
+             and sr2 == SR2.MISSING_ADDRESS_MARK) or
+            # data field missing (some FDCs don't)
+            (sr1 == SR1.SUCCESS and sr2 == SR2.MISSING_ADDRESS_MARK) or
+            # CHRN mismatch
+            (sr1 == SR1.CANNOT_FIND_SECTOR_ID and sr2 == SR2.SUCCESS) or
+            # CHRN mismatch, including wrong cylinder
+            (sr1 == SR1.CANNOT_FIND_SECTOR_ID
+             and sr2 == SR2.WRONG_CYLINDER_DETECTED)):
+            pass
+        else:
+            print('Unusual status flags (ST1=%02X ST2=%02X)' % (sr1, sr2))
+            
 class EDSKTrack:
 
     gap_presync = 12
@@ -130,14 +191,14 @@ class EDSK(Image):
             raise error.Fatal('Unrecognised CPC DSK file: bad signature')
 
         if extended:
-            tsizes = list(dat[52:52+ncyls*nsides])
-            tsizes = list(map(lambda x: x*256, tsizes))
+            track_sizes = list(dat[52:52+ncyls*nsides])
+            track_sizes = list(map(lambda x: x*256, track_sizes))
         else:
-            tsizes = [track_sz] * (ncyls * nsides)
+            track_sizes = [track_sz] * (ncyls * nsides)
 
         o = 256 # skip disk header and track-size table
-        for tsize in tsizes:
-            if tsize == 0:
+        for track_size in track_sizes:
+            if track_size == 0:
                 continue
             sig, cyl, head, sec_sz, nsecs, gap_3, filler = struct.unpack(
                 '<12s4x2B2x4B', dat[o:o+24])
@@ -158,55 +219,62 @@ class EDSK(Image):
                 secs = dat[o+24:o+24+8*nsecs]
                 data_pos = o + 256 # skip track header and sector-info table
                 while secs:
-                    c, h, r, n, stat1, stat2, actual_length = struct.unpack(
+                    c, h, r, n, stat1, stat2, data_size = struct.unpack(
                         '<6BH', secs[:8])
                     secs = secs[8:]
-                    size = mfm.sec_sz(n)
+                    native_size = mfm.sec_sz(n)
                     weak = []
+                    errs = SectorErrors(stat1, stat2)
+                    num_copies = 0 if errs.data_not_found else 1
                     if not extended:
-                        actual_length = mfm.sec_sz(sec_sz)
-                    elif size != actual_length:
-                        error.check(actual_length != 0
-                                    and actual_length % size == 0,
-                                    'EDSK: Weird sector size (GAP protection?)')
-                        weak = cls().find_weak_ranges(
-                            dat[data_pos:data_pos+actual_length], size)
-                    # Update CRCs according to status flags
-                    icrc, dcrc = 0, 0
-                    if stat1 & 0x20:
-                        if stat2 & 0x20:
-                            dcrc = 0xffff
-                        else:
-                            icrc = 0xffff
-                        stat1 &= ~0x20
-                        stat2 &= ~0x20
-                    # Update address marks according to status flags
-                    imark, dmark = mfm.IBM_MFM.IDAM, mfm.IBM_MFM.DAM
-                    if stat2 & 0x40:
-                        dmark = mfm.IBM_MFM.DDAM
-                    if stat2 & 0x01:
-                        dmark = 0
-                    elif stat1 & 0x01:
-                        imark = 0
-                    stat1 &= ~0x01
-                    stat2 &= ~0x41
-                    error.check(stat1 == 0 and stat2 == 0,
-                                'EDSK: Mangled sector (copy protection?)')
-                    sec_data = dat[data_pos:data_pos+size]
-                    data_pos += actual_length
+                        data_size = mfm.sec_sz(sec_sz)
+                    sec_data = dat[data_pos:data_pos+data_size]
+                    data_pos += data_size
+                    if (extended
+                        and data_size > native_size
+                        and errs.data_crc_error
+                        and (data_size % native_size == 0
+                             or data_size == 49152)):
+                        num_copies = (3 if data_size == 49152
+                                      else data_size // native_size)
+                        data_size //= num_copies
+                        weak = cls().find_weak_ranges(sec_data, data_size)
+                        sec_data = sec_data[:data_size]
+                    if data_size < native_size:
+                        # Pad short data
+                        sec_data += bytes(native_size - data_size)
                     # IDAM
                     t += mfm.encode(bytes(track.gap_presync))
                     t += mfm.sync_bytes
-                    am = bytes([0xa1, 0xa1, 0xa1, imark, c, h, r, n])
-                    am += struct.pack('>H', mfm.crc16.new(am).crcValue^icrc)
+                    am = bytes([0xa1, 0xa1, 0xa1, mfm.IBM_MFM.IDAM,
+                                c, h, r, n])
+                    crc = mfm.crc16.new(am).crcValue
+                    if errs.id_crc_error:
+                        crc ^= 0x5555
+                    am += struct.pack('>H', crc)
                     t += mfm.encode(am[3:])
                     t += mfm.encode(bytes([track.gapbyte] * track.gap_2))
                     # DAM
+                    if errs.id_crc_error or errs.data_not_found:
+                        continue
                     t += mfm.encode(bytes(track.gap_presync))
                     t += mfm.sync_bytes
                     track.weak += [((s+len(t)//2+4)*16, n*16) for s,n in weak]
+                    dmark = (mfm.IBM_MFM.DDAM if errs.deleted_dam
+                             else mfm.IBM_MFM.DAM)
                     am = bytes([0xa1, 0xa1, 0xa1, dmark]) + sec_data
-                    am += struct.pack('>H', mfm.crc16.new(am).crcValue^dcrc)
+                    if data_size > native_size:
+                        # Long data includes CRC and GAP
+                        if (sec_data[-13] != 0
+                            and all([v==0 for v in sec_data[-12:]])):
+                            # Includes next pre-sync: Clip it.
+                            am = am[:-12]
+                        t += mfm.encode(am[3:])
+                        continue
+                    crc = mfm.crc16.new(am).crcValue
+                    if errs.data_crc_error:
+                        crc ^= 0x5555
+                    am += struct.pack('>H', crc)
                     t += mfm.encode(am[3:])
                     t += mfm.encode(bytes([track.gapbyte] * gap_3))
 
@@ -234,7 +302,7 @@ class EDSK(Image):
             track.bits = bitarray(endian='big')
             track.bits.frombytes(mfm.mfm_encode(t))
             edsk.to_track[cyl,head] = track
-            o += tsize
+            o += track_size
 
         return edsk
 
