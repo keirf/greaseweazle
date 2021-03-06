@@ -111,7 +111,7 @@ class EDSK(Image):
             if weak:
                 s, e = min(s, weak[0]), max(e, weak[-1])
         return [(s,e-s+1)] if s <= e else []
-        
+
     @classmethod
     def from_file(cls, name):
 
@@ -133,7 +133,7 @@ class EDSK(Image):
             tsizes = list(dat[52:52+ncyls*nsides])
             tsizes = list(map(lambda x: x*256, tsizes))
         else:
-            raise error.Fatal('Standard CPC DSK file not yet supported')
+            tsizes = [track_sz] * (ncyls * nsides)
 
         o = 256 # skip disk header and track-size table
         for tsize in tsizes:
@@ -161,9 +161,11 @@ class EDSK(Image):
                     c, h, r, n, stat1, stat2, actual_length = struct.unpack(
                         '<6BH', secs[:8])
                     secs = secs[8:]
-                    size = 128 << n
+                    size = mfm.sec_sz(n)
                     weak = []
-                    if size != actual_length:
+                    if not extended:
+                        actual_length = mfm.sec_sz(sec_sz)
+                    elif size != actual_length:
                         error.check(actual_length != 0
                                     and actual_length % size == 0,
                                     'EDSK: Weird sector size (GAP protection?)')
@@ -221,6 +223,7 @@ class EDSK(Image):
                             '(%d bits @ GAP3=%d; %d bits @ GAP3=0)'
                             % (cyl, head, len(t)*8, gap_3,
                                (len(t)//2-gap_3*nsecs)*16))
+                #print('EDSK: GAP3 reduced (%d -> %d)' % (gap_3, new_gap_3))
                 gap_3 = new_gap_3
 
             # Pre-index gap
