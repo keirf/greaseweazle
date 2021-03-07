@@ -206,6 +206,7 @@ class EDSK(Image):
                         'EDSK: Missing track header')
             error.check((cyl, head) not in edsk.to_track,
                         'EDSK: Track specified twice')
+            bad_crc_clip_data = False
             while True:
                 track = EDSKTrack()
                 t = bytes()
@@ -218,6 +219,7 @@ class EDSK(Image):
                 t += mfm.encode(bytes([track.gapbyte] * track.gap_1))
                 secs = dat[o+24:o+24+8*nsecs]
                 data_pos = o + 256 # skip track header and sector-info table
+                clippable, ngap3 = 0, 0
                 while secs:
                     c, h, r, n, stat1, stat2, data_size = struct.unpack(
                         '<6BH', secs[:8])
@@ -240,9 +242,6 @@ class EDSK(Image):
                         data_size //= num_copies
                         weak = cls().find_weak_ranges(sec_data, data_size)
                         sec_data = sec_data[:data_size]
-                    if data_size < native_size:
-                        # Pad short data
-                        sec_data += bytes(native_size - data_size)
                     # IDAM
                     t += mfm.encode(bytes(track.gap_presync))
                     t += mfm.sync_bytes
@@ -262,35 +261,70 @@ class EDSK(Image):
                     track.weak += [((s+len(t)//2+4)*16, n*16) for s,n in weak]
                     dmark = (mfm.IBM_MFM.DDAM if errs.deleted_dam
                              else mfm.IBM_MFM.DAM)
-                    am = bytes([0xa1, 0xa1, 0xa1, dmark]) + sec_data
-                    if data_size > native_size:
-                        # Long data includes CRC and GAP
+                    gap_included = False
+                    if errs.data_crc_error:
+                        if secs:
+                            # Look for next IDAM
+                            idam = bytes([0]*12 + [0xa1]*3
+                                         + [mfm.IBM_MFM.IDAM])
+                            idx = sec_data.find(idam)
+                        else:
+                            # Last sector: Look for GAP3
+                            idx = sec_data.find(bytes([track.gapbyte]*16))
+                        if idx > 0:
+                            # 2 + gap_3 = CRC + GAP3 (because gap_included)
+                            clippable += data_size - idx + 2 + gap_3
+                            if bad_crc_clip_data:
+                                data_size = idx
+                                sec_data = sec_data[:data_size]
+                                gap_included = True
+                    elif data_size < native_size:
+                        # Pad short data
+                        sec_data += bytes(native_size - data_size)
+                    elif data_size > native_size:
+                        # Clip long data
                         if (sec_data[-13] != 0
                             and all([v==0 for v in sec_data[-12:]])):
                             # Includes next pre-sync: Clip it.
-                            am = am[:-12]
+                            sec_data = sec_data[:-12]
+                        # Long data includes CRC and GAP
+                        gap_included = True
+                    am = bytes([0xa1, 0xa1, 0xa1, dmark]) + sec_data
+                    if gap_included:
                         t += mfm.encode(am[3:])
-                        continue
-                    crc = mfm.crc16.new(am).crcValue
-                    if errs.data_crc_error:
-                        crc ^= 0x5555
-                    am += struct.pack('>H', crc)
-                    t += mfm.encode(am[3:])
-                    t += mfm.encode(bytes([track.gapbyte] * gap_3))
+                    else:
+                        crc = mfm.crc16.new(am).crcValue
+                        if errs.data_crc_error:
+                            crc ^= 0x5555
+                        am += struct.pack('>H', crc)
+                        t += mfm.encode(am[3:])
+                        if secs:
+                            # GAP3 for all but last sector
+                            t += mfm.encode(bytes([track.gapbyte] * gap_3))
+                            ngap3 += 1
 
-                # Some EDSK images have bogus GAP3 values. If the track is too
-                # long to comfortably fit in 300rpm at double density, shrink
-                # GAP3 as far as necessary.
+                # The track may be too long to fit: Check for overhang.
                 tracklen = int((track.time_per_rev / track.clock) / 16)
                 overhang = int(len(t)//2 - tracklen*0.99)
                 if overhang <= 0:
                     break
-                new_gap_3 = gap_3 - math.ceil(overhang / nsecs)
+
+                # Some EDSK tracks with Bad CRC contain a raw dump following
+                # the DAM. This can usually be clipped.
+                if clippable > overhang:
+                    bad_crc_clip_data = True
+                    continue
+
+                # Some EDSK images have bogus GAP3 values. Shrink it if
+                # necessary.
+                new_gap_3 = -1
+                if ngap3 != 0:
+                    new_gap_3 = gap_3 - math.ceil(overhang / ngap3)
                 error.check(new_gap_3 >= 0,
                             'EDSK: Track %d.%d is too long '
                             '(%d bits @ GAP3=%d; %d bits @ GAP3=0)'
                             % (cyl, head, len(t)*8, gap_3,
-                               (len(t)//2-gap_3*nsecs)*16))
+                               (len(t)//2-gap_3*ngap3)*16))
                 #print('EDSK: GAP3 reduced (%d -> %d)' % (gap_3, new_gap_3))
                 gap_3 = new_gap_3
 
