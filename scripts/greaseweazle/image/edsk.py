@@ -87,7 +87,7 @@ class EDSKTrack:
     def __init__(self):
         self.time_per_rev = 0.2
         self.clock = 2e-6
-        self.bits, self.weak = [], []
+        self.bits, self.weak, self.bytes = [], [], bytearray()
 
     def raw_track(self):
         track = MasterTrack(
@@ -186,7 +186,7 @@ class EDSK(Image):
         if len(data) > 6307:
             data = data[:6307]
         track = EDSKTrack()
-        t = bytes()
+        t = track.bytes
         # Post-index gap
         t += mfm.encode(bytes([track.gapbyte] * 16))
         # IAM
@@ -209,13 +209,6 @@ class EDSK(Image):
                  else mfm.IBM_MFM.DAM)
         am = bytes([0xa1, 0xa1, 0xa1, dmark]) + data
         t += mfm.encode(am[3:])
-        # Pre-index gap
-        track.verify_len = len(t)*8
-        tracklen = int((track.time_per_rev / track.clock) / 16)
-        gap = max(40, tracklen - len(t)//2)
-        t += mfm.encode(bytes([track.gapbyte] * gap))
-        track.bits = bitarray(endian='big')
-        track.bits.frombytes(mfm.mfm_encode(t))
         return track
 
     @classmethod
@@ -254,7 +247,7 @@ class EDSK(Image):
             bad_crc_clip_data = False
             while True:
                 track = EDSKTrack()
-                t = bytes()
+                t = track.bytes
                 # Post-index gap
                 t += mfm.encode(bytes([track.gapbyte] * track.gap_4a))
                 # IAM
@@ -349,22 +342,16 @@ class EDSK(Image):
                             t += mfm.encode(bytes([track.gapbyte] * gap_3))
                             ngap3 += 1
 
-                # Special 8K track handler
-                ntrack = cls()._build_8k_track(sectors)
-                if ntrack:
-                    track = ntrack
+                # Special track handlers
+                special_track = cls()._build_8k_track(sectors)
+                if special_track is not None:
+                    track = special_track
                     break
 
                 # The track may be too long to fit: Check for overhang.
                 tracklen = int((track.time_per_rev / track.clock) / 16)
                 overhang = int(len(t)//2 - tracklen*0.99)
                 if overhang <= 0:
-                    # We're done: Generate the pre-index gap
-                    track.verify_len = len(t)*8
-                    gap = tracklen - len(t)//2
-                    t += mfm.encode(bytes([track.gapbyte] * gap))
-                    track.bits = bitarray(endian='big')
-                    track.bits.frombytes(mfm.mfm_encode(t))
                     break
 
                 # Some EDSK tracks with Bad CRC contain a raw dump following
@@ -386,6 +373,17 @@ class EDSK(Image):
                 #print('EDSK: GAP3 reduced (%d -> %d)' % (gap_3, new_gap_3))
                 gap_3 = new_gap_3
 
+            # Pre-index gap
+            track.verify_len = len(track.bytes)*8
+            tracklen = int((track.time_per_rev / track.clock) / 16)
+            gap = max(40, tracklen - len(t)//2)
+            track.bytes += mfm.encode(bytes([track.gapbyte] * gap))
+
+            # Add the clock buts
+            track.bits = bitarray(endian='big')
+            track.bits.frombytes(mfm.mfm_encode(track.bytes))
+
+            # Register the track
             edsk.to_track[cyl,head] = track
             o += track_size
 
