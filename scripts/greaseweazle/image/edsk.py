@@ -161,17 +161,31 @@ class EDSK(Image):
     def __init__(self):
         self.to_track = dict()
 
-    # Currently only finds one weak range.
+    # Find all weak ranges in the given sector data copies.
     @staticmethod
     def find_weak_ranges(dat, size):
         orig = dat[:size]
-        s, e = size, 0
+        s, w = size, []
+        # Find first mismatching byte across all copies
         for i in range(1, len(dat)//size):
             diff = [x^y for x, y in zip(orig, dat[size*i:size*(i+1)])]
             weak = [idx for idx, val in enumerate(diff) if val != 0]
             if weak:
-                s, e = min(s, weak[0]), max(e, weak[-1])
-        return [(s,e-s+1)] if s <= e else []
+                s = min(s, weak[0])
+        # Look for runs of filler
+        i = s
+        while i < size:
+            j, x = i, orig[i]
+            while j < size and orig[j] == x:
+                j += 1
+            if j-i >= 16:
+                w.append((s,i-s))
+                s = j
+            i = j
+        # Append final weak area if any.
+        if s < size:
+            w.append((s,size-s))
+        return w
 
     @staticmethod
     def _build_8k_track(sectors):
