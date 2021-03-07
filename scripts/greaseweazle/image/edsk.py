@@ -173,6 +173,51 @@ class EDSK(Image):
                 s, e = min(s, weak[0]), max(e, weak[-1])
         return [(s,e-s+1)] if s <= e else []
 
+    @staticmethod
+    def _build_8k_track(sectors):
+        if len(sectors) != 1:
+            return None
+        c,h,r,n,errs,data = sectors[0]
+        if n != 6:
+            return None
+        if errs.id_crc_error or errs.data_not_found or not errs.data_crc_error:
+            return None
+        # Magic longtrack value is for Coin-Op Hits. Taken from SAMdisk.
+        if len(data) > 6307:
+            data = data[:6307]
+        track = EDSKTrack()
+        t = bytes()
+        # Post-index gap
+        t += mfm.encode(bytes([track.gapbyte] * 16))
+        # IAM
+        t += mfm.encode(bytes(track.gap_presync))
+        t += mfm.iam_sync_bytes
+        t += mfm.encode(bytes([mfm.IBM_MFM.IAM]))
+        t += mfm.encode(bytes([track.gapbyte] * 16))
+        # IDAM
+        t += mfm.encode(bytes(track.gap_presync))
+        t += mfm.sync_bytes
+        am = bytes([0xa1, 0xa1, 0xa1, mfm.IBM_MFM.IDAM, c, h, r, n])
+        crc = mfm.crc16.new(am).crcValue
+        am += struct.pack('>H', crc)
+        t += mfm.encode(am[3:])
+        t += mfm.encode(bytes([track.gapbyte] * track.gap_2))
+        # DAM
+        t += mfm.encode(bytes(track.gap_presync))
+        t += mfm.sync_bytes
+        dmark = (mfm.IBM_MFM.DDAM if errs.deleted_dam
+                 else mfm.IBM_MFM.DAM)
+        am = bytes([0xa1, 0xa1, 0xa1, dmark]) + data
+        t += mfm.encode(am[3:])
+        # Pre-index gap
+        track.verify_len = len(t)*8
+        tracklen = int((track.time_per_rev / track.clock) / 16)
+        gap = max(40, tracklen - len(t)//2)
+        t += mfm.encode(bytes([track.gapbyte] * gap))
+        track.bits = bitarray(endian='big')
+        track.bits.frombytes(mfm.mfm_encode(t))
+        return track
+
     @classmethod
     def from_file(cls, name):
 
@@ -217,13 +262,13 @@ class EDSK(Image):
                 t += mfm.iam_sync_bytes
                 t += mfm.encode(bytes([mfm.IBM_MFM.IAM]))
                 t += mfm.encode(bytes([track.gapbyte] * track.gap_1))
-                secs = dat[o+24:o+24+8*nsecs]
+                sh = dat[o+24:o+24+8*nsecs]
                 data_pos = o + 256 # skip track header and sector-info table
-                clippable, ngap3 = 0, 0
-                while secs:
+                clippable, ngap3, sectors = 0, 0, []
+                while sh:
                     c, h, r, n, stat1, stat2, data_size = struct.unpack(
-                        '<6BH', secs[:8])
-                    secs = secs[8:]
+                        '<6BH', sh[:8])
+                    sh = sh[8:]
                     native_size = mfm.sec_sz(n)
                     weak = []
                     errs = SectorErrors(stat1, stat2)
@@ -242,6 +287,7 @@ class EDSK(Image):
                         data_size //= num_copies
                         weak = cls().find_weak_ranges(sec_data, data_size)
                         sec_data = sec_data[:data_size]
+                    sectors.append((c,h,r,n,errs,sec_data))
                     # IDAM
                     t += mfm.encode(bytes(track.gap_presync))
                     t += mfm.sync_bytes
@@ -263,7 +309,7 @@ class EDSK(Image):
                              else mfm.IBM_MFM.DAM)
                     gap_included = False
                     if errs.data_crc_error:
-                        if secs:
+                        if sh:
                             # Look for next IDAM
                             idam = bytes([0]*12 + [0xa1]*3
                                          + [mfm.IBM_MFM.IDAM])
@@ -298,15 +344,27 @@ class EDSK(Image):
                             crc ^= 0x5555
                         am += struct.pack('>H', crc)
                         t += mfm.encode(am[3:])
-                        if secs:
+                        if sh:
                             # GAP3 for all but last sector
                             t += mfm.encode(bytes([track.gapbyte] * gap_3))
                             ngap3 += 1
+
+                # Special 8K track handler
+                ntrack = cls()._build_8k_track(sectors)
+                if ntrack:
+                    track = ntrack
+                    break
 
                 # The track may be too long to fit: Check for overhang.
                 tracklen = int((track.time_per_rev / track.clock) / 16)
                 overhang = int(len(t)//2 - tracklen*0.99)
                 if overhang <= 0:
+                    # We're done: Generate the pre-index gap
+                    track.verify_len = len(t)*8
+                    gap = tracklen - len(t)//2
+                    t += mfm.encode(bytes([track.gapbyte] * gap))
+                    track.bits = bitarray(endian='big')
+                    track.bits.frombytes(mfm.mfm_encode(t))
                     break
 
                 # Some EDSK tracks with Bad CRC contain a raw dump following
@@ -328,13 +386,6 @@ class EDSK(Image):
                 #print('EDSK: GAP3 reduced (%d -> %d)' % (gap_3, new_gap_3))
                 gap_3 = new_gap_3
 
-            # Pre-index gap
-            track.verify_len = len(t)*8
-            gap = tracklen - len(t)//2
-            t += mfm.encode(bytes([track.gapbyte] * gap))
-
-            track.bits = bitarray(endian='big')
-            track.bits.frombytes(mfm.mfm_encode(t))
             edsk.to_track[cyl,head] = track
             o += track_size
 
