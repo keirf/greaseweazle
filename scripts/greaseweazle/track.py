@@ -66,6 +66,7 @@ class MasterTrack:
         self.splice = splice
         self.weak = weak
         self.precomp = None
+        self.force_random_weak = True
 
     def __str__(self):
         s = "\nMaster Track: splice @ %d\n" % self.splice
@@ -101,7 +102,7 @@ class MasterTrack:
             e = s + n
             assert 0 < s < e < bitlen
             pattern = bitarray(endian="big")
-            if n < 400:
+            if n < 400 or self.force_random_weak:
                 # Short weak regions are written with no flux transitions.
                 # Actually we insert a flux transition every 32 bitcells, else
                 # we risk triggering Greaseweazle's No Flux Area generator.

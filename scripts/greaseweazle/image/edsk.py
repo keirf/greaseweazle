@@ -311,7 +311,7 @@ class EDSK(Image):
                         continue
                     t += mfm.encode(bytes(track.gap_presync))
                     t += mfm.sync_bytes
-                    track.weak += [((s+len(t)//2+4)*16, n*16) for s,n in weak]
+                    track.weak += [((s+len(t)//2+1)*16, n*16) for s,n in weak]
                     dmark = (mfm.IBM_MFM.DDAM if errs.deleted_dam
                              else mfm.IBM_MFM.DAM)
                     gap_included = False
