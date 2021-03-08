@@ -370,7 +370,7 @@ class EDSK(Image):
 
                 # Some EDSK tracks with Bad CRC contain a raw dump following
                 # the DAM. This can usually be clipped.
-                if clippable > overhang:
+                if clippable and not bad_crc_clip_data:
                     bad_crc_clip_data = True
                     continue
 
