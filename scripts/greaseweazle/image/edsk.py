@@ -323,7 +323,7 @@ class EDSK(Image):
                             idx = sec_data.find(idam)
                         else:
                             # Last sector: Look for GAP3
-                            idx = sec_data.find(bytes([track.gapbyte]*16))
+                            idx = sec_data.find(bytes([track.gapbyte]*8))
                         if idx > 0:
                             # 2 + gap_3 = CRC + GAP3 (because gap_included)
                             clippable += data_size - idx + 2 + gap_3
