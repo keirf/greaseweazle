@@ -2,7 +2,7 @@
 export FW_MAJOR := 0
 export FW_MINOR := 25
 
-TARGETS := all blinky clean dist windist mrproper ocd flash start serial pysetup
+TARGETS := all blinky clean dist windist mrproper f1_ocd ocd flash start serial pysetup
 .PHONY: $(TARGETS)
 
 ifneq ($(RULES_MK),y)
@@ -100,6 +100,9 @@ DEV=/dev/ttyUSB0
 ocd: all
 	$(PYTHON) scripts/telnet.py localhost 4444 \
 	"reset init ; flash write_image erase `pwd`/$(PROJ)-$(VER).hex ; reset"
+
+f1_ocd: all
+	python3 scripts/openocd/flash.py `pwd`/$(PROJ)-$(VER).hex
 
 flash: all
 	sudo stm32flash -b $(BAUD) -w $(PROJ)-$(VER).hex $(DEV)
