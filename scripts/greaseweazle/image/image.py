@@ -16,7 +16,14 @@ class Image:
     ## Context manager for image objects created using .to_file()
 
     def __enter__(self):
-        self.file = open(self.filename, "wb")
+        if os.path.isfile(self.filename):
+            print("\nSTOP: " + self.filename + " : exists")
+            exit()
+        else:
+            try:
+                self.file = open(self.filename, "wb")
+            except IOError:
+                print("File not accessible")
         return self
 
     def __exit__(self, type, value, tb):
