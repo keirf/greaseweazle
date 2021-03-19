@@ -50,7 +50,9 @@ def main(argv):
         print('  Not found')
         sys.exit(0)
 
-    if usb.hw_model == 7 and usb.update_mode != args.bootloader:
+    mode_switched = (usb.jumperless_update
+                     and usb.update_mode != args.bootloader)
+    if mode_switched:
         usb = util.usb_reopen(usb, args.bootloader)
         
     port = usb.port_info
@@ -78,8 +80,8 @@ def main(argv):
         speed = 'Unknown (0x%02X)' % usb.usb_speed
     print_info_line('USB Rate', speed, tab=2)
 
-    if usb.hw_model == 7 and usb.update_mode:
-        usb = util.usb_reopen(usb, False)
+    if mode_switched:
+        usb = util.usb_reopen(usb, not args.bootloader)
 
 
 if __name__ == "__main__":

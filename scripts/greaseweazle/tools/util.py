@@ -7,7 +7,7 @@
 # This is free and unencumbered software released into the public domain.
 # See the file COPYING for more details, or visit <http://unlicense.org>.
 
-import argparse, os, sys, serial, struct, time, re
+import argparse, os, sys, serial, struct, time, re, platform
 import importlib
 import serial.tools.list_ports
 
@@ -259,52 +259,64 @@ def usb_reopen(usb, is_update):
         else:
             new_usb = USB.Unit(new_ser)
             new_usb.port_info = port_info(devicename)
+            new_usb.jumperless_update = usb.jumperless_update
             return new_usb
     raise serial.SerialException('Could not reopen port after mode switch')
 
 
 def usb_open(devicename, is_update=False, mode_check=True):
 
+    def print_update_instructions(usb):
+        print("To perform an Update:")
+        if not usb.jumperless_update:
+            print(" - Disconnect from USB")
+            print(" - Install the Update Jumper at pins %s"
+                  % ("RXI-TXO" if usb.hw_model == 7 else "DCLK-GND"))
+            print(" - Reconnect to USB")
+        print(" - Run \"gw update\" to install firmware v%u.%u" %
+              (version.major, version.minor))
+
     if devicename is None:
         devicename = find_port()
     
     usb = USB.Unit(serial.Serial(devicename))
     usb.port_info = port_info(devicename)
+    is_win7 = (platform.system() == 'Windows' and platform.release() == '7')
+    usb.jumperless_update = usb.hw_model == 7 and not is_win7
 
     if not mode_check:
         return usb
 
     if usb.update_mode and not is_update:
-        if usb.hw_model == 7 and not usb.update_jumpered:
+        if usb.jumperless_update and not usb.update_jumpered:
             usb = usb_reopen(usb, is_update)
             if not usb.update_mode:
                 return usb
-        print("Greaseweazle is in Firmware Update Mode:")
-        print(" The only available action is \"update\" of main firmware")
+        print("ERROR: Greaseweazle is in Firmware Update Mode")
+        print(" - The only available action is \"gw update\"")
         if usb.update_jumpered:
-            print(" Remove the Update Jumper for normal operation")
+            print(" - For normal operation disconnect from USB and remove "
+                  "the Update Jumper at pins %s"
+                  % ("RXI-TXO" if usb.hw_model == 7 else "DCLK-GND"))
         else:
-            print(" Main firmware is erased: You *must* perform an update!")
+            print(" - Main firmware is erased: You *must* perform an update!")
         sys.exit(1)
 
     if is_update and not usb.update_mode:
-        if usb.hw_model == 7:
+        if usb.jumperless_update:
             usb = usb_reopen(usb, is_update)
             error.check(usb.update_mode, """\
 Greaseweazle F7 did not change to Firmware Update Mode as requested.
-If the problem persists, install the Update Jumper (across RX/TX).""")
+If the problem persists, install the Update Jumper at pins RXI-TXO.""")
             return usb
-        print("Greaseweazle is in Normal Mode:")
-        print(" To \"update\" you must install the Update Jumper")
+        print("ERROR: Greaseweazle is not in Firmware Update Mode")
+        print_update_instructions(usb)
         sys.exit(1)
 
     if not usb.update_mode and usb.update_needed:
         print("ERROR: Greaseweazle firmware v%u.%u is unsupported"
               % (usb.major, usb.minor))
-        if usb.hw_model != 7:
-            print("Install the Update Jumper; ", end="")
-        print("Run \"gw update\" to install firmware v%u.%u" %
-              (version.major, version.minor))
+        print_update_instructions(usb)
         sys.exit(1)
 
     return usb

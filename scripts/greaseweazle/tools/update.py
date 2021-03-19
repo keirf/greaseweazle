@@ -93,10 +93,10 @@ def update_firmware(usb, args):
             return
         print("Done.")
     
-        if usb.hw_model == 7:
+        if usb.jumperless_update:
             util.usb_reopen(usb, is_update=False)
         else:
-            print("** Disconnect Greaseweazle and remove the Programming Jumper.")
+            print("** Disconnect Greaseweazle and remove the Update Jumper")
 
 
 def main(argv):
