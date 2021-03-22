@@ -277,6 +277,11 @@ void hw_usb_init(void)
 
 void hw_usb_deinit(void)
 {
+    /* HAL_PCD_Stop, USB_DevDisconnect */
+    otgd->dctl |= OTG_DCTL_SDIS;
+    peripheral_clock_delay();
+
+    /* HAL_PCD_MspDeInit */
     switch (conf_port) {
     case PORT_FS:
         gpio_configure_pin(gpioa, 11, GPI_floating);
