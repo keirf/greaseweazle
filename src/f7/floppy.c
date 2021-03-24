@@ -290,7 +290,7 @@ static void reset_user_pins(void)
 
 static void flippy_trk0_sensor(bool_t level)
 {
-    if (gw_info.hw_submodel == F7SM_lightning_plus) {
+    if (board_config->flippy) {
         gpio_write_pin(gpioc, 1, level);
         delay_us(10);
     }

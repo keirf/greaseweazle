@@ -63,7 +63,7 @@ const static struct pin_mapping _msel_pins_f7_slim[] = {
     {  0,  0,  0 }
 };
 
-const static struct pin_mapping _user_pins_F7SM_basic_v1[] = {
+const static struct pin_mapping _user_pins_F7SM_v1[] = {
     { 2, _B, 12, _OD },
     { 0,  0,  0, _OD } };
 const static struct pin_mapping _user_pins_F7SM_ant_goffart_f7_plus_v1[] = {
@@ -75,7 +75,7 @@ const static struct pin_mapping _user_pins_F7SM_lightning[] = {
     { 4, _E, 15, _PP },
     { 6, _E, 14, _PP },
     { 0,  0,  0, _PP } };
-const static struct pin_mapping _user_pins_F7SM_basic_v2[] = {
+const static struct pin_mapping _user_pins_F7SM_v2[] = {
     { 2, _B, 12, _OD },
     { 4, _C,  8, _OD },
     { 6, _C,  7, _OD },
@@ -92,10 +92,15 @@ const static struct pin_mapping _user_pins_F7SM_lightning_plus[] = {
     { 0,  0,  0, _PP } };
 const static struct pin_mapping _user_pins_F7SM_slim[] = {
     { 0,  0,  0, _PP } };
+const static struct pin_mapping _user_pins_F7SM_v3[] = {
+    { 2, _B, 12, _PP },
+    { 4, _C,  8, _PP },
+    { 6, _C,  7, _PP },
+    { 0,  0,  0, _PP } };
 const static struct board_config _board_config[] = {
-    [F7SM_basic_v1] = {
+    [F7SM_v1] = {
         .hse_mhz   = 8,
-        .user_pins = _user_pins_F7SM_basic_v1,
+        .user_pins = _user_pins_F7SM_v1,
         .msel_pins = _msel_pins_std },
     [F7SM_ant_goffart_f7_plus_v1] = {
         .hse_mhz   = 8,
@@ -106,9 +111,9 @@ const static struct board_config _board_config[] = {
         .hs_usb    = TRUE,
         .user_pins = _user_pins_F7SM_lightning,
         .msel_pins = _msel_pins_std },
-    [F7SM_basic_v2] = {
+    [F7SM_v2] = {
         .hse_mhz   = 8,
-        .user_pins = _user_pins_F7SM_basic_v2,
+        .user_pins = _user_pins_F7SM_v2,
         .msel_pins = _msel_pins_std },
     [F7SM_ant_goffart_f7_plus_v2] = {
         .hse_mhz   = 8,
@@ -118,6 +123,7 @@ const static struct board_config _board_config[] = {
         .hse_mhz   = 16,
         .hse_byp   = TRUE,
         .hs_usb    = TRUE,
+        .flippy    = TRUE,
         .user_pins = _user_pins_F7SM_lightning_plus,
         .msel_pins = _msel_pins_std },
     [F7SM_slim] = {
@@ -125,6 +131,11 @@ const static struct board_config _board_config[] = {
         .hse_byp   = TRUE,
         .user_pins = _user_pins_F7SM_slim,
         .msel_pins = _msel_pins_f7_slim },
+    [F7SM_v3] = {
+        .hse_mhz   = 8,
+        .flippy    = TRUE,
+        .user_pins = _user_pins_F7SM_v3,
+        .msel_pins = _msel_pins_std },
 };
 const struct board_config *board_config;
 
@@ -229,10 +240,10 @@ static void mcu_board_init(void)
         pu[upin->gpio_bank] &= ~(1u << upin->gpio_pin);
     }
 
-    /* Lightning Plus TRK0_DISABLE output: Set inactive (LOW). */
-    if (gw_info.hw_submodel == F7SM_lightning_plus) {
+    /* Flippy TRK0_DISABLE output: Set inactive (LOW). */
+    if (board_config->flippy) {
         gpio_configure_pin(gpioc, 1, GPO_pushpull(IOSPD_LOW, LOW));
-        pu[_C] &= ~(1u << 1);
+        pu[_C] &= ~(1u << 1); /* PC1 */
     }
 
     /* F7 Slim: Extra pins should float in case they are inputs (drive->GW). */

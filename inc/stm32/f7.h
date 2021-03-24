@@ -89,13 +89,14 @@ void gpio_set_af(GPIO gpio, unsigned int pin, unsigned int af);
 #define section_ext_ram __attribute__((section(".ext_ram")))
 
 enum {
-    F7SM_basic_v1 = 0,
+    F7SM_v1 = 0,
     F7SM_ant_goffart_f7_plus_v1,
     F7SM_lightning,
-    F7SM_basic_v2,
+    F7SM_v2,
     F7SM_ant_goffart_f7_plus_v2,
     F7SM_lightning_plus,
     F7SM_slim,
+    F7SM_v3,
 };
 
 struct pin_mapping {
@@ -109,6 +110,7 @@ struct board_config {
     uint8_t hse_mhz;
     bool_t hse_byp;
     bool_t hs_usb;
+    bool_t flippy;
     const struct pin_mapping *user_pins;
     const struct pin_mapping *msel_pins;
 };
