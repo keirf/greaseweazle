@@ -39,7 +39,7 @@ static struct unit {
 static struct gw_delay delay_params;
 static const struct gw_delay factory_delay_params = {
     .select_delay = 10,
-    .step_delay = 5000,
+    .step_delay = 10000,
     .seek_settle = 15,
     .motor_delay = 750,
     .watchdog = 10000
