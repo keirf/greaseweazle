@@ -246,10 +246,20 @@ static void mcu_board_init(void)
         pu[_C] &= ~(1u << 1); /* PC1 */
     }
 
-    /* F7 Slim: Extra pins should float in case they are inputs (drive->GW). */
-    if (gw_info.hw_submodel == F7SM_slim) {
+    switch (gw_info.hw_submodel) {
+
+    case F7SM_slim:
+        /* Extra pins should float in case they are inputs (drive->GW). */
         pu[_B] &= ~((1u << 0) | (1u << 12)); /* PB0, PB12 */
         pu[_C] &= ~(1u << 8); /* PC8 */
+        break;
+
+    case F7SM_v3:
+    case F7SM_lightning_plus:
+        /* /RDY input line is externally pulled up. */
+        pu[_C] &= ~(1u << 2); /* PC2 */
+        break;
+
     }
 
     gpio_pull_up_pins(gpioa, pu[_A]);
