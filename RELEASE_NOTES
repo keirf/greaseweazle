@@ -3,6 +3,12 @@
 ** Keir Fraser <keir.xen@gmail.com>
 ************************************
 
+** v0.26 - 26 March 2021
+ - Support new Greaseweazle model: F7 v3 "Thunderbolt"
+ - EDSK: Support for writing many protected EDSK files
+ - Windows 7: Disable jumperless firmware update as it hangs.
+ - Default head-step delay is doubled to 10ms.
+
 ** v0.25 - 27 February 2021
  - EDSK: Support for writing unprotected EDSK files
  - SCP: Allow disktype header byte to be specified (eg "a.scp::disktype=amiga")
