@@ -271,7 +271,7 @@ class EDSK(Image):
                 t += mfm.encode(bytes([track.gapbyte] * track.gap_1))
                 sh = dat[o+24:o+24+8*nsecs]
                 data_pos = o + 256 # skip track header and sector-info table
-                clippable, ngap3, sectors = 0, 0, []
+                clippable, ngap3, sectors, idam_included = 0, 0, [], False
                 while sh:
                     c, h, r, n, stat1, stat2, data_size = struct.unpack(
                         '<6BH', sh[:8])
@@ -296,17 +296,19 @@ class EDSK(Image):
                         sec_data = sec_data[:data_size]
                     sectors.append((c,h,r,n,errs,sec_data))
                     # IDAM
-                    t += mfm.encode(bytes(track.gap_presync))
-                    t += mfm.sync_bytes
-                    am = bytes([0xa1, 0xa1, 0xa1, mfm.IBM_MFM.IDAM,
-                                c, h, r, n])
-                    crc = mfm.crc16.new(am).crcValue
-                    if errs.id_crc_error:
-                        crc ^= 0x5555
-                    am += struct.pack('>H', crc)
-                    t += mfm.encode(am[3:])
-                    t += mfm.encode(bytes([track.gapbyte] * track.gap_2))
+                    if not idam_included:
+                        t += mfm.encode(bytes(track.gap_presync))
+                        t += mfm.sync_bytes
+                        am = bytes([0xa1, 0xa1, 0xa1, mfm.IBM_MFM.IDAM,
+                                    c, h, r, n])
+                        crc = mfm.crc16.new(am).crcValue
+                        if errs.id_crc_error:
+                            crc ^= 0x5555
+                        am += struct.pack('>H', crc)
+                        t += mfm.encode(am[3:])
+                        t += mfm.encode(bytes([track.gapbyte] * track.gap_2))
                     # DAM
+                    gap_included, idam_included = False, False
                     if errs.id_crc_error or errs.data_not_found:
                         continue
                     t += mfm.encode(bytes(track.gap_presync))
@@ -314,7 +316,6 @@ class EDSK(Image):
                     track.weak += [((s+len(t)//2+1)*16, n*16) for s,n in weak]
                     dmark = (mfm.IBM_MFM.DDAM if errs.deleted_dam
                              else mfm.IBM_MFM.DAM)
-                    gap_included = False
                     if errs.data_crc_error:
                         if sh:
                             # Look for next IDAM
@@ -335,26 +336,41 @@ class EDSK(Image):
                         # Pad short data
                         sec_data += bytes(native_size - data_size)
                     elif data_size > native_size:
-                        # Clip long data
+                        # Clip long data if it includes pre-sync 00 bytes
                         if (sec_data[-13] != 0
                             and all([v==0 for v in sec_data[-12:]])):
                             # Includes next pre-sync: Clip it.
                             sec_data = sec_data[:-12]
+                        if sh:
+                            # Look for next IDAM
+                            idam = bytes([0]*12 + [0xa1]*3 + [mfm.IBM_MFM.IDAM]
+                                         + list(sh[:4]))
+                            idx = sec_data.find(idam)
+                            if idx > native_size:
+                                # Sector data includes next IDAM. Output it
+                                # here and skip it on next iteration.
+                                t += mfm.encode(bytes([dmark]))
+                                t += mfm.encode(sec_data[:idx+12])
+                                t += mfm.sync_bytes
+                                t += mfm.encode(sec_data[idx+12+3:])
+                                idam_included = True
+                                continue
                         # Long data includes CRC and GAP
                         gap_included = True
-                    am = bytes([0xa1, 0xa1, 0xa1, dmark]) + sec_data
                     if gap_included:
-                        t += mfm.encode(am[3:])
-                    else:
-                        crc = mfm.crc16.new(am).crcValue
-                        if errs.data_crc_error:
-                            crc ^= 0x5555
-                        am += struct.pack('>H', crc)
-                        t += mfm.encode(am[3:])
-                        if sh:
-                            # GAP3 for all but last sector
-                            t += mfm.encode(bytes([track.gapbyte] * gap_3))
-                            ngap3 += 1
+                        t += mfm.encode(bytes[dmark])
+                        t += mfm.encode(sec_data)
+                        continue
+                    am = bytes([0xa1, 0xa1, 0xa1, dmark]) + sec_data
+                    crc = mfm.crc16.new(am).crcValue
+                    if errs.data_crc_error:
+                        crc ^= 0x5555
+                    am += struct.pack('>H', crc)
+                    t += mfm.encode(am[3:])
+                    if sh:
+                        # GAP3 for all but last sector
+                        t += mfm.encode(bytes([track.gapbyte] * gap_3))
+                        ngap3 += 1
 
                 # Special track handlers
                 special_track = cls()._build_8k_track(sectors)
