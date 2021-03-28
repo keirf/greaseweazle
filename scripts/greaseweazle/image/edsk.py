@@ -225,6 +225,62 @@ class EDSK(Image):
         t += mfm.encode(am[3:])
         return track
 
+    @staticmethod
+    def _build_kbi19_track(sectors):
+        ids = [0,1,4,7,10,13,16,2,5,8,11,14,17,3,6,9,12,15,18]
+        if len(sectors) != len(ids):
+            return None
+        for s,id in zip(sectors,ids):
+            c,h,r,n,_,_ = s
+            if r != id or n != 2:
+                return None
+        def addcrc(t,n):
+            crc = mfm.crc16.new(mfm.decode(t[-n*2:])).crcValue
+            t += mfm.encode(struct.pack('>H', crc))
+        track = EDSKTrack()
+        t = track.bytes
+        # Post-index gap
+        t += mfm.encode(bytes([track.gapbyte] * 64))
+        # IAM
+        t += mfm.encode(bytes(track.gap_presync))
+        t += mfm.iam_sync_bytes
+        t += mfm.encode(bytes([mfm.IBM_MFM.IAM]))
+        t += mfm.encode(bytes([track.gapbyte] * 50))
+        for idx, s in enumerate(sectors):
+            c,h,r,n,errs,data = s
+            # IDAM
+            t += mfm.encode(bytes(track.gap_presync))
+            t += mfm.sync_bytes
+            t += mfm.encode(bytes([mfm.IBM_MFM.IDAM, c, h, r, n]))
+            addcrc(t, 8)
+            if r == 0:
+                t += mfm.encode(bytes([track.gapbyte] * 17))
+                t += mfm.encode(b' KBI ')
+            else:
+                t += mfm.encode(bytes([track.gapbyte] * 8))
+                t += mfm.encode(b' KBI ')
+                t += mfm.encode(bytes([track.gapbyte] * 9))
+            # DAM
+            t += mfm.encode(bytes(track.gap_presync))
+            t += mfm.sync_bytes
+            dmark = (mfm.IBM_MFM.DDAM if errs.deleted_dam
+                     else mfm.IBM_MFM.DAM)
+            t += mfm.encode(bytes([dmark]))
+            if idx%3 != 0:
+                t += mfm.encode(data[:61])
+            elif r == 0:
+                t += mfm.encode(data[:512])
+                addcrc(t,516)
+            else:
+                t += mfm.encode(data[0:0x10e])
+                addcrc(t,516)
+                t += mfm.encode(data[0x110:0x187])
+                addcrc(t,516)
+                t += mfm.encode(data[0x189:0x200])
+                addcrc(t,516)
+                t += mfm.encode(bytes([track.gapbyte] * 80))
+        return track
+
     @classmethod
     def from_file(cls, name):
 
@@ -358,7 +414,7 @@ class EDSK(Image):
                         # Long data includes CRC and GAP
                         gap_included = True
                     if gap_included:
-                        t += mfm.encode(bytes[dmark])
+                        t += mfm.encode(bytes([dmark]))
                         t += mfm.encode(sec_data)
                         continue
                     am = bytes([0xa1, 0xa1, 0xa1, dmark]) + sec_data
@@ -374,6 +430,8 @@ class EDSK(Image):
 
                 # Special track handlers
                 special_track = cls()._build_8k_track(sectors)
+                if special_track is None:
+                    special_track = cls()._build_kbi19_track(sectors)
                 if special_track is not None:
                     track = special_track
                     break
