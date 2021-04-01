@@ -14,8 +14,38 @@ from .image import Image
 
 # Names for disktype byte in SCP file header
 DiskType = {
-    'amiga': 0x04,
-    'c64':   0x00
+    'amiga':       0x04,
+    'c64':         0x00,
+    'atari800-sd': 0x10,
+    'atari800-dd': 0x11,
+    'atari800-ed': 0x12,
+    'atarist-ss':  0x14,
+    'atarist-ds':  0x15,
+    'appleII':     0x20,
+    'appleIIpro':  0x21,
+    'apple-400k':  0x24,
+    'apple-800k':  0x25,
+    'apple-1m44':  0x26,
+    'ibmpc-320k':  0x30,
+    'ibmpc-720k':  0x31,
+    'ibmpc-1m2':   0x32,
+    'ibmpc-1m44':  0x33,
+    'trs80_sssd':  0x40,
+    'trs80_ssdd':  0x41,
+    'trs80_dssd':  0x42,
+    'trs80_dsdd':  0x43,
+    'ti-99/4a':    0x50,
+    'roland-d20':  0x60,
+    'amstrad-cpc': 0x70,
+    'other-320k':  0x80,
+    'other-1m2':   0x81,
+    'other-720k':  0x84,
+    'other-1m44':  0x85,
+    'tape-gcr1':   0xe0,
+    'tape-gcr2':   0xe1,
+    'tape-mfm':    0xe2,
+    'hdd-mfm':     0xf0,
+    'hdd-rll':     0xf1
 }
 
 
