@@ -31,6 +31,8 @@ def main(argv):
                         help="drive to read (A,B,0,1,2)")
     parser.add_argument("--force", action="store_true",
                         help="allow extreme cylinders with no prompt")
+    parser.add_argument("--motor-on", action="store_true",
+                        help="seek with drive motor activated")
     parser.add_argument("cylinder", type=int, help="cylinder to seek")
     parser.description = description
     parser.prog += ' ' + argv[1]
@@ -47,7 +49,7 @@ def main(argv):
     
     try:
         usb = util.usb_open(args.device)
-        util.with_drive_selected(seek, usb, args, motor=False)
+        util.with_drive_selected(seek, usb, args, motor=args.motor_on)
     except USB.CmdError as err:
         print("Command Failed: %s" % err)
 
