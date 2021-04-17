@@ -76,7 +76,6 @@ windist: pysetup
 	cp -a scripts/greaseweazle/optimised/optimised* $(PROJ)-$(VER)/scripts/greaseweazle/optimised
 	cd $(PROJ)-$(VER)/scripts && $(PYTHON) setup.py build
 	cp -a $(PROJ)-$(VER)/scripts/build/exe.win*/* $(PROJ)-$(VER)/
-	cp -a $(PROJ)-$(VER)/lib/bitarray/VCRUNTIME140.DLL $(PROJ)-$(VER)/
 	rm -rf $(PROJ)-$(VER)/scripts $(PROJ)-$(VER)/*.py $(PROJ)-$(VER)/gw
 	curl -L http://softpres.org/_media/files:spsdeclib_5.1_windows.zip --output ipf.zip
 	$(UNZIP) -oipf ipf.zip
