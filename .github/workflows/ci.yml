@@ -114,9 +114,9 @@ jobs:
       run: |
         export VER=${{ steps.vars.outputs.sha_short }}
         unzip Greaseweazle-$VER-win.zip
-        find . -name 'api-ms-*' | xargs rm
-        find Greaseweazle-$VER/lib -name 'python*.dll' | xargs rm
-        find Greaseweazle-$VER/lib -name 'vcruntime140.dll' | xargs rm
+        find . -name 'api-ms-*' | xargs rm -f
+        find Greaseweazle-$VER/lib -name 'python*.dll' | xargs rm -f
+        find Greaseweazle-$VER/lib -name 'vcruntime140.dll' | xargs rm -f
         rm Greaseweazle-$VER-win.zip
         zip -r Greaseweazle-$VER-win.zip Greaseweazle-$VER
 
