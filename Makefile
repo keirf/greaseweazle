@@ -26,10 +26,10 @@ all: scripts/greaseweazle/version.py
 	srec_cat bootloader/Bootloader.hex -Intel src/$(PROJ).hex -Intel \
 	-o $(PROJ)-$(VER).hex -Intel
 	$(PYTHON) ./scripts/mk_update.py new $(PROJ)-$(VER).upd \
-		bootloader/Bootloader.bin src/$(PROJ).bin $(stm32)
+		bootloader/Bootloader.bin src/$(PROJ).bin $(mcu)
 
 blinky:
-	$(MAKE) debug=y stm32=f1 -C blinky_test -f $(ROOT)/Rules.mk \
+	$(MAKE) debug=y mcu=stm32f1 -C blinky_test -f $(ROOT)/Rules.mk \
 		Blinky.elf Blinky.bin Blinky.hex
 
 clean::
@@ -45,7 +45,7 @@ dist:
 	mkdir -p $(PROJ)-$(VER)/scripts/misc
 	mkdir -p $(PROJ)-$(VER)/alt
 	$(MAKE) clean
-	$(MAKE) stm32=f1 all blinky
+	$(MAKE) mcu=stm32f1 all blinky
 	cp -a $(PROJ)-$(VER).hex $(PROJ)-$(VER)/$(PROJ)-F1-$(VER).hex
 	cp -a $(PROJ)-$(VER).upd $(PROJ)-$(VER)/$(PROJ)-$(VER).upd
 	cp -a blinky_test/Blinky.hex $(PROJ)-$(VER)/alt/Blinky_Test-$(VER).hex
@@ -60,7 +60,7 @@ dist:
 	cp -a scripts/misc/*.py $(PROJ)-$(VER)/scripts/misc/
 	cp -a RELEASE_NOTES $(PROJ)-$(VER)/
 	$(MAKE) clean
-	$(MAKE) stm32=f7 all
+	$(MAKE) mcu=stm32f7 all
 	cp -a $(PROJ)-$(VER).hex $(PROJ)-$(VER)/$(PROJ)-F7-$(VER).hex
 	$(PYTHON) ./scripts/mk_update.py cat $(PROJ)-$(VER)/$(PROJ)-$(VER).upd \
 		$(PROJ)-$(VER)/$(PROJ)-$(VER).upd $(PROJ)-$(VER).upd

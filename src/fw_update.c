@@ -9,11 +9,11 @@
  * See the file COPYING for more details, or visit <http://unlicense.org>.
  */
 
-#if STM32F == 1
+#if MCU == STM32F1
 /*  8kB-64kB (56kB total) */
 #define FIRMWARE_START 0x08002000
 #define FIRMWARE_END   0x08010000
-#elif STM32F == 7
+#elif MCU == STM32F7
 /* 16kB-64KB (48kB total) */
 #define FIRMWARE_START 0x08004000
 #define FIRMWARE_END   0x08010000
@@ -40,7 +40,7 @@ static bool_t upd_strapped;
 struct gw_info gw_info = {
     .is_main_firmware = 0,
     .max_cmd = CMD_MAX,
-    .hw_model = STM32F
+    .hw_model = MCU
 };
 
 static void blink_init(void)
@@ -159,7 +159,7 @@ static void process_command(void)
         update_prep(u_len);
         break;
     }
-#if STM32F == 7
+#if MCU == STM32F7
     case CMD_SWITCH_FW_MODE: {
         uint8_t mode = u_buf[2];
         if ((len != 3) || (mode & ~1))
@@ -223,7 +223,7 @@ static void update_process(void)
     }
 }
 
-#if STM32F == 1
+#if MCU == STM32F1
 
 static bool_t enter_bootloader(void)
 {
@@ -247,7 +247,7 @@ static bool_t enter_bootloader(void)
     return upd_strapped;
 }
 
-#elif STM32F == 7
+#elif MCU == STM32F7
 
 static bool_t check_update_requested(void)
 {

@@ -45,10 +45,10 @@ static const struct gw_delay factory_delay_params = {
     .watchdog = 10000
 };
 
-#if STM32F == 1
-#include "f1/floppy.c"
-#elif STM32F == 7
-#include "f7/floppy.c"
+#if MCU == STM32F1
+#include "mcu/stm32f1/floppy.c"
+#elif MCU == STM32F7
+#include "mcu/stm32f7/floppy.c"
 #endif
 
 static struct index {
@@ -356,7 +356,7 @@ struct gw_info gw_info = {
     .is_main_firmware = 1,
     .max_cmd = CMD_MAX,
     .sample_freq = 72000000u,
-    .hw_model = STM32F
+    .hw_model = MCU
 };
 
 static void watchdog_kick(void)
@@ -1318,7 +1318,7 @@ static void process_command(void)
         sink_source_prep(&ssb);
         break;
     }
-#if STM32F == 7
+#if MCU == STM32F7
     case CMD_SWITCH_FW_MODE: {
         uint8_t mode = u_buf[2];
         if ((len != 3) || (mode & ~1))

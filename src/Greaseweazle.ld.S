@@ -1,10 +1,10 @@
 
-#if STM32F == 1
+#if MCU == STM32F1
 
 #define FLASH_BASE 0x08002000
 #define FLASH_LEN  56K
 
-#elif STM32F == 7
+#elif MCU == STM32F7
 
 #define FLASH_BASE 0x08004000
 #define FLASH_LEN  48K

@@ -20,10 +20,10 @@ static void gpio_pull_up_pins(GPIO gpio, uint16_t mask)
     }
 }
 
-#if STM32F == 1
-#include "f1/board.c"
-#elif STM32F == 7
-#include "f7/board.c"
+#if MCU == STM32F1
+#include "mcu/stm32f1/board.c"
+#elif MCU == STM32F7
+#include "mcu/stm32f7/board.c"
 #endif
 
 void board_init(void)

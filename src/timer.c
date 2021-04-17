@@ -9,12 +9,12 @@
  * See the file COPYING for more details, or visit <http://unlicense.org>.
  */
 
-#if STM32F == 1
+#if MCU == STM32F1
 void IRQ_25(void) __attribute__((alias("IRQ_timer")));
 #define TIMER_IRQ 25
 #define tim tim1
 #define tim_bits 16
-#elif STM32F == 7
+#elif MCU == STM32F7
 void IRQ_50(void) __attribute__((alias("IRQ_timer")));
 #define TIMER_IRQ 50
 #define tim tim5 /* 32-bit timer */
@@ -114,7 +114,7 @@ void timer_cancel(struct timer *timer)
 
 void timers_init(void)
 {
-#if STM32F == 7
+#if MCU == STM32F7
     rcc->apb1enr |= RCC_APB1ENR_TIM5EN;
     peripheral_clock_delay();
 #endif

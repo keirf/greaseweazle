@@ -16,14 +16,14 @@
 #include <limits.h>
 
 #include "util.h"
-#include "stm32/common_regs.h"
-#include "stm32/common.h"
-#if STM32F == 1
-#include "stm32/f1_regs.h"
-#include "stm32/f1.h"
-#elif STM32F == 7
-#include "stm32/f7_regs.h"
-#include "stm32/f7.h"
+#include "mcu/stm32/common_regs.h"
+#include "mcu/stm32/common.h"
+#if MCU == STM32F1
+#include "mcu/stm32/f1_regs.h"
+#include "mcu/stm32/f1.h"
+#elif MCU == STM32F7
+#include "mcu/stm32/f7_regs.h"
+#include "mcu/stm32/f7.h"
 #endif
 #include "intrinsics.h"
 

@@ -46,7 +46,7 @@ def mk_cat_entry(dat, hw_model, sig):
 
 def new_upd(argv):
     dat = b'GWUP'
-    hw_model = int(re.match("f(\d)", argv[2]).group(1))
+    hw_model = int(re.match("\w+f(\d)$", argv[2]).group(1))
     with open(argv[1], "rb") as gw_f:
         dat += mk_cat_entry(gw_f.read(), hw_model, b'GW')
     with open(argv[0], "rb") as bl_f:

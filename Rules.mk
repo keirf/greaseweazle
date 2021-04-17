@@ -24,11 +24,11 @@ FLAGS += -fno-common -fno-exceptions -fno-strict-aliasing
 FLAGS += -mlittle-endian -mthumb -mfloat-abi=soft
 FLAGS += -Wno-unused-value -ffunction-sections
 
-ifeq ($(stm32),f1)
-FLAGS += -mcpu=cortex-m3 -DSTM32F=1
+ifeq ($(mcu),stm32f1)
+FLAGS += -mcpu=cortex-m3 -DSTM32F1=1 -DMCU=1
 stm32f1=y
-else ifeq ($(stm32),f7)
-FLAGS += -mcpu=cortex-m7 -DSTM32F=7
+else ifeq ($(mcu),stm32f7)
+FLAGS += -mcpu=cortex-m7 -DSTM32F7=7 -DMCU=7
 stm32f7=y
 endif
 

@@ -3,9 +3,9 @@ ENTRY(vector_table)
 MEMORY
 {
   FLASH (rx)      : ORIGIN = FLASH_BASE, LENGTH = FLASH_LEN
-#if STM32F == 1
+#if MCU == STM32F1
   RAM (rwx)       : ORIGIN = 0x20000000, LENGTH = 20K
-#elif STM32F == 7
+#elif MCU == STM32F7
   RAM (rwx)       : ORIGIN = 0x20000000, LENGTH = 64K
   EXT_RAM (rwx)   : ORIGIN = 0x20010000, LENGTH = 192K
 #endif
@@ -51,7 +51,7 @@ SECTIONS
     _ebss = .;
   } >RAM
 
-#if STM32F == 7
+#if MCU == STM32F7
   .ext_ram (NOLOAD) : {
     . = ALIGN(8);
     _ext_ram_start = .;

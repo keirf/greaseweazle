@@ -13,9 +13,9 @@
 #define BAUD 3000000 /* 3Mbaud */
 #endif
 
-#if STM32F == 1
+#if MCU == STM32F1
 #define PCLK SYSCLK
-#elif STM32F == 7
+#elif MCU == STM32F7
 #define PCLK (APB2_MHZ * 1000000)
 #endif
 
@@ -23,11 +23,11 @@
 
 static void ser_putc(uint8_t c)
 {
-#if STM32F == 1
+#if MCU == STM32F1
     while (!(usart1->sr & USART_SR_TXE))
         cpu_relax();
     usart1->dr = c;
-#elif STM32F == 7
+#elif MCU == STM32F7
     while (!(usart1->isr & USART_ISR_TXE))
         cpu_relax();
     usart1->tdr = c;
@@ -83,10 +83,10 @@ void console_init(void)
     peripheral_clock_delay();
 
     /* Enable TX pin (PA9) for USART output, RX pin (PA10) as input. */
-#if STM32F == 1
+#if MCU == STM32F1
     gpio_configure_pin(gpioa, 9, AFO_pushpull(_10MHz));
     gpio_configure_pin(gpioa, 10, GPI_pull_up);
-#elif STM32F == 7
+#elif MCU == STM32F7
     gpio_set_af(gpioa, 9, 7);
     gpio_set_af(gpioa, 10, 7);
     gpio_configure_pin(gpioa, 9, AFO_pushpull(IOSPD_MED));
@@ -102,9 +102,9 @@ void console_init(void)
  * any serial input to cause a crash dump of the stuck context. */
 void console_crash_on_input(void)
 {
-#if STM32F == 1
+#if MCU == STM32F1
     (void)usart1->dr; /* clear UART_SR_RXNE */
-#elif STM32F == 7
+#elif MCU == STM32F7
     usart1->rqr = USART_RQR_RXFRQ; /* clear ISR_RXNE */
     usart1->icr = USART_ICR_ORECF; /* clear ISR_ORE */
 #endif
