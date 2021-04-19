@@ -30,9 +30,18 @@ import re, struct, sys
 
 from greaseweazle import version
 
+name_to_hw_model = { 'stm32f1': 1,
+                     'stm32f7': 7,
+                     'at32f415': 4 }
+
+hw_model_to_name = { 1: 'STM32F103',
+                     7: 'STM32F730',
+                     4: 'AT32F415' }
+
 def mk_cat_entry(dat, hw_model, sig):
     max_kb = { 1: { b'BL':  8, b'GW': 56 },
-               7: { b'BL': 16, b'GW': 48 } }
+               7: { b'BL': 16, b'GW': 48 },
+               4: { b'BL':  8, b'GW': 56 } }
     dlen = len(dat)
     assert (dlen & 3) == 0, "input is not longword padded"
     assert dlen <= max_kb[hw_model][sig]*1024, "input is too long"
@@ -46,7 +55,7 @@ def mk_cat_entry(dat, hw_model, sig):
 
 def new_upd(argv):
     dat = b'GWUP'
-    hw_model = int(re.match("\w+f(\d)$", argv[2]).group(1))
+    hw_model = name_to_hw_model[argv[2]]
     with open(argv[1], "rb") as gw_f:
         dat += mk_cat_entry(gw_f.read(), hw_model, b'GW')
     with open(argv[0], "rb") as bl_f:
@@ -77,7 +86,7 @@ def _verify_upd(d):
         crc16 = crcmod.predefined.Crc('crc-ccitt-false')
         crc16.update(d[4:upd_len+4])
         assert crc16.crcValue == 0
-        print('F%u %s v%u.%u' % (hw_model,
+        print('%s %s v%u.%u' % (hw_model_to_name[hw_model],
                                  {b'BL': 'Boot', b'GW': 'Main'}[upd_type],
                                  major, minor))
         d = d[upd_len+4:]

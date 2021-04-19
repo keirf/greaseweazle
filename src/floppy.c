@@ -49,6 +49,8 @@ static const struct gw_delay factory_delay_params = {
 #include "mcu/stm32f1/floppy.c"
 #elif MCU == STM32F7
 #include "mcu/stm32f7/floppy.c"
+#elif MCU == AT32F415
+#include "mcu/at32f415/floppy.c"
 #endif
 
 static struct index {

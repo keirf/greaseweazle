@@ -16,7 +16,13 @@
 #define IFACE_HS_EMBEDDED 1
 #define IFACE_HS_ULPI     2
 
+#if MCU == STM32F7
 #define conf_port PORT_HS
+#define MAX_MPS USB_HS_MPS
+#elif MCU == AT32F415
+#define conf_port PORT_FS
+#define MAX_MPS USB_FS_MPS
+#endif
 #define conf_nr_ep 4
 
 /* USB On-The-Go Full Speed interface */
@@ -204,6 +210,8 @@ struct otg_dfifo { /* 1000.. */
 #define OTG_RXSTS_CHNUM(r)   ((r)&0xf)
 
 #define OTG_GCCFG_PHYHSEN    (1u<<23)
+#define OTG_GCCFG_VBUSBSEN   (1u<<19)
+#define OTG_GCCFG_VBUSASEN   (1u<<18)
 #define OTG_GCCFG_VBDEN      (1u<<21)
 #define OTG_GCCFG_PWRDWN     (1u<<16)
 
@@ -367,6 +375,12 @@ static OTG_DIEP otg_diep = (struct otg_diep *)(OTG_BASE + 0x900);
 static OTG_DOEP otg_doep = (struct otg_doep *)(OTG_BASE + 0xb00);
 static OTG_PCGCCTL otg_pcgcctl = (struct otg_pcgcctl *)(OTG_BASE + 0xe00);
 static OTG_DFIFO otg_dfifo = (struct otg_dfifo *)(OTG_BASE + 0x1000);
+
+/* DWC OTG private interface to MCU-specific layer. */
+extern int conf_iface;
+void core_reset(void);
+void dwc_otg_init(void);
+void dwc_otg_deinit(void);
 
 /*
  * Local variables:

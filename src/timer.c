@@ -14,15 +14,23 @@ void IRQ_25(void) __attribute__((alias("IRQ_timer")));
 #define TIMER_IRQ 25
 #define tim tim1
 #define tim_bits 16
+#define TIM_CR1_MCUBITS 0
 #elif MCU == STM32F7
 void IRQ_50(void) __attribute__((alias("IRQ_timer")));
 #define TIMER_IRQ 50
 #define tim tim5 /* 32-bit timer */
 #define tim_bits 32
+#define TIM_CR1_MCUBITS 0
+#elif MCU == AT32F415
+void IRQ_50(void) __attribute__((alias("IRQ_timer")));
+#define TIMER_IRQ 50
+#define tim tim5 /* 32-bit timer */
+#define tim_bits 32
+#define TIM_CR1_MCUBITS TIM_CR1_PMEN
 #endif
 
 /* IRQ only on counter overflow, one-time enable. */
-#define TIM_CR1 (TIM_CR1_URS | TIM_CR1_OPM)
+#define TIM_CR1 (TIM_CR1_URS | TIM_CR1_OPM | TIM_CR1_MCUBITS)
 
 /* Empirically-determined offset applied to timer deadlines to counteract the
  * latency incurred by reprogram_timer() and IRQ_timer(). */
@@ -114,7 +122,7 @@ void timer_cancel(struct timer *timer)
 
 void timers_init(void)
 {
-#if MCU == STM32F7
+#if MCU == STM32F7 || MCU == AT32F415
     rcc->apb1enr |= RCC_APB1ENR_TIM5EN;
     peripheral_clock_delay();
 #endif

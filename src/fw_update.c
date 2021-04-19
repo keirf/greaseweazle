@@ -9,7 +9,7 @@
  * See the file COPYING for more details, or visit <http://unlicense.org>.
  */
 
-#if MCU == STM32F1
+#if MCU == STM32F1 || MCU == AT32F415
 /*  8kB-64kB (56kB total) */
 #define FIRMWARE_START 0x08002000
 #define FIRMWARE_END   0x08010000
@@ -264,6 +264,46 @@ static bool_t check_update_strapped(void)
     /* Check whether the Serial TX/RX lines (PA9/PA10) are strapped. */
     rcc->ahb1enr |= RCC_AHB1ENR_GPIOAEN;
     (void)rcc->ahb1enr;
+    gpio_configure_pin(gpioa, 9, GPO_pushpull(IOSPD_LOW, HIGH));
+    gpio_configure_pin(gpioa, 10, GPI_pull_up);
+    for (i = 0; i < 10; i++) {
+        gpio_write_pin(gpioa, 9, i&1);
+        for (j = 0; j < 10000; j++)
+            cpu_relax();
+        if (gpio_read_pin(gpioa, 10) != (i&1))
+            return FALSE;
+    }
+
+    return TRUE;
+}
+
+static bool_t enter_bootloader(void)
+{
+    bool_t upd_requested = check_update_requested();
+    upd_strapped = check_update_strapped();
+    return upd_requested || upd_strapped;
+}
+
+#elif MCU == AT32F415
+
+static bool_t check_update_requested(void)
+{
+#if 1
+    return FALSE;
+#else
+    /* Check-and-clear a magic value poked into SRAM1 by the main firmware. */
+    bool_t match = (*(volatile uint32_t *)0x20010000 == 0xdeadbeef);
+    *(volatile uint32_t *)0x20010000 = 0;
+    return match;
+#endif
+}
+
+static bool_t check_update_strapped(void)
+{
+    int i, j;
+
+    /* Check whether the Serial TX/RX lines (PA9/PA10) are strapped. */
+    rcc->apb2enr |= RCC_APB2ENR_IOPAEN;
     gpio_configure_pin(gpioa, 9, GPO_pushpull(IOSPD_LOW, HIGH));
     gpio_configure_pin(gpioa, 10, GPI_pull_up);
     for (i = 0; i < 10; i++) {

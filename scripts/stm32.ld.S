@@ -8,6 +8,8 @@ MEMORY
 #elif MCU == STM32F7
   RAM (rwx)       : ORIGIN = 0x20000000, LENGTH = 64K
   EXT_RAM (rwx)   : ORIGIN = 0x20010000, LENGTH = 192K
+#elif MCU == AT32F415
+  RAM (rwx)       : ORIGIN = 0x20000000, LENGTH = 32K
 #endif
 }
 

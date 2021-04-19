@@ -60,6 +60,9 @@ static SER_ID ser_id = (uint32_t *)0x1ffff7e8;
 /* No delay required after enabling a peripheral clock, before accessing it. */
 #define peripheral_clock_delay() ((void)0)
 
+/* No secondary RAM region */
+#define section_ext_ram
+
 /*
  * Local variables:
  * mode: C

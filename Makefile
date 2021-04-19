@@ -65,6 +65,11 @@ dist:
 	$(PYTHON) ./scripts/mk_update.py cat $(PROJ)-$(VER)/$(PROJ)-$(VER).upd \
 		$(PROJ)-$(VER)/$(PROJ)-$(VER).upd $(PROJ)-$(VER).upd
 	$(MAKE) clean
+	$(MAKE) mcu=at32f415 all
+	cp -a $(PROJ)-$(VER).hex $(PROJ)-$(VER)/$(PROJ)-AT32F415-$(VER).hex
+	$(PYTHON) ./scripts/mk_update.py cat $(PROJ)-$(VER)/$(PROJ)-$(VER).upd \
+		$(PROJ)-$(VER)/$(PROJ)-$(VER).upd $(PROJ)-$(VER).upd
+	$(MAKE) clean
 	$(ZIP) $(PROJ)-$(VER).zip $(PROJ)-$(VER)
 
 windist: pysetup

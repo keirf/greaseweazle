@@ -1,5 +1,5 @@
 
-#if MCU == STM32F1
+#if MCU == STM32F1 || MCU == AT32F415
 
 #define FLASH_BASE 0x08000000
 #define FLASH_LEN  8K
