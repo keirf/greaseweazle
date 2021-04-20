@@ -39,30 +39,22 @@ static void clock_init(void)
     rcc->cr &= ~RCC_CR_HSION;
 }
 
-static void gpio_init(GPIO gpio)
-{
-    /* Floating Input. Reference Manual states that JTAG pins are in PU/PD
-     * mode at reset, so ensure all PU/PD are disabled. */
-    gpio->crl = gpio->crh = 0x44444444u;
-}
-
 static void peripheral_init(void)
 {
-    /* Enable basic GPIO and AFIO clocks, all timers, and DMA. */
-    rcc->apb1enr = (RCC_APB1ENR_TIM2EN |
-                    RCC_APB1ENR_TIM3EN |
-                    RCC_APB1ENR_TIM4EN);
+    /* Enable basic GPIO and AFIO clocks, and DMA. */
+    rcc->apb1enr = 0;
     rcc->apb2enr = (RCC_APB2ENR_IOPAEN |
                     RCC_APB2ENR_IOPBEN |
                     RCC_APB2ENR_IOPCEN |
-                    RCC_APB2ENR_AFIOEN |
-                    RCC_APB2ENR_TIM1EN);
+                    RCC_APB2ENR_IOPFEN |
+                    RCC_APB2ENR_AFIOEN);
     rcc->ahbenr = RCC_AHBENR_DMA1EN;
 
-    /* All pins in a stable state. */
-    gpio_init(gpioa);
-    gpio_init(gpiob);
-    gpio_init(gpioc);
+    /* Reclaim JTAG pins. */
+    afio->mapr = AFIO_MAPR_SWJ_ON_JTAG_OFF;
+    gpio_configure_pin(gpioa, 15, GPI_floating);
+    gpio_configure_pin(gpiob,  3, GPI_floating);
+    gpio_configure_pin(gpiob,  4, GPI_floating);
 }
 
 void stm32_init(void)
