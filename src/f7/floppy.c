@@ -265,6 +265,20 @@ static uint8_t drive_motor(uint8_t nr, bool_t on)
 
 }
 
+static uint8_t mcu_get_floppy_pin(unsigned int pin, uint8_t *p_level)
+{
+    switch (gw_info.hw_submodel) {
+    case F7SM_v3:
+    case F7SM_lightning_plus:
+        if (pin == 34) {
+            *p_level = gpio_read_pin(gpioc, 2);
+            return ACK_OKAY;
+        }
+        break;
+    }
+    return ACK_BAD_PIN;
+}
+
 static uint8_t set_user_pin(unsigned int pin, unsigned int level)
 {
     const struct pin_mapping *upin;

@@ -296,6 +296,26 @@ static bool_t set_bus_type(uint8_t type)
     return TRUE;
 }
 
+static uint8_t get_floppy_pin(unsigned int pin, uint8_t *p_level)
+{
+    uint8_t rc = ACK_OKAY;
+    switch (pin) {
+    case 8:
+        *p_level = get_index();
+        break;
+    case 26:
+        *p_level = get_trk0();
+        break;
+    case 28:
+        *p_level = get_wrprot();
+        break;
+    default:
+        rc = mcu_get_floppy_pin(pin, p_level);
+        break;
+    }
+    return rc;
+}
+
 static void floppy_reset(void)
 {
     floppy_state = ST_inactive;
@@ -1260,6 +1280,15 @@ static void process_command(void)
         if ((len != 4) || (level & ~1))
             goto bad_command;
         u_buf[1] = set_user_pin(pin, level);
+        goto out;
+    }
+    case CMD_GET_PIN: {
+        uint8_t pin = u_buf[2];
+        if (len != 3)
+            goto bad_command;
+        u_buf[1] = get_floppy_pin(pin, &u_buf[2]);
+        if (u_buf[1] == ACK_OKAY)
+            resp_sz += 1;
         goto out;
     }
     case CMD_RESET: {

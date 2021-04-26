@@ -173,6 +173,11 @@ static uint8_t drive_motor(uint8_t nr, bool_t on)
     return ACK_OKAY;
 }
 
+static uint8_t mcu_get_floppy_pin(unsigned int pin, uint8_t *p_level)
+{
+    return ACK_BAD_PIN;
+}
+
 static uint8_t set_user_pin(unsigned int pin, unsigned int level)
 {
     if (pin != 2)
