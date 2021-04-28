@@ -415,7 +415,7 @@ static void rdata_encode_flux(void)
     IRQ_global_disable();
 
     /* Find out where the DMA engine's producer index has got to. */
-    prod = ARRAY_SIZE(dma.buf) - dma_rdata.ndtr;
+    prod = (ARRAY_SIZE(dma.buf) - dma_rdata.ndtr) & buf_mask;
 
     if (read.nr_index != index.count) {
         /* We have just passed the index mark: Record information about 
@@ -762,7 +762,7 @@ static void wdata_decode_flux(void)
     uint16_t nr_to_wrap, nr_to_cons, nr, dmacons;
 
     /* Find out where the DMA engine's consumer index has got to. */
-    dmacons = ARRAY_SIZE(dma.buf) - dma_wdata.ndtr;
+    dmacons = (ARRAY_SIZE(dma.buf) - dma_wdata.ndtr) & buf_mask;
 
     /* Find largest contiguous stretch of ring buffer we can fill. */
     nr_to_wrap = ARRAY_SIZE(dma.buf) - dma.prod;
@@ -914,6 +914,7 @@ static void floppy_write_check_underflow(void)
 
 static void floppy_write(void)
 {
+    const uint16_t buf_mask = ARRAY_SIZE(dma.buf) - 1;
     uint16_t dmacons, todo, prev_todo;
 
     floppy_process_write_packet();
@@ -938,8 +939,8 @@ static void floppy_write(void)
             goto terminate;
         /* Check progress of draining the DMA ring. */
         prev_todo = todo;
-        dmacons = ARRAY_SIZE(dma.buf) - dma_wdata.ndtr;
-        todo = (dma.prod - dmacons) & (ARRAY_SIZE(dma.buf) - 1);
+        dmacons = (ARRAY_SIZE(dma.buf) - dma_wdata.ndtr) & buf_mask;
+        todo = (dma.prod - dmacons) & buf_mask;
     } while ((todo != 0) && (todo <= prev_todo));
 
 terminate:
