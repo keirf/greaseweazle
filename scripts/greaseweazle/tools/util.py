@@ -271,7 +271,7 @@ def usb_open(devicename, is_update=False, mode_check=True):
         if not usb.jumperless_update:
             print(" - Disconnect from USB")
             print(" - Install the Update Jumper at pins %s"
-                  % ("RXI-TXO" if usb.hw_model == 7 else "DCLK-GND"))
+                  % ("RXI-TXO" if usb.hw_model != 1 else "DCLK-GND"))
             print(" - Reconnect to USB")
         print(" - Run \"gw update\" to install firmware v%u.%u" %
               (version.major, version.minor))
@@ -282,7 +282,7 @@ def usb_open(devicename, is_update=False, mode_check=True):
     usb = USB.Unit(serial.Serial(devicename))
     usb.port_info = port_info(devicename)
     is_win7 = (platform.system() == 'Windows' and platform.release() == '7')
-    usb.jumperless_update = usb.hw_model == 7 and not is_win7
+    usb.jumperless_update = usb.hw_model != 1 and not is_win7
 
     if not mode_check:
         return usb
@@ -297,7 +297,7 @@ def usb_open(devicename, is_update=False, mode_check=True):
         if usb.update_jumpered:
             print(" - For normal operation disconnect from USB and remove "
                   "the Update Jumper at pins %s"
-                  % ("RXI-TXO" if usb.hw_model == 7 else "DCLK-GND"))
+                  % ("RXI-TXO" if usb.hw_model != 1 else "DCLK-GND"))
         else:
             print(" - Main firmware is erased: You *must* perform an update!")
         sys.exit(1)

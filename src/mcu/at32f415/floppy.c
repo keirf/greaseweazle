@@ -103,7 +103,7 @@ found:
 
 
 /* We sometimes cast u_buf to uint32_t[], hence the alignment constraint. */
-#define U_BUF_SZ 8192
+#define U_BUF_SZ 16384
 static uint8_t u_buf[U_BUF_SZ] aligned(4);
 
 static void floppy_mcu_init(void)

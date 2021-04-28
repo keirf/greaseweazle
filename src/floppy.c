@@ -1321,7 +1321,7 @@ static void process_command(void)
         sink_source_prep(&ssb);
         break;
     }
-#if MCU == STM32F7
+#if MCU != STM32F1
     case CMD_SWITCH_FW_MODE: {
         uint8_t mode = u_buf[2];
         if ((len != 3) || (mode & ~1))
@@ -1330,7 +1330,7 @@ static void process_command(void)
             usb_deinit();
             delay_ms(500);
             /* Poke a flag in SRAM1, picked up by the bootloader. */
-            *(volatile uint32_t *)0x20010000 = 0xdeadbeef;
+            _reset_flag = 0xdeadbeef;
             dcache_disable();
             system_reset();
         }

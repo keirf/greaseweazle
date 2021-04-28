@@ -28,6 +28,13 @@ SECTIONS
     _etext = .;
   } >FLASH
 
+#if MCU == AT32F415
+  .flags : {
+    _reset_flag = .;
+    . = . + 4;
+  } >RAM
+#endif
+
   .data : AT (_etext) {
     . = ALIGN(4);
     _sdat = .;
@@ -55,8 +62,9 @@ SECTIONS
 
 #if MCU == STM32F7
   .ext_ram (NOLOAD) : {
-    . = ALIGN(8);
     _ext_ram_start = .;
+    _reset_flag = .;
+    . = . + 4;
     *(.ext_ram)
     . = ALIGN(4);
     _ext_ram_end = .;

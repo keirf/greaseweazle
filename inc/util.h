@@ -109,6 +109,9 @@ uint16_t crc16_ccitt(const void *buf, size_t len, uint16_t crc);
 /* Build info. */
 extern const uint8_t fw_major, fw_minor;
 
+/* Bootloader mode flag. */
+extern volatile uint32_t _reset_flag;
+
 /* Text/data/BSS address ranges. */
 extern char _stext[], _etext[];
 extern char _sdat[], _edat[], _ldat[];

@@ -41,7 +41,7 @@ hw_model_to_name = { 1: 'STM32F103',
 def mk_cat_entry(dat, hw_model, sig):
     max_kb = { 1: { b'BL':  8, b'GW': 56 },
                7: { b'BL': 16, b'GW': 48 },
-               4: { b'BL':  8, b'GW': 56 } }
+               4: { b'BL': 16, b'GW': 48 } }
     dlen = len(dat)
     assert (dlen & 3) == 0, "input is not longword padded"
     assert dlen <= max_kb[hw_model][sig]*1024, "input is too long"

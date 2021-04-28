@@ -9,11 +9,11 @@
  * See the file COPYING for more details, or visit <http://unlicense.org>.
  */
 
-#if MCU == STM32F1 || MCU == AT32F415
+#if MCU == STM32F1
 /*  8kB-64kB (56kB total) */
 #define FIRMWARE_START 0x08002000
 #define FIRMWARE_END   0x08010000
-#elif MCU == STM32F7
+#elif MCU == STM32F7 || MCU == AT32F415
 /* 16kB-64KB (48kB total) */
 #define FIRMWARE_START 0x08004000
 #define FIRMWARE_END   0x08010000
@@ -159,7 +159,7 @@ static void process_command(void)
         update_prep(u_len);
         break;
     }
-#if MCU == STM32F7
+#if MCU != STM32F1
     case CMD_SWITCH_FW_MODE: {
         uint8_t mode = u_buf[2];
         if ((len != 3) || (mode & ~1))
@@ -247,13 +247,13 @@ static bool_t enter_bootloader(void)
     return upd_strapped;
 }
 
-#elif MCU == STM32F7
+#else
 
 static bool_t check_update_requested(void)
 {
     /* Check-and-clear a magic value poked into SRAM1 by the main firmware. */
-    bool_t match = (*(volatile uint32_t *)0x20010000 == 0xdeadbeef);
-    *(volatile uint32_t *)0x20010000 = 0;
+    bool_t match = (_reset_flag == 0xdeadbeef);
+    _reset_flag = 0;
     return match;
 }
 
@@ -262,48 +262,12 @@ static bool_t check_update_strapped(void)
     int i, j;
 
     /* Check whether the Serial TX/RX lines (PA9/PA10) are strapped. */
+#if MCU == STM32F7
     rcc->ahb1enr |= RCC_AHB1ENR_GPIOAEN;
     (void)rcc->ahb1enr;
-    gpio_configure_pin(gpioa, 9, GPO_pushpull(IOSPD_LOW, HIGH));
-    gpio_configure_pin(gpioa, 10, GPI_pull_up);
-    for (i = 0; i < 10; i++) {
-        gpio_write_pin(gpioa, 9, i&1);
-        for (j = 0; j < 10000; j++)
-            cpu_relax();
-        if (gpio_read_pin(gpioa, 10) != (i&1))
-            return FALSE;
-    }
-
-    return TRUE;
-}
-
-static bool_t enter_bootloader(void)
-{
-    bool_t upd_requested = check_update_requested();
-    upd_strapped = check_update_strapped();
-    return upd_requested || upd_strapped;
-}
-
-#elif MCU == AT32F415
-
-static bool_t check_update_requested(void)
-{
-#if 1
-    return FALSE;
 #else
-    /* Check-and-clear a magic value poked into SRAM1 by the main firmware. */
-    bool_t match = (*(volatile uint32_t *)0x20010000 == 0xdeadbeef);
-    *(volatile uint32_t *)0x20010000 = 0;
-    return match;
-#endif
-}
-
-static bool_t check_update_strapped(void)
-{
-    int i, j;
-
-    /* Check whether the Serial TX/RX lines (PA9/PA10) are strapped. */
     rcc->apb2enr |= RCC_APB2ENR_IOPAEN;
+#endif
     gpio_configure_pin(gpioa, 9, GPO_pushpull(IOSPD_LOW, HIGH));
     gpio_configure_pin(gpioa, 10, GPI_pull_up);
     for (i = 0; i < 10; i++) {

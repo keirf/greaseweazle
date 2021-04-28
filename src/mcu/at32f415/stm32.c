@@ -9,6 +9,8 @@
  * See the file COPYING for more details, or visit <http://unlicense.org>.
  */
 
+unsigned int FLASH_PAGE_SIZE = 2048;
+
 static void clock_init(void)
 {
     /* Flash controller: reads require 2 wait states at 72MHz. */
@@ -57,12 +59,20 @@ static void peripheral_init(void)
     gpio_configure_pin(gpiob,  4, GPI_floating);
 }
 
+static void identify_mcu(void)
+{
+    unsigned int flash_kb = *(uint16_t *)0x1ffff7e0;
+    if (flash_kb <= 128)
+        FLASH_PAGE_SIZE = 1024;
+}
+
 void stm32_init(void)
 {
     cortex_init();
     clock_init();
     peripheral_init();
     cpu_sync();
+    identify_mcu();
 }
 
 void gpio_configure_pin(GPIO gpio, unsigned int pin, unsigned int mode)
