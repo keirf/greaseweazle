@@ -86,9 +86,10 @@ def _verify_upd(d):
         crc16 = crcmod.predefined.Crc('crc-ccitt-false')
         crc16.update(d[4:upd_len+4])
         assert crc16.crcValue == 0
-        print('%s %s v%u.%u' % (hw_model_to_name[hw_model],
-                                 {b'BL': 'Boot', b'GW': 'Main'}[upd_type],
-                                 major, minor))
+        print('%s %s v%u.%u: %u bytes'
+              % (hw_model_to_name[hw_model],
+                 {b'BL': 'Boot', b'GW': 'Main'}[upd_type],
+                 major, minor, upd_len))
         d = d[upd_len+4:]
 
 def verify_upd(argv):
