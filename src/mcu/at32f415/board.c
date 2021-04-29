@@ -15,7 +15,7 @@
 static void mcu_board_init(void)
 {
     gpio_pull_up_pins(gpioa, 0x0101); /* PA0,8 */
-    gpio_pull_up_pins(gpiob, 0xdc03); /* PB0-1,10-12,14-15 */
+    gpio_pull_up_pins(gpiob, 0x1803); /* PB0-1,11-12 */
     gpio_pull_up_pins(gpioc, 0xffff); /* PC0-15 */
 
     /* Flippy TRK0_DISABLE output: Set inactive (LOW). */

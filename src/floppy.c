@@ -117,6 +117,7 @@ static enum {
     ST_source_bytes,
     ST_sink_bytes,
     ST_update_bootloader,
+    ST_testmode,
 } floppy_state = ST_inactive;
 
 static uint32_t u_cons, u_prod;
@@ -1336,6 +1337,15 @@ static void process_command(void)
         }
         break;
     }
+    case CMD_TEST_MODE: {
+        uint32_t sig1 = *(uint32_t *)&u_buf[2];
+        uint32_t sig2 = *(uint32_t *)&u_buf[6];
+        if (len != 10) goto bad_command;
+        if (sig1 != 0x6e504b4e) goto bad_command;
+        if (sig2 != 0x382910d3) goto bad_command;
+        floppy_state = ST_testmode;
+        break;
+    }
 #endif
     default:
         goto bad_command;
@@ -1428,6 +1438,13 @@ void floppy_process(void)
     case ST_update_bootloader:
         update_continue();
         break;
+
+#if MCU != STM32F1
+    case ST_testmode:
+        watchdog.armed = FALSE;
+        testmode_process();
+        break;
+#endif
 
     default:
         break;

@@ -103,6 +103,9 @@ static inline int printk(const char *format, ...) { return 0; }
 void floppy_init(void);
 void floppy_process(void);
 
+/* Test mode */
+void testmode_process(void);
+
 /* CRC-CCITT */
 uint16_t crc16_ccitt(const void *buf, size_t len, uint16_t crc);
 

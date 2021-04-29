@@ -51,15 +51,7 @@ typedef uint16_t timcnt_t;
 #define irq_index 40
 void IRQ_40(void) __attribute__((alias("IRQ_INDEX_changed"))); /* EXTI15_10 */
 
-enum { _A = 0, _B, _C, _D, _E, _F, _G };
-
-struct pin_mapping {
-    uint8_t pin_id;
-    uint8_t gpio_bank;
-    uint8_t gpio_pin;
-};
-
-const static struct pin_mapping msel_pins[] = {
+const struct pin_mapping msel_pins[] = {
     { 10, _A,  3 },
     { 12, _B,  9 },
     { 14, _A,  4 },
@@ -67,40 +59,12 @@ const static struct pin_mapping msel_pins[] = {
     {  0,  0,  0 }
 };
 
-const static struct pin_mapping user_pins[] = {
+const struct pin_mapping user_pins[] = {
     {  2, _A,  6 },
     {  4, _A,  5 },
     {  6, _A,  7 },
     {  0,  0,  0 }
 };
-
-GPIO gpio_from_id(uint8_t id)
-{
-    switch (id) {
-    case _A: return gpioa;
-    case _B: return gpiob;
-    case _C: return gpioc;
-    }
-    ASSERT(0);
-    return NULL;
-}
-
-uint8_t write_mapped_pin(
-    const struct pin_mapping *map, int pin_id, bool_t level)
-{
-    const struct pin_mapping *pin;
-
-    for (pin = map; pin->pin_id != 0; pin++)
-        if (pin->pin_id == pin_id)
-            goto found;
-
-    return ACK_BAD_PIN;
-
-found:
-    gpio_write_pin(gpio_from_id(pin->gpio_bank), pin->gpio_pin, level);
-    return ACK_OKAY;
-}
-
 
 /* We sometimes cast u_buf to uint32_t[], hence the alignment constraint. */
 #define U_BUF_SZ 16384

@@ -92,6 +92,21 @@ void fpec_init(void);
 void fpec_page_erase(uint32_t flash_address);
 void fpec_write(const void *data, unsigned int size, uint32_t flash_address);
 
+/* Pin mappings */
+enum { _A = 0, _B, _C, _D, _E, _F, _G, _H, _I };
+enum { _OD = 0, _PP };
+struct pin_mapping {
+    uint8_t pin_id;
+    uint8_t gpio_bank;
+    uint8_t gpio_pin;
+    bool_t  push_pull;
+};
+GPIO gpio_from_id(uint8_t id);
+uint8_t write_mapped_pin(
+    const struct pin_mapping *map, int pin_id, bool_t level);
+uint8_t read_mapped_pin(
+    const struct pin_mapping *map, int pin_id, bool_t *p_level);
+
 /*
  * Local variables:
  * mode: C

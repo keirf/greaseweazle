@@ -42,6 +42,8 @@ class Cmd:
     EraseFlux       = 17
     SourceBytes     = 18
     SinkBytes       = 19
+    GetPin          = 20
+    TestMode        = 21
     str = {
         GetInfo: "GetInfo",
         Update: "Update",
@@ -62,7 +64,9 @@ class Cmd:
         Reset: "Reset",
         EraseFlux: "EraseFlux",
         SourceBytes: "SourceBytes",
-        SinkBytes: "SinkBytes"
+        SinkBytes: "SinkBytes",
+        GetPin: "GetPin",
+        TestMode: "TestMode"
     }
 
 

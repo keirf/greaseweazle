@@ -12,43 +12,6 @@
 #define gpio_led gpiob
 #define pin_led 13
 
-enum { _A = 0, _B, _C, _D, _E, _F, _G, _H, _I };
-enum { _OD = 0, _PP };
-
-GPIO gpio_from_id(uint8_t id)
-{
-    switch (id) {
-    case _A: return gpioa;
-    case _B: return gpiob;
-    case _C: return gpioc;
-    case _D: return gpiod;
-    case _E: return gpioe;
-    case _F: return gpiof;
-    case _G: return gpiog;
-    case _H: return gpioh;
-    case _I: return gpioi;
-    }
-    ASSERT(0);
-    return NULL;
-}
-
-uint8_t write_mapped_pin(
-    const struct pin_mapping *map, int pin_id, bool_t level)
-{
-    const struct pin_mapping *pin;
-
-    for (pin = map; pin->pin_id != 0; pin++)
-        if (pin->pin_id == pin_id)
-            goto found;
-
-    return ACK_BAD_PIN;
-
-found:
-    gpio_write_pin(gpio_from_id(pin->gpio_bank), pin->gpio_pin, level);
-    return ACK_OKAY;
-}
-
-
 const static struct pin_mapping _msel_pins_std[] = {
     { 10, _B,  1 },
     { 12, _B,  0 },

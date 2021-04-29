@@ -9,6 +9,57 @@
  * See the file COPYING for more details, or visit <http://unlicense.org>.
  */
 
+GPIO gpio_from_id(uint8_t id)
+{
+    switch (id) {
+    case _A: return gpioa;
+    case _B: return gpiob;
+    case _C: return gpioc;
+    case _D: return gpiod;
+    case _E: return gpioe;
+    case _F: return gpiof;
+    case _G: return gpiog;
+#if MCU == STM32F7
+    case _H: return gpioh;
+    case _I: return gpioi;
+#endif
+    }
+    ASSERT(0);
+    return NULL;
+}
+
+uint8_t write_mapped_pin(
+    const struct pin_mapping *map, int pin_id, bool_t level)
+{
+    const struct pin_mapping *pin;
+
+    for (pin = map; pin->pin_id != 0; pin++)
+        if (pin->pin_id == pin_id)
+            goto found;
+
+    return ACK_BAD_PIN;
+
+found:
+    gpio_write_pin(gpio_from_id(pin->gpio_bank), pin->gpio_pin, level);
+    return ACK_OKAY;
+}
+
+uint8_t read_mapped_pin(
+    const struct pin_mapping *map, int pin_id, bool_t *p_level)
+{
+    const struct pin_mapping *pin;
+
+    for (pin = map; pin->pin_id != 0; pin++)
+        if (pin->pin_id == pin_id)
+            goto found;
+
+    return ACK_BAD_PIN;
+
+found:
+    *p_level = gpio_read_pin(gpio_from_id(pin->gpio_bank), pin->gpio_pin);
+    return ACK_OKAY;
+}
+
 /* Pull up currently unused and possibly-floating pins. */
 static void gpio_pull_up_pins(GPIO gpio, uint16_t mask)
 {

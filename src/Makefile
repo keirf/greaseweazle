@@ -10,6 +10,9 @@ OBJS += timer.o
 OBJS += util.o
 OBJS += floppy.o
 
+OBJS-$(stm32f7)  += testmode.o
+OBJS-$(at32f415) += testmode.o
+
 OBJS-$(debug) += console.o
 
 SUBDIRS += mcu usb
