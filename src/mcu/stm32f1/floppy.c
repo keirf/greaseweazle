@@ -12,8 +12,12 @@
 #define O_FALSE 1
 #define O_TRUE  0
 
-#define GPO_bus GPO_opendrain(_2MHz,O_FALSE)
-#define AFO_bus AFO_opendrain(_2MHz)
+#define GPO_bus_pp GPO_pushpull(_2MHz,O_FALSE)
+#define AFO_bus_pp AFO_pushpull(_2MHz)
+#define GPO_bus_od GPO_opendrain(_2MHz,O_FALSE)
+#define AFO_bus_od AFO_opendrain(_2MHz)
+static unsigned int GPO_bus;
+static unsigned int AFO_bus;
 static unsigned int GPI_bus;
 
 /* Input pins */
@@ -63,10 +67,21 @@ static uint8_t u_buf[U_BUF_SZ] aligned(4);
 
 static void floppy_mcu_init(void)
 {
-    /* Determine whether input pins must be internally pulled down. */
-    configure_pin(index, GPI_pull_down);
-    delay_us(10);
-    GPI_bus = (get_index() == LOW) ? GPI_pull_up : GPI_floating;
+    const struct pin_mapping *mpin;
+    const struct pin_mapping *upin;
+
+    switch (gw_info.hw_submodel) {
+    case F1SM_basic:
+        /* Determine whether input pins must be internally pulled down. */
+        configure_pin(index, GPI_pull_down);
+        delay_us(10);
+        GPI_bus = (get_index() == LOW) ? GPI_pull_up : GPI_floating;
+        break;
+    case F1SM_plus:
+        GPI_bus = GPI_floating;
+        break;
+    }
+
     printk("Floppy Inputs: %sternal Pullup\n",
            (GPI_bus == GPI_pull_up) ? "In" : "Ex");
 
@@ -74,17 +89,26 @@ static void floppy_mcu_init(void)
     afio->mapr |= (AFIO_MAPR_TIM2_REMAP_PARTIAL_1
                    | AFIO_MAPR_TIM3_REMAP_PARTIAL);
 
-    /* Set up EXTI mapping for INDEX: PB[15:0] -> EXT[15:0] */
-    afio->exticr1 = afio->exticr2 = afio->exticr3 = afio->exticr4 = 0x1111;
-
     configure_pin(rdata, GPI_bus);
 
-    /* Configure SELECT/MOTOR lines. */
-    configure_pin(sel, GPO_bus);
-    configure_pin(mot, GPO_bus);
+    /* Configure user-modifiable pins. */
+    for (upin = board_config->user_pins; upin->pin_id != 0; upin++) {
+        gpio_configure_pin(gpio_from_id(upin->gpio_bank), upin->gpio_pin,
+                           upin->push_pull ? GPO_bus_pp : GPO_bus_od);
+    }
 
-    /* Configure user-modifiable lines. */
-    configure_pin(densel, GPO_bus);
+    /* Configure the standard output types. */
+    GPO_bus = upin->push_pull ? GPO_bus_pp : GPO_bus_od;
+    AFO_bus = upin->push_pull ? AFO_bus_pp : AFO_bus_od;
+
+    /* Configure SELECT/MOTOR lines. */
+    for (mpin = board_config->msel_pins; mpin->pin_id != 0; mpin++) {
+        gpio_configure_pin(gpio_from_id(mpin->gpio_bank), mpin->gpio_pin,
+                           GPO_bus);
+    }
+
+    /* Set up EXTI mapping for INDEX: PB[15:0] -> EXT[15:0] */
+    afio->exticr1 = afio->exticr2 = afio->exticr3 = afio->exticr4 = 0x1111;
 }
 
 static void rdata_prep(void)
@@ -146,55 +170,26 @@ static void dma_wdata_start(void)
                     DMA_CR_EN);
 }
 
-static void drive_deselect(void)
-{
-    write_pin(sel, FALSE);
-    unit_nr = -1;
-}
-
-static uint8_t drive_select(uint8_t nr)
-{
-    write_pin(sel, TRUE);
-    unit_nr = 0;
-    delay_us(delay_params.select_delay);
-    return ACK_OKAY;
-}
-
-static uint8_t drive_motor(uint8_t nr, bool_t on)
-{
-    if (unit[0].motor == on)
-        return ACK_OKAY;
-
-    write_pin(mot, on);
-    unit[0].motor = on;
-    if (on)
-        delay_ms(delay_params.motor_delay);
-
-    return ACK_OKAY;
-}
-
 static uint8_t mcu_get_floppy_pin(unsigned int pin, uint8_t *p_level)
 {
+    switch (gw_info.hw_submodel) {
+    case F1SM_plus:
+        if (pin == 34) {
+            *p_level = gpio_read_pin(gpioa, 8);
+            return ACK_OKAY;
+        }
+        break;
+    }
     return ACK_BAD_PIN;
 }
 
-static uint8_t set_user_pin(unsigned int pin, unsigned int level)
+static void flippy_trk0_sensor(bool_t level)
 {
-    if (pin != 2)
-        return ACK_BAD_PIN;
-    gpio_write_pin(gpio_densel, pin_densel, level);
-    return ACK_OKAY;
+    if (board_config->flippy) {
+        gpio_write_pin(gpioa, 2, level);
+        delay_us(10);
+    }
 }
-
-static void reset_user_pins(void)
-{
-    write_pin(densel, FALSE);
-}
-
-/* No Flippy-modded drive support on F1 boards. */
-#define flippy_trk0_sensor_disable() ((void)0)
-#define flippy_trk0_sensor_enable() ((void)0)
-#define flippy_detect() FALSE
 
 /*
  * Local variables:

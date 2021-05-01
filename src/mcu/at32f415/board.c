@@ -12,6 +12,27 @@
 #define gpio_led gpiob
 #define pin_led 13
 
+const static struct pin_mapping _msel_pins[] = {
+    { 10, _A,  3 },
+    { 12, _B,  9 },
+    { 14, _A,  4 },
+    { 16, _A,  1 },
+    {  0,  0,  0 }
+};
+
+const static struct pin_mapping _user_pins[] = {
+    {  2, _A,  6 },
+    {  4, _A,  5 },
+    {  6, _A,  7 },
+    {  0,  0,  0 }
+};
+
+const static struct board_config _board_config = {
+    .flippy    = TRUE,
+    .user_pins = _user_pins,
+    .msel_pins = _msel_pins
+};
+
 static void mcu_board_init(void)
 {
     gpio_pull_up_pins(gpioa, 0x0101); /* PA0,8 */
@@ -23,6 +44,9 @@ static void mcu_board_init(void)
 
     /* /RDY input line is externally pulled up. */
     gpio_configure_pin(gpiob, 15, GPI_floating);
+
+    /* Single static config. */
+    board_config = &_board_config;
 }
 
 /*

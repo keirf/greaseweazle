@@ -15,7 +15,8 @@ from greaseweazle.tools import util
 from greaseweazle import usb as USB
 from greaseweazle import version
 
-model_id = { 1: { 0: 'F1' },
+model_id = { 1: { 0: 'F1',
+                  1: 'F1 Plus' },
              7: { 0: 'F7 v1',
                   1: 'F7 Plus (Ant Goffart, v1)',
                   2: 'F7 Lightning',

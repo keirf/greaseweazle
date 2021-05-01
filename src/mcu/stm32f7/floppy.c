@@ -154,117 +154,6 @@ static void dma_wdata_start(void)
     dma_wdata.cr |= DMA_CR_EN;
 }
 
-static void drive_deselect(void)
-{
-    int pin = -1;
-    uint8_t rc;
-
-    if (unit_nr == -1)
-        return;
-
-    switch (bus_type) {
-    case BUS_IBMPC:
-        switch (unit_nr) {
-        case 0: pin = 14; break;
-        case 1: pin = 12; break;
-        }
-        break;
-    case BUS_SHUGART:
-        switch (unit_nr) {
-        case 0: pin = 10; break;
-        case 1: pin = 12; break;
-        case 2: pin = 14; break;
-        }
-        break;
-    }
-
-    rc = write_mapped_pin(board_config->msel_pins, pin, O_FALSE);
-    ASSERT(rc == ACK_OKAY);
-
-    unit_nr = -1;
-}
-
-static uint8_t drive_select(uint8_t nr)
-{
-    int pin = -1;
-    uint8_t rc;
-
-    if (nr == unit_nr)
-        return ACK_OKAY;
-
-    drive_deselect();
-
-    switch (bus_type) {
-    case BUS_IBMPC:
-        switch (nr) {
-        case 0: pin = 14; break;
-        case 1: pin = 12; break;
-        default: return ACK_BAD_UNIT;
-        }
-        break;
-    case BUS_SHUGART:
-        switch (nr) {
-        case 0: pin = 10; break;
-        case 1: pin = 12; break;
-        case 2: pin = 14; break;
-        default: return ACK_BAD_UNIT;
-        }
-        break;
-    default:
-        return ACK_NO_BUS;
-    }
-
-    rc = write_mapped_pin(board_config->msel_pins, pin, O_TRUE);
-    if (rc != ACK_OKAY)
-        return ACK_BAD_UNIT;
-
-    unit_nr = nr;
-    delay_us(delay_params.select_delay);
-
-    return ACK_OKAY;
-}
-
-static uint8_t drive_motor(uint8_t nr, bool_t on)
-{
-    int pin = -1;
-    uint8_t rc;
-
-    switch (bus_type) {
-    case BUS_IBMPC:
-        if (nr >= 2) 
-            return ACK_BAD_UNIT;
-        if (unit[nr].motor == on)
-            return ACK_OKAY;
-        switch (nr) {
-        case 0: pin = 10; break;
-        case 1: pin = 16; break;
-        }
-        break;
-    case BUS_SHUGART:
-        if (nr >= 3)
-            return ACK_BAD_UNIT;
-        /* All shugart units share one motor line. Alias them all to unit 0. */
-        nr = 0;
-        if (unit[nr].motor == on)
-            return ACK_OKAY;
-        pin = 16;
-        break;
-    default:
-        return ACK_NO_BUS;
-    }
-
-    rc = write_mapped_pin(board_config->msel_pins, pin, on ? O_TRUE : O_FALSE);
-    if (rc != ACK_OKAY)
-        return ACK_BAD_UNIT;
-
-    unit[nr].motor = on;
-    if (on)
-        delay_ms(delay_params.motor_delay);
-
-    return ACK_OKAY;
-
-}
-
 static uint8_t mcu_get_floppy_pin(unsigned int pin, uint8_t *p_level)
 {
     switch (gw_info.hw_submodel) {
@@ -279,47 +168,12 @@ static uint8_t mcu_get_floppy_pin(unsigned int pin, uint8_t *p_level)
     return ACK_BAD_PIN;
 }
 
-static uint8_t set_user_pin(unsigned int pin, unsigned int level)
-{
-    const struct pin_mapping *upin;
-
-    for (upin = board_config->user_pins; upin->pin_id != 0; upin++) {
-        if (upin->pin_id == pin)
-            goto found;
-    }
-    return ACK_BAD_PIN;
-
-found:
-    gpio_write_pin(gpio_from_id(upin->gpio_bank), upin->gpio_pin, level);
-    return ACK_OKAY;
-}
-
-static void reset_user_pins(void)
-{
-    const struct pin_mapping *upin;
-
-    for (upin = board_config->user_pins; upin->pin_id != 0; upin++)
-        gpio_write_pin(gpio_from_id(upin->gpio_bank), upin->gpio_pin, O_FALSE);
-}
-
 static void flippy_trk0_sensor(bool_t level)
 {
     if (board_config->flippy) {
         gpio_write_pin(gpioc, 1, level);
         delay_us(10);
     }
-}
-
-#define flippy_trk0_sensor_disable() flippy_trk0_sensor(HIGH)
-#define flippy_trk0_sensor_enable() flippy_trk0_sensor(LOW)
-
-static bool_t flippy_detect(void)
-{
-    bool_t is_flippy;
-    flippy_trk0_sensor_disable();
-    is_flippy = (get_trk0() == HIGH);
-    flippy_trk0_sensor_enable();
-    return is_flippy;
 }
 
 /*

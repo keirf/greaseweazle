@@ -108,7 +108,6 @@ struct board_config {
     const struct pin_mapping *msel_pins;
 };
 
-extern const struct board_config *board_config;
 void identify_board_config(void);
 
 void early_fatal(int blinks) __attribute__((noreturn));

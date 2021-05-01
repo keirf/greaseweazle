@@ -30,9 +30,28 @@ struct rsp {
 #define TEST_BIT(p,n) (!!((p)[(n)/8] & (1<<((n)&7))))
 #define SET_BIT(p,n) ((p)[(n)/8] |= (1<<((n)&7)))
 
-void testmode_set_pin(unsigned int pin, bool_t level);
-bool_t testmode_get_pin(unsigned int pin);
+extern struct pin_mapping testmode_in_pins[];
+extern struct pin_mapping testmode_out_pins[];
 void testmode_get_option_bytes(void *buf);
+
+static void testmode_set_pin(unsigned int pin, bool_t level)
+{
+    int rc;
+    rc = write_mapped_pin(testmode_out_pins, pin, level);
+    if (rc != ACK_OKAY)
+        rc = write_mapped_pin(board_config->msel_pins, pin, level);
+    if (rc != ACK_OKAY)
+        rc = write_mapped_pin(board_config->user_pins, pin, level);
+}
+
+static bool_t testmode_get_pin(unsigned int pin)
+{
+    bool_t level;
+    int rc = read_mapped_pin(testmode_in_pins, pin, &level);
+    if (rc != ACK_OKAY)
+        level = FALSE;
+    return level;
+}
 
 static void set_pins(uint8_t *pins)
 {

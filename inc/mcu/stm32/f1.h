@@ -63,6 +63,17 @@ static SER_ID ser_id = (uint32_t *)0x1ffff7e8;
 /* No secondary RAM region */
 #define section_ext_ram
 
+enum {
+    F1SM_basic = 0,
+    F1SM_plus,
+};
+
+struct board_config {
+    bool_t flippy;
+    const struct pin_mapping *user_pins;
+    const struct pin_mapping *msel_pins;
+};
+
 /*
  * Local variables:
  * mode: C

@@ -100,7 +100,6 @@ const static struct board_config _board_config[] = {
         .user_pins = _user_pins_F7SM_v3,
         .msel_pins = _msel_pins_std },
 };
-const struct board_config *board_config;
 
 /* Blink the activity LED to indicate fatal error. */
 void early_fatal(int blinks)

@@ -9,6 +9,8 @@
  * See the file COPYING for more details, or visit <http://unlicense.org>.
  */
 
+const struct board_config *board_config;
+
 GPIO gpio_from_id(uint8_t id)
 {
     switch (id) {

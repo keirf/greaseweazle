@@ -282,7 +282,8 @@ def usb_open(devicename, is_update=False, mode_check=True):
     usb = USB.Unit(serial.Serial(devicename))
     usb.port_info = port_info(devicename)
     is_win7 = (platform.system() == 'Windows' and platform.release() == '7')
-    usb.jumperless_update = usb.hw_model != 1 and not is_win7
+    usb.jumperless_update = ((usb.hw_model, usb.hw_submodel) != (1, 0)
+                             and not is_win7)
 
     if not mode_check:
         return usb

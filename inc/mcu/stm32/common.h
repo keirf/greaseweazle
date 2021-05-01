@@ -107,6 +107,8 @@ uint8_t write_mapped_pin(
 uint8_t read_mapped_pin(
     const struct pin_mapping *map, int pin_id, bool_t *p_level);
 
+extern const struct board_config *board_config;
+
 /*
  * Local variables:
  * mode: C
