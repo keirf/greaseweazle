@@ -1468,7 +1468,6 @@ static void process_command(void)
         sink_source_prep(&ssb);
         break;
     }
-#if MCU != STM32F1
     case CMD_SWITCH_FW_MODE: {
         uint8_t mode = u_buf[2];
         if ((len != 3) || (mode & ~1))
@@ -1476,13 +1475,13 @@ static void process_command(void)
         if (mode == FW_MODE_BOOTLOADER) {
             usb_deinit();
             delay_ms(500);
-            /* Poke a flag in SRAM1, picked up by the bootloader. */
             _reset_flag = 0xdeadbeef;
             dcache_disable();
             system_reset();
         }
         break;
     }
+#if MCU != STM32F1
     case CMD_TEST_MODE: {
         uint32_t sig1 = *(uint32_t *)&u_buf[2];
         uint32_t sig2 = *(uint32_t *)&u_buf[6];

@@ -159,7 +159,6 @@ static void process_command(void)
         update_prep(u_len);
         break;
     }
-#if MCU != STM32F1
     case CMD_SWITCH_FW_MODE: {
         uint8_t mode = u_buf[2];
         if ((len != 3) || (mode & ~1))
@@ -171,7 +170,6 @@ static void process_command(void)
         }
         break;
     }
-#endif
     default:
         goto bad_command;
     }
@@ -225,7 +223,7 @@ static void update_process(void)
 
 #if MCU == STM32F1
 
-static bool_t enter_bootloader(void)
+static bool_t check_update_strapped(void)
 {
     /* Turn on AFIO and GPIOA clocks. */
     rcc->apb2enr = RCC_APB2ENR_IOPAEN | RCC_APB2ENR_AFIOEN;
@@ -248,14 +246,6 @@ static bool_t enter_bootloader(void)
 }
 
 #else
-
-static bool_t check_update_requested(void)
-{
-    /* Check-and-clear a magic value poked into SRAM1 by the main firmware. */
-    bool_t match = (_reset_flag == 0xdeadbeef);
-    _reset_flag = 0;
-    return match;
-}
 
 static bool_t check_update_strapped(void)
 {
@@ -281,14 +271,22 @@ static bool_t check_update_strapped(void)
     return TRUE;
 }
 
+#endif
+
+static bool_t check_update_requested(void)
+{
+    /* Check-and-clear a magic value poked into SRAM1 by the main firmware. */
+    bool_t match = (_reset_flag == 0xdeadbeef);
+    _reset_flag = 0;
+    return match;
+}
+
 static bool_t enter_bootloader(void)
 {
     bool_t upd_requested = check_update_requested();
     upd_strapped = check_update_strapped();
     return upd_requested || upd_strapped;
 }
-
-#endif
 
 int main(void)
 {

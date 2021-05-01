@@ -28,7 +28,7 @@ SECTIONS
     _etext = .;
   } >FLASH
 
-#if MCU == AT32F415
+#if MCU == STM32F1 || MCU == AT32F415
   .flags : {
     _reset_flag = .;
     . = . + 4;
