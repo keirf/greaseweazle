@@ -379,8 +379,6 @@ static OTG_DFIFO otg_dfifo = (struct otg_dfifo *)(OTG_BASE + 0x1000);
 /* DWC OTG private interface to MCU-specific layer. */
 extern int conf_iface;
 void core_reset(void);
-void dwc_otg_init(void);
-void dwc_otg_deinit(void);
 
 /*
  * Local variables:

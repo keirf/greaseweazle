@@ -1,7 +1,7 @@
 /*
- * hw_f1.h
+ * hw_usbd.h
  * 
- * USB register definitions for STM32F10x devices (except 105/107).
+ * USB register definitions for STM32F10x USBD peripheral.
  * 
  * Written & released by Keir Fraser <keir.xen@gmail.com>
  * 

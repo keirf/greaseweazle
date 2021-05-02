@@ -27,12 +27,12 @@ static struct ep {
     bool_t rx_active, tx_ready;
 } eps[conf_nr_ep];
 
-bool_t hw_has_highspeed(void)
+static bool_t dwc_otg_has_highspeed(void)
 {
     return conf_iface == IFACE_HS_EMBEDDED;
 }
 
-bool_t usb_is_highspeed(void)
+static bool_t dwc_otg_is_highspeed(void)
 {
     return is_hs;
 }
@@ -129,7 +129,7 @@ static void fifos_init(void)
     }
 }
 
-void dwc_otg_init(void)
+static void dwc_otg_init(void)
 {
     int i;
 
@@ -199,32 +199,32 @@ void dwc_otg_init(void)
     delay_ms(3);
 }
 
-void dwc_otg_deinit(void)
+static void dwc_otg_deinit(void)
 {
     /* HAL_PCD_Stop, USB_DevDisconnect */
     otgd->dctl |= OTG_DCTL_SDIS;
     peripheral_clock_delay();
 }
 
-int ep_rx_ready(uint8_t epnr)
+static int dwc_otg_ep_rx_ready(uint8_t epnr)
 {
     struct ep *ep = &eps[epnr];
     return (ep->rxc != ep->rxp) ? ep->rx[RX_MASK(ep, rxc)].count : -1;
 }
 
-bool_t ep_tx_ready(uint8_t epnr)
+static bool_t dwc_otg_ep_tx_ready(uint8_t epnr)
 {
     return eps[epnr].tx_ready;
 }
 
-void usb_read(uint8_t epnr, void *buf, uint32_t len)
+static void dwc_otg_read(uint8_t epnr, void *buf, uint32_t len)
 {
     struct ep *ep = &eps[epnr];
     memcpy(buf, ep->rx[RX_MASK(ep, rxc++)].data, len);
     prepare_rx(epnr);
 }
 
-void usb_write(uint8_t epnr, const void *buf, uint32_t len)
+static void dwc_otg_write(uint8_t epnr, const void *buf, uint32_t len)
 {
     OTG_DIEP diep = &otg_diep[epnr];
 
@@ -238,13 +238,13 @@ void usb_write(uint8_t epnr, const void *buf, uint32_t len)
     eps[epnr].tx_ready = FALSE;
 }
 
-void usb_stall(uint8_t epnr)
+static void dwc_otg_stall(uint8_t epnr)
 {
     otg_diep[epnr].ctl |= OTG_DIEPCTL_STALL;
     otg_doep[epnr].ctl |= OTG_DOEPCTL_STALL;
 }
 
-void usb_configure_ep(uint8_t epnr, uint8_t type, uint32_t size)
+static void dwc_otg_configure_ep(uint8_t epnr, uint8_t type, uint32_t size)
 {
     int i;
     struct ep *ep;
@@ -297,7 +297,7 @@ void usb_configure_ep(uint8_t epnr, uint8_t type, uint32_t size)
     }
 }
 
-void usb_setaddr(uint8_t addr)
+static void dwc_otg_setaddr(uint8_t addr)
 {
     otgd->dcfg = (otgd->dcfg & ~OTG_DCFG_DAD(0x7f)) | OTG_DCFG_DAD(addr);
 }
@@ -415,7 +415,7 @@ static void handle_iepint(uint8_t epnr)
     }
 }
 
-void usb_process(void)
+static void dwc_otg_process(void)
 {
     uint32_t gintsts = otg->gintsts & otg->gintmsk;
 
@@ -461,6 +461,24 @@ void usb_process(void)
         handle_rx_transfer();
     }
 }
+
+const struct usb_driver dwc_otg = {
+    .init = dwc_otg_init,
+    .deinit = dwc_otg_deinit,
+    .process = dwc_otg_process,
+
+    .has_highspeed = dwc_otg_has_highspeed,
+    .is_highspeed = dwc_otg_is_highspeed,
+
+    .setaddr = dwc_otg_setaddr,
+
+    .configure_ep = dwc_otg_configure_ep,
+    .ep_rx_ready = dwc_otg_ep_rx_ready,
+    .ep_tx_ready = dwc_otg_ep_tx_ready,
+    .read = dwc_otg_read,
+    .write = dwc_otg_write,
+    .stall = dwc_otg_stall
+};
 
 /*
  * Local variables:

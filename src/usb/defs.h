@@ -84,6 +84,27 @@ void hw_usb_init(void);
 void hw_usb_deinit(void);
 bool_t hw_has_highspeed(void);
 
+struct usb_driver {
+    void (*init)(void);
+    void (*deinit)(void);
+    void (*process)(void);
+
+    bool_t (*has_highspeed)(void);
+    bool_t (*is_highspeed)(void);
+
+    void (*setaddr)(uint8_t addr);
+
+    void (*configure_ep)(uint8_t epnr, uint8_t type, uint32_t size);
+    int (*ep_rx_ready)(uint8_t epnr);
+    bool_t (*ep_tx_ready)(uint8_t epnr);
+    void (*read)(uint8_t epnr, void *buf, uint32_t len);
+    void (*write)(uint8_t epnr, const void *buf, uint32_t len);
+    void (*stall)(uint8_t epnr);
+};
+
+extern const struct usb_driver dwc_otg;
+extern const struct usb_driver usbd;
+
 #define WARN printk
 
 /*
