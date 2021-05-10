@@ -77,8 +77,8 @@ static void gpio_pull_up_pins(GPIO gpio, uint16_t mask)
 #include "mcu/stm32f1/board.c"
 #elif MCU == STM32F7
 #include "mcu/stm32f7/board.c"
-#elif MCU == AT32F415
-#include "mcu/at32f415/board.c"
+#elif MCU == AT32F4
+#include "mcu/at32f4/board.c"
 #endif
 
 void board_init(void)

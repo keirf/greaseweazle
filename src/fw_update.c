@@ -13,7 +13,7 @@
 /*  8kB-64kB (56kB total) */
 #define FIRMWARE_START 0x08002000
 #define FIRMWARE_END   0x08010000
-#elif MCU == STM32F7 || MCU == AT32F415
+#elif MCU == STM32F7 || MCU == AT32F4
 /* 16kB-64KB (48kB total) */
 #define FIRMWARE_START 0x08004000
 #define FIRMWARE_END   0x08010000

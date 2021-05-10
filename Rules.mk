@@ -30,9 +30,9 @@ stm32f1=y
 else ifeq ($(mcu),stm32f7)
 FLAGS += -mcpu=cortex-m7 -DSTM32F7=7 -DMCU=7
 stm32f7=y
-else ifeq ($(mcu),at32f415)
-FLAGS += -mcpu=cortex-m4 -DAT32F415=4 -DMCU=4
-at32f415=y
+else ifeq ($(mcu),at32f4)
+FLAGS += -mcpu=cortex-m4 -DAT32F4=4 -DMCU=4
+at32f4=y
 endif
 
 ifneq ($(debug),y)

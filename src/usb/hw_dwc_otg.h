@@ -19,7 +19,7 @@
 #if MCU == STM32F7
 #define conf_port PORT_HS
 #define MAX_MPS USB_HS_MPS
-#elif MCU == AT32F415
+#elif MCU == AT32F4
 #define conf_port PORT_FS
 #define MAX_MPS USB_FS_MPS
 #endif

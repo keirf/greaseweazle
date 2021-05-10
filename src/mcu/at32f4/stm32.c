@@ -10,11 +10,14 @@
  */
 
 unsigned int FLASH_PAGE_SIZE = 2048;
+unsigned int at32f4_series;
 
 static void clock_init(void)
 {
-    /* Flash controller: reads require 2 wait states at 72MHz. */
-    flash->acr = FLASH_ACR_PRFTBE | FLASH_ACR_LATENCY(2);
+    if (at32f4_series == AT32F415) {
+        /* Flash controller: reads require 2 wait states at 72MHz. */
+        flash->acr = FLASH_ACR_PRFTBE | FLASH_ACR_LATENCY(2);
+    }
 
     /* Start up the external oscillator. */
     rcc->cr |= RCC_CR_HSEON;
@@ -64,15 +67,16 @@ static void identify_mcu(void)
     unsigned int flash_kb = *(uint16_t *)0x1ffff7e0;
     if (flash_kb <= 128)
         FLASH_PAGE_SIZE = 1024;
+    at32f4_series = *(uint8_t *)0x1ffff7f3; /* UID[95:88] */
 }
 
 void stm32_init(void)
 {
+    identify_mcu();
     cortex_init();
     clock_init();
     peripheral_init();
     cpu_sync();
-    identify_mcu();
 }
 
 void gpio_configure_pin(GPIO gpio, unsigned int pin, unsigned int mode)

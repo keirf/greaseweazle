@@ -8,7 +8,7 @@ MEMORY
 #elif MCU == STM32F7
   RAM (rwx)       : ORIGIN = 0x20000000, LENGTH = 64K
   EXT_RAM (rwx)   : ORIGIN = 0x20010000, LENGTH = 192K
-#elif MCU == AT32F415
+#elif MCU == AT32F4
   RAM (rwx)       : ORIGIN = 0x20000000, LENGTH = 32K
 #endif
 }
@@ -28,7 +28,7 @@ SECTIONS
     _etext = .;
   } >FLASH
 
-#if MCU == STM32F1 || MCU == AT32F415
+#if MCU == STM32F1 || MCU == AT32F4
   .flags : {
     _reset_flag = .;
     . = . + 4;

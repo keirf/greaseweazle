@@ -1,7 +1,7 @@
 /*
- * at32f415/floppy.c
+ * at32f4/floppy.c
  * 
- * Floppy interface control: AT32F415CBT7
+ * Floppy interface control: AT32F4xx
  * 
  * Written & released by Keir Fraser <keir.xen@gmail.com>
  * 

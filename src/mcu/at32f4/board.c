@@ -1,5 +1,5 @@
 /*
- * at32f415/board.c
+ * at32f4/board.c
  * 
  * Board-specific setup and management.
  * 

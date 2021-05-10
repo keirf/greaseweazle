@@ -11,7 +11,7 @@ OBJS += util.o
 OBJS += floppy.o
 
 OBJS-$(stm32f7)  += testmode.o
-OBJS-$(at32f415) += testmode.o
+OBJS-$(at32f4) += testmode.o
 
 OBJS-$(debug) += console.o
 

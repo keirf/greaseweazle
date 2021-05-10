@@ -21,7 +21,7 @@ void IRQ_50(void) __attribute__((alias("IRQ_timer")));
 #define tim tim5 /* 32-bit timer */
 #define tim_bits 32
 #define TIM_CR1_MCUBITS 0
-#elif MCU == AT32F415
+#elif MCU == AT32F4
 void IRQ_50(void) __attribute__((alias("IRQ_timer")));
 #define TIMER_IRQ 50
 #define tim tim5 /* 32-bit timer */
@@ -122,7 +122,7 @@ void timer_cancel(struct timer *timer)
 
 void timers_init(void)
 {
-#if MCU == STM32F7 || MCU == AT32F415
+#if MCU == STM32F7 || MCU == AT32F4
     rcc->apb1enr |= RCC_APB1ENR_TIM5EN;
     peripheral_clock_delay();
 #endif

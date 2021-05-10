@@ -24,9 +24,9 @@
 #elif MCU == STM32F7
 #include "mcu/stm32/f7_regs.h"
 #include "mcu/stm32/f7.h"
-#elif MCU == AT32F415
-#include "mcu/at32/f415_regs.h"
-#include "mcu/at32/f415.h"
+#elif MCU == AT32F4
+#include "mcu/at32/f4_regs.h"
+#include "mcu/at32/f4.h"
 #endif
 #include "intrinsics.h"
 

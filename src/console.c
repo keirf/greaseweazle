@@ -17,7 +17,7 @@
 #define PCLK SYSCLK
 #elif MCU == STM32F7
 #define PCLK (APB2_MHZ * 1000000)
-#elif MCU == AT32F415
+#elif MCU == AT32F4
 #define PCLK SYSCLK
 #endif
 
@@ -25,7 +25,7 @@
 
 static void ser_putc(uint8_t c)
 {
-#if MCU == STM32F1 || MCU == AT32F415
+#if MCU == STM32F1 || MCU == AT32F4
     while (!(usart1->sr & USART_SR_TXE))
         cpu_relax();
     usart1->dr = c;
@@ -85,7 +85,7 @@ void console_init(void)
     peripheral_clock_delay();
 
     /* Enable TX pin (PA9) for USART output, RX pin (PA10) as input. */
-#if MCU == STM32F1 || MCU == AT32F415
+#if MCU == STM32F1 || MCU == AT32F4
     gpio_configure_pin(gpioa, 9, AFO_pushpull(_10MHz));
     gpio_configure_pin(gpioa, 10, GPI_pull_up);
 #elif MCU == STM32F7
@@ -104,7 +104,7 @@ void console_init(void)
  * any serial input to cause a crash dump of the stuck context. */
 void console_crash_on_input(void)
 {
-#if MCU == STM32F1 || MCU == AT32F415
+#if MCU == STM32F1 || MCU == AT32F4
     (void)usart1->dr; /* clear UART_SR_RXNE */
 #elif MCU == STM32F7
     usart1->rqr = USART_RQR_RXFRQ; /* clear ISR_RXNE */
