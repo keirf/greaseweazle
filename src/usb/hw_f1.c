@@ -12,10 +12,15 @@
 void hw_usb_init(void)
 {
     usbd.init();
+
+    /* Indicate we are connected by pulling up D+. */
+    gpio_configure_pin(gpioa, 0, GPO_pushpull(_2MHz, HIGH));
 }
 
 void hw_usb_deinit(void)
 {
+    gpio_configure_pin(gpioa, 0, GPI_floating);
+
     usbd.deinit();
 }
 
