@@ -1,5 +1,5 @@
 /*
- * f1/stm32.c
+ * at32f4/stm32.c
  * 
  * Core and peripheral registers.
  * 

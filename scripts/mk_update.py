@@ -34,9 +34,9 @@ name_to_hw_model = { 'stm32f1': 1,
                      'stm32f7': 7,
                      'at32f4': 4 }
 
-hw_model_to_name = { 1: 'STM32F103',
-                     7: 'STM32F730',
-                     4: 'AT32F4xx' }
+hw_model_to_name = { 1: 'STM32F1',
+                     7: 'STM32F7',
+                     4: 'AT32F4' }
 
 def mk_cat_entry(dat, hw_model, sig):
     max_kb = { 1: { b'BL':  8, b'GW': 56 },
