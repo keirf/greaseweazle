@@ -28,7 +28,7 @@ const struct pin_mapping testmode_out_pins[] = {
 
 void testmode_get_option_bytes(void *buf)
 {
-    memcpy(buf, (void *)0x1ffff800, 16);
+    memcpy(buf, (void *)0x1ffff800, 32);
 }
 
 /*

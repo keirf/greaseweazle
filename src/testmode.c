@@ -7,25 +7,7 @@
  * See the file COPYING for more details, or visit <http://unlicense.org>.
  */
 
-#define CMD_option_bytes 0
-#define CMD_pins         1
-#define CMD_led          2
-
-struct cmd {
-    uint32_t cmd;
-    union {
-        uint8_t pins[64/8];
-        uint32_t x[28/4];
-    } u;
-};
-
-struct rsp {
-    union {
-        uint8_t opt[32];
-        uint8_t pins[64/8];
-        uint32_t x[32/4];
-    } u;
-};
+#include "testmode.h"
 
 #define TEST_BIT(p,n) (!!((p)[(n)/8] & (1<<((n)&7))))
 #define SET_BIT(p,n) ((p)[(n)/8] |= (1<<((n)&7)))
@@ -76,6 +58,55 @@ static void get_pins(uint8_t *pins)
     }
 }
 
+static unsigned int testmode_test_headers(void)
+{
+    int i, rc = TESTHEADER_success;
+    bool_t keep_pa9_high = FALSE;
+
+#ifndef NDEBUG
+    return rc;
+#endif
+
+#if MCU == AT32F4
+    if (at32f4_series == AT32F415) {
+        /* AT32F415: PA9 LOW trips OTG VbusBSen and drops the USB connection. 
+         * See Datasheet Table 5 Footnote 8. */
+        keep_pa9_high = TRUE;
+    }
+#endif
+
+    /* Can RXI and TXO pull themselves up and down? */
+    for (i = keep_pa9_high ? 1 : 0; i < 2; i++) {
+        gpio_configure_pin(gpioa, 9+i, GPI_pull_down);
+        delay_ms(1);
+        rc++;
+        if (gpio_read_pin(gpioa, 9+i) != LOW)
+            goto out;
+        gpio_configure_pin(gpioa, 9+i, GPI_pull_up);
+        delay_ms(1);
+        rc++;
+        if (gpio_read_pin(gpioa, 9+i) != HIGH)
+            goto out;
+    }
+
+    /* Are RXI and TXO shorted? */
+    for (i = keep_pa9_high ? 1 : 0; i < 2; i++) {
+        gpio_configure_pin(gpioa, 9+i, GPO_pushpull(IOSPD_LOW, LOW));
+        delay_ms(1);
+        rc++;
+        if (gpio_read_pin(gpioa, 10-i) != HIGH)
+            goto out;
+        gpio_configure_pin(gpioa, 9+i, GPI_pull_up);
+    }
+
+    rc = TESTHEADER_success;
+
+out:
+    for (i = 0; i < 2; i++)
+        gpio_configure_pin(gpioa, 9+i, GPI_pull_up);
+    return rc;
+}
+
 void testmode_process(void)
 {
     int len = ep_rx_ready(EP_RX);
@@ -104,6 +135,10 @@ void testmode_process(void)
     }
     case CMD_led: {
         act_led(!!cmd.u.pins[0]);
+        break;
+    }
+    case CMD_test_headers: {
+        rsp.u.x[0] = testmode_test_headers();
         break;
     }
     }
