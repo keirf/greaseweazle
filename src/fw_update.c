@@ -249,7 +249,11 @@ static bool_t check_update_strapped(void)
 
 static bool_t check_update_strapped(void)
 {
-    int i, j;
+    int i;
+
+    /* Enable SysTick counter. */
+    stk->load = STK_MASK;
+    stk->ctrl = STK_CTRL_ENABLE;
 
     /* Check whether the Serial TX/RX lines (PA9/PA10) are strapped. */
 #if MCU == STM32F7
@@ -262,8 +266,7 @@ static bool_t check_update_strapped(void)
     gpio_configure_pin(gpioa, 10, GPI_pull_up);
     for (i = 0; i < 10; i++) {
         gpio_write_pin(gpioa, 9, i&1);
-        for (j = 0; j < 10000; j++)
-            cpu_relax();
+        early_delay_us(100);
         if (gpio_read_pin(gpioa, 10) != (i&1))
             return FALSE;
     }
