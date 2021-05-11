@@ -17,6 +17,7 @@ from greaseweazle import version
 
 model_id = { 1: { 0: 'F1',
                   1: 'F1 Plus' },
+             4: { 0: 'V4' },
              7: { 0: 'F7 v1',
                   1: 'F7 Plus (Ant Goffart, v1)',
                   2: 'F7 Lightning',

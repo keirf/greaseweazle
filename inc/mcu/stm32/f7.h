@@ -110,6 +110,7 @@ struct board_config {
 
 void identify_board_config(void);
 
+/* On reset, SYSCLK=HSI at 16MHz. SYSCLK runs at 2MHz. */
 void early_fatal(int blinks) __attribute__((noreturn));
 #define early_delay_ms(ms) (delay_ticks((ms)*2000))
 #define early_delay_us(us) (delay_ticks((us)*2))

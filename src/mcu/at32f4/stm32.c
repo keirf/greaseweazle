@@ -24,6 +24,9 @@ static void clock_init(void)
     while (!(rcc->cr & RCC_CR_HSERDY))
         cpu_relax();
 
+    if (at32f4_series == AT32F403)
+        delay_ms(2);
+
     /* PLLs, scalers, muxes. */
     rcc->cfgr = (RCC_CFGR_PLLMUL(9) |        /* PLL = 9*8MHz = 72MHz */
                  RCC_CFGR_PLLSRC_PREDIV1 |
@@ -35,10 +38,16 @@ static void clock_init(void)
     while (!(rcc->cr & RCC_CR_PLLRDY))
         cpu_relax();
 
+    if (at32f4_series == AT32F403)
+        delay_us(200);
+
     /* Switch to the externally-driven PLL for system clock. */
     rcc->cfgr |= RCC_CFGR_SW_PLL;
     while ((rcc->cfgr & RCC_CFGR_SWS_MASK) != RCC_CFGR_SWS_PLL)
         cpu_relax();
+
+    if (at32f4_series == AT32F403)
+        delay_us(200);
 
     /* Internal oscillator no longer needed. */
     rcc->cr &= ~RCC_CR_HSION;
@@ -67,13 +76,22 @@ static void identify_mcu(void)
     unsigned int flash_kb = *(uint16_t *)0x1ffff7e0;
     if (flash_kb <= 128)
         FLASH_PAGE_SIZE = 1024;
+
     at32f4_series = *(uint8_t *)0x1ffff7f3; /* UID[95:88] */
+    switch (at32f4_series) {
+    case AT32F403:
+    case AT32F415:
+        break;
+    default:
+        early_fatal(4);
+    }
 }
 
 void stm32_init(void)
 {
-    identify_mcu();
     cortex_init();
+    identify_mcu();
+    identify_board_config();
     clock_init();
     peripheral_init();
     cpu_sync();
