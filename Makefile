@@ -1,6 +1,6 @@
 
 export FW_MAJOR := 0
-export FW_MINOR := 26
+export FW_MINOR := 27
 
 TARGETS := all blinky clean dist windist mrproper f1_ocd ocd flash start serial pysetup
 .PHONY: $(TARGETS)
@@ -43,12 +43,12 @@ dist:
 	mkdir -p $(PROJ)-$(VER)/scripts/greaseweazle/image
 	mkdir -p $(PROJ)-$(VER)/scripts/greaseweazle/tools
 	mkdir -p $(PROJ)-$(VER)/scripts/misc
-	mkdir -p $(PROJ)-$(VER)/alt
+	mkdir -p $(PROJ)-$(VER)/hex/alt
 	$(MAKE) clean
 	$(MAKE) mcu=stm32f1 all blinky
-	cp -a $(PROJ)-$(VER).hex $(PROJ)-$(VER)/$(PROJ)-F1-$(VER).hex
+	cp -a $(PROJ)-$(VER).hex $(PROJ)-$(VER)/hex/$(PROJ)-F1-$(VER).hex
 	cp -a $(PROJ)-$(VER).upd $(PROJ)-$(VER)/$(PROJ)-$(VER).upd
-	cp -a blinky_test/Blinky.hex $(PROJ)-$(VER)/alt/Blinky_Test-$(VER).hex
+	cp -a blinky_test/Blinky.hex $(PROJ)-$(VER)/hex/alt/Blinky_Test-F1-$(VER).hex
 	cp -a COPYING $(PROJ)-$(VER)/
 	cp -a README.md $(PROJ)-$(VER)/
 	cp -a gw $(PROJ)-$(VER)/
@@ -61,12 +61,12 @@ dist:
 	cp -a RELEASE_NOTES $(PROJ)-$(VER)/
 	$(MAKE) clean
 	$(MAKE) mcu=stm32f7 all
-	cp -a $(PROJ)-$(VER).hex $(PROJ)-$(VER)/$(PROJ)-F7-$(VER).hex
+	cp -a $(PROJ)-$(VER).hex $(PROJ)-$(VER)/hex/$(PROJ)-F7-$(VER).hex
 	$(PYTHON) ./scripts/mk_update.py cat $(PROJ)-$(VER)/$(PROJ)-$(VER).upd \
 		$(PROJ)-$(VER)/$(PROJ)-$(VER).upd $(PROJ)-$(VER).upd
 	$(MAKE) clean
 	$(MAKE) mcu=at32f4 all
-	cp -a $(PROJ)-$(VER).hex $(PROJ)-$(VER)/$(PROJ)-AT32F4-$(VER).hex
+	cp -a $(PROJ)-$(VER).hex $(PROJ)-$(VER)/hex/$(PROJ)-AT32F4-$(VER).hex
 	$(PYTHON) ./scripts/mk_update.py cat $(PROJ)-$(VER)/$(PROJ)-$(VER).upd \
 		$(PROJ)-$(VER)/$(PROJ)-$(VER).upd $(PROJ)-$(VER).upd
 	$(MAKE) clean

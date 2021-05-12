@@ -3,6 +3,14 @@
 ** Keir Fraser <keir.xen@gmail.com>
 ************************************
 
+** v0.27 - 12 May 2021
+ - EDSK: Support writing KBI-19 protection tracks
+ - EDSK: Support next IDAM in preceding sector's GAP
+ - gw seek: New option --motor-on to enable drive motor while seeking
+ - New firmware command: CMD_GET_PIN to interrogate input floppy pins
+ - New board type: V4 (using AT32F4xx MCUs)
+ - New board type: F1 Plus (enhanced BP adapter board by Monideth Pen)
+
 ** v0.26 - 26 March 2021
  - Support new Greaseweazle model: F7 v3 "Thunderbolt"
  - EDSK: Support for writing many protected EDSK files
