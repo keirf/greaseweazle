@@ -13,6 +13,8 @@
 #define CMD_pins         1
 #define CMD_led          2
 #define CMD_test_headers 3
+#define CMD_wdat_osc_on  4
+#define CMD_wdat_osc_off 5
 
 /* CMD_test_headers return code in rsp.u.x[0] */
 #define TESTHEADER_success 100

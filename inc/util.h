@@ -104,6 +104,7 @@ void floppy_init(void);
 void floppy_process(void);
 
 /* Test mode */
+uint8_t testmode_init(void);
 void testmode_process(void);
 
 /* CRC-CCITT */

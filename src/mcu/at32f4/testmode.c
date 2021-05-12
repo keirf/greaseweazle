@@ -31,6 +31,11 @@ void testmode_get_option_bytes(void *buf)
     memcpy(buf, (void *)0x1ffff800, 32);
 }
 
+uint8_t testmode_init(void)
+{
+    return ACK_OKAY;
+}
+
 /*
  * Local variables:
  * mode: C

@@ -31,6 +31,16 @@ void testmode_get_option_bytes(void *buf)
     memcpy(buf, (void *)0x1fff0000, 32);
 }
 
+uint8_t testmode_init(void)
+{
+    switch (gw_info.hw_submodel) {
+    case F7SM_lightning_plus:
+    case F7SM_v3:
+        return ACK_OKAY;
+    }
+    return ACK_BAD_COMMAND;
+}
+
 /*
  * Local variables:
  * mode: C

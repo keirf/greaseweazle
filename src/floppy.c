@@ -1488,8 +1488,10 @@ static void process_command(void)
         if (len != 10) goto bad_command;
         if (sig1 != 0x6e504b4e) goto bad_command;
         if (sig2 != 0x382910d3) goto bad_command;
-        floppy_state = ST_testmode;
-        break;
+        u_buf[1] = testmode_init();
+        if (u_buf[1] == ACK_OKAY)
+            floppy_state = ST_testmode;
+        goto out;
     }
 #endif
     default:

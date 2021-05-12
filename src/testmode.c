@@ -107,6 +107,37 @@ out:
     return rc;
 }
 
+/* It so happens that all supported boards use the same pin and timer for 
+ * WDAT, so we can share the code here. Future boards may require this to 
+ * be made board-specific. */
+#define gpio_wdata  gpioa
+#define pin_wdata   2
+#define tim_wdata   (tim2)
+#define GPO_bus GPO_pushpull(IOSPD_LOW,HIGH)
+#define AFO_bus AFO_pushpull(IOSPD_LOW)
+static void testmode_wdat_osc_on(void)
+{
+    tim_wdata->psc = SYSCLK_MHZ/TIME_MHZ-1;
+    tim_wdata->ccmr2 = (TIM_CCMR2_CC3S(TIM_CCS_OUTPUT) |
+                        TIM_CCMR2_OC3M(TIM_OCM_PWM1));
+    tim_wdata->ccer = TIM_CCER_CC3E;
+    tim_wdata->ccr3 = time_us(1);
+    tim_wdata->arr = time_us(2)-1;
+    tim_wdata->dier = TIM_DIER_UDE;
+    tim_wdata->cr2 = 0;
+    tim_wdata->egr = TIM_EGR_UG;
+    tim_wdata->sr = 0;
+    tim_wdata->cr1 = TIM_CR1_CEN;
+    gpio_configure_pin(gpio_wdata, pin_wdata, AFO_bus);
+}
+static void testmode_wdat_osc_off(void)
+{
+    gpio_configure_pin(gpio_wdata, pin_wdata, GPO_bus);
+    tim_wdata->ccer = 0;
+    tim_wdata->cr1 = 0;
+    tim_wdata->sr = 0;
+}
+
 void testmode_process(void)
 {
     int len = ep_rx_ready(EP_RX);
@@ -139,6 +170,14 @@ void testmode_process(void)
     }
     case CMD_test_headers: {
         rsp.u.x[0] = testmode_test_headers();
+        break;
+    }
+    case CMD_wdat_osc_on: {
+        testmode_wdat_osc_on();
+        break;
+    }
+    case CMD_wdat_osc_off: {
+        testmode_wdat_osc_off();
         break;
     }
     }
