@@ -229,6 +229,14 @@ class Unit:
     def set_pin(self, pin, level):
         self._send_cmd(struct.pack("4B", Cmd.SetPin, 4, pin, int(level)))
 
+    ## get_pin:
+    def get_pin(self, pin):
+        self.ser.write(struct.pack("3B", Cmd.GetPin, 3, pin))
+        (c,r) = struct.unpack("2B", self.ser.read(2))
+        if r != Ack.Okay:
+            raise CmdError(cmd, r)
+        (v,) = struct.unpack("B", self.ser.read(1))
+        return v
 
     ## power_on_reset:
     ## Re-initialise to power-on defaults.

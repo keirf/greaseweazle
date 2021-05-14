@@ -53,7 +53,8 @@ actions = [ 'info',
             'update',
             'pin',
             'reset',
-            'bandwidth' ]
+            'bandwidth',
+            'getpin' ]
 argv = sys.argv
 
 def usage():
