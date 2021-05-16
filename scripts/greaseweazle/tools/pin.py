@@ -20,15 +20,15 @@ def level(letter):
         raise argparse.ArgumentTypeError("invalid pin level: '%s'" % letter)
     return levels[letter.upper()]
 
-def main(argv):
+def pin_set(argv):
 
     parser = util.ArgumentParser(usage='%(prog)s [options] pin level')
     parser.add_argument("--device", help="greaseweazle device name")
     parser.add_argument("pin", type=int, help="pin number")
     parser.add_argument("level", type=level, help="pin level (H,L)")
     parser.description = description
-    parser.prog += ' ' + argv[1]
-    args = parser.parse_args(argv[2:])
+    parser.prog += ' pin set'
+    args = parser.parse_args(argv[3:])
 
     try:
         usb = util.usb_open(args.device)
@@ -38,6 +38,46 @@ def main(argv):
     except USB.CmdError as error:
         print("Command Failed: %s" % error)
 
+def _pin_get(usb, args, **_kwargs):
+    """Get the specified pin value.
+    """
+    value = usb.get_pin(args.pin)
+    print("Pin %u is %s" %
+          (args.pin, ("Low (0v)", "High (5v)")[value]))
+
+def pin_get(argv):
+
+    parser = util.ArgumentParser(usage='%(prog)s [options] pin')
+    parser.add_argument("--device", help="greaseweazle device name")
+    parser.add_argument("--drive", type=util.drive_letter, default='A',
+                        help="drive to read (A,B,0,1,2)")
+    parser.add_argument("pin", type=int, help="pin number")
+    parser.description = description
+    parser.prog += ' pin get'
+    args = parser.parse_args(argv[3:])
+
+    try:
+        usb = util.usb_open(args.device)
+        util.with_drive_selected(_pin_get, usb, args, motor=False)
+    except USB.CmdError as error:
+        print("Command Failed: %s" % error)
+
+def usage(argv):
+    print("usage: gw pin get|set [-h] ...")
+    print("  get|set  Get or set a pin")
+    sys.exit(1)
+
+def main(argv):
+
+    if len(argv) < 3:
+        usage(argv)
+
+    if argv[2] == 'get':
+        pin_get(argv)
+    elif argv[2] == 'set':
+        pin_set(argv)
+    else:
+        usage(argv)
 
 if __name__ == "__main__":
     main(sys.argv)

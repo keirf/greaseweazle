@@ -95,7 +95,7 @@ class Ack:
         NoUnit: "No drive unit selected",
         NoBus: "No bus type (eg. Shugart, IBM/PC) specified",
         BadUnit: "Invalid unit number",
-        BadPin: "Not a modifiable pin",
+        BadPin: "Invalid pin",
         BadCylinder: "Invalid cylinder"
     }
 
@@ -228,6 +228,14 @@ class Unit:
     ## Set a pin level.
     def set_pin(self, pin, level):
         self._send_cmd(struct.pack("4B", Cmd.SetPin, 4, pin, int(level)))
+
+
+    ## get_pin:
+    ## Get a pin level.
+    def get_pin(self, pin):
+        self._send_cmd(struct.pack("3B", Cmd.GetPin, 3, pin))
+        v, = struct.unpack("B", self.ser.read(1))
+        return v
 
 
     ## power_on_reset:
