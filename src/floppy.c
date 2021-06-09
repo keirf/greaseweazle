@@ -378,6 +378,32 @@ static uint8_t floppy_seek(int cyl)
     return ACK_OKAY;
 }
 
+static uint8_t floppy_noclick_step(void)
+{
+    uint8_t rc;
+
+    /* Make sure the drive is at cylinder 0. */
+    rc = floppy_seek(0);
+    if (rc != ACK_OKAY)
+        return rc;
+
+    /* Step to cylinder -1 should be ignored, but reset Disk Change. */
+    step_dir_out();
+    step_once();
+
+    /* Does it look like we actually stepped? Get back to cylinder 0 if so. */
+    if (get_trk0() == HIGH) {
+        delay_ms(delay_params.seek_settle); /* change of direction */
+        step_dir_in();
+        step_once();
+        delay_ms(delay_params.seek_settle);
+        /* Discourage further use of this command. */
+        return ACK_BAD_CYLINDER;
+    }
+
+    return ACK_OKAY;
+}
+
 static void floppy_flux_end(void)
 {
     /* Turn off write pins. */
@@ -1494,6 +1520,12 @@ static void process_command(void)
         goto out;
     }
 #endif
+    case CMD_NOCLICK_STEP: {
+        if (len != 2)
+            goto bad_command;
+        u_buf[1] = floppy_noclick_step();
+        goto out;
+    }
     default:
         goto bad_command;
     }

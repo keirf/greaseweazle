@@ -73,7 +73,12 @@
 /* CMD_TEST_MODE, length=10, 0x6e504b4e, 0x382910d3 
  * Responds ACK_OKAY and then switches to board test mode until reset. */
 #define CMD_TEST_MODE      21
-#define CMD_MAX            21
+/* CMD_NOCLICK_STEP, length=2 
+ * Steps outward from cylinder 0. This is expected to be ignored by the drive,
+ * but will reset the Disk Change signal if a disk has been inserted. 
+ * On successful return the drive is always at cylinder 0. */
+#define CMD_NOCLICK_STEP   22
+#define CMD_MAX            22
 
 
 /*
