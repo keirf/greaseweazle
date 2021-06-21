@@ -15,10 +15,8 @@
 
 #if MCU == STM32F1
 #define PCLK SYSCLK
-#elif MCU == STM32F7
+#else
 #define PCLK (APB2_MHZ * 1000000)
-#elif MCU == AT32F4
-#define PCLK SYSCLK
 #endif
 
 #define USART1_IRQ 37

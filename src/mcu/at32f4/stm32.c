@@ -28,10 +28,13 @@ static void clock_init(void)
         delay_ms(2);
 
     /* PLLs, scalers, muxes. */
-    rcc->cfgr = (RCC_CFGR_PLLMUL(9) |        /* PLL = 9*8MHz = 72MHz */
+    rcc->cfgr = (RCC_CFGR_PLLRANGE_GT72MHZ |
+                 RCC_CFGR_PLLMUL_18 |        /* PLL = 18*8MHz = 144MHz */
+                 RCC_CFGR_USBPSC_3 |         /* USB = 144/3MHz = 48MHz */
                  RCC_CFGR_PLLSRC_PREDIV1 |
                  RCC_CFGR_ADCPRE_DIV8 |
-                 RCC_CFGR_PPRE1_DIV2);
+                 RCC_CFGR_APB2PSC_2 |        /* APB2 = 144/2MHz = 72MHz */
+                 RCC_CFGR_APB1PSC_2);        /* APB1 = 144/2MHz = 72MHz */
 
     /* Enable and stabilise the PLL. */
     rcc->cr |= RCC_CR_PLLON;
