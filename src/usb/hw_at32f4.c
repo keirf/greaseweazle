@@ -87,14 +87,6 @@ void usb_stall(uint8_t epnr)
 
 void usb_configure_ep(uint8_t epnr, uint8_t type, uint32_t size)
 {
-    switch (at32f4_series) {
-    case AT32F403:
-        /* Double-buffer hardware implementation is incompatible. */
-        if (type == EPT_DBLBUF)
-            type = EPT_BULK;
-        break;
-    }
-
     drv->configure_ep(epnr, type, size);
 }
 

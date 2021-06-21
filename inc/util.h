@@ -132,6 +132,7 @@ void EXC_unused(void);
 #define RESET_IRQ_PRI         0
 #define INDEX_IRQ_PRI         2
 #define TIMER_IRQ_PRI         4
+#define USB_IRQ_PRI           6
 
 /*
  * Local variables:

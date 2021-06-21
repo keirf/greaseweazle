@@ -11,7 +11,7 @@ OBJS-$(stm32f7) += hw_dwc_otg.o
 OBJS-$(stm32f7) += hw_f7.o
 
 OBJS-$(at32f4) += hw_dwc_otg.o
-OBJS-$(at32f4) += hw_usbd.o
+OBJS-$(at32f4) += hw_usbd_at32f4.o
 OBJS-$(at32f4) += hw_at32f4.o
 
 $(OBJS) $(OBJS-y): CFLAGS += -include $(ROOT)/src/usb/defs.h
