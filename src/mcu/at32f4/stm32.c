@@ -14,9 +14,11 @@ unsigned int at32f4_series;
 
 static void clock_init(void)
 {
+    uint32_t cfgr;
+
     if (at32f4_series == AT32F415) {
-        /* Flash controller: reads require 2 wait states at 72MHz. */
-        flash->acr = FLASH_ACR_PRFTBE | FLASH_ACR_LATENCY(2);
+        /* Flash controller: reads require 4 wait states at 144MHz. */
+        flash->acr = FLASH_ACR_PRFTBE | FLASH_ACR_LATENCY(4);
     }
 
     /* Start up the external oscillator. */
@@ -24,33 +26,57 @@ static void clock_init(void)
     while (!(rcc->cr & RCC_CR_HSERDY))
         cpu_relax();
 
-    if (at32f4_series == AT32F403)
-        delay_ms(2);
-
     /* PLLs, scalers, muxes. */
-    rcc->cfgr = (RCC_CFGR_PLLRANGE_GT72MHZ |
-                 RCC_CFGR_PLLMUL_18 |        /* PLL = 18*8MHz = 144MHz */
-                 RCC_CFGR_USBPSC_3 |         /* USB = 144/3MHz = 48MHz */
-                 RCC_CFGR_PLLSRC_PREDIV1 |
-                 RCC_CFGR_ADCPRE_DIV8 |
-                 RCC_CFGR_APB2PSC_2 |        /* APB2 = 144/2MHz = 72MHz */
-                 RCC_CFGR_APB1PSC_2);        /* APB1 = 144/2MHz = 72MHz */
+    cfgr = (RCC_CFGR_PLLMUL_18 |        /* PLL = 18*8MHz = 144MHz */
+            RCC_CFGR_USBPSC_3 |         /* USB = 144/3MHz = 48MHz */
+            RCC_CFGR_PLLSRC_PREDIV1 |
+            RCC_CFGR_ADCPRE_DIV8 |
+            RCC_CFGR_APB2PSC_2 |        /* APB2 = 144/2MHz = 72MHz */
+            RCC_CFGR_APB1PSC_2);        /* APB1 = 144/2MHz = 72MHz */
+
+    switch (at32f4_series) {
+    case AT32F403:
+        cfgr |= RCC_CFGR_PLLRANGE_GT72MHZ;
+        early_delay_ms(2);
+        break;
+    case AT32F415: {
+        uint32_t rcc_pll = *RCC_PLL;
+        rcc_pll &= ~(RCC_PLL_PLLCFGEN | RCC_PLL_FREF_MASK);
+        rcc_pll |= RCC_PLL_FREF_8M;
+        *RCC_PLL = rcc_pll;
+        break;
+    }
+    }
+
+    rcc->cfgr = cfgr;
 
     /* Enable and stabilise the PLL. */
     rcc->cr |= RCC_CR_PLLON;
     while (!(rcc->cr & RCC_CR_PLLRDY))
         cpu_relax();
 
-    if (at32f4_series == AT32F403)
-        delay_us(200);
+    switch (at32f4_series) {
+    case AT32F403:
+        early_delay_us(200);
+        break;
+    case AT32F415:
+        *RCC_MISC2 |= RCC_MISC2_AUTOSTEP_EN;
+        break;
+    }
 
     /* Switch to the externally-driven PLL for system clock. */
     rcc->cfgr |= RCC_CFGR_SW_PLL;
     while ((rcc->cfgr & RCC_CFGR_SWS_MASK) != RCC_CFGR_SWS_PLL)
         cpu_relax();
 
-    if (at32f4_series == AT32F403)
-        delay_us(200);
+    switch (at32f4_series) {
+    case AT32F403:
+        early_delay_us(200);
+        break;
+    case AT32F415:
+        *RCC_MISC2 &= ~RCC_MISC2_AUTOSTEP_EN;
+        break;
+    }
 
     /* Internal oscillator no longer needed. */
     rcc->cr &= ~RCC_CR_HSION;
