@@ -3,6 +3,13 @@
 ** Keir Fraser <keir.xen@gmail.com>
 ************************************
 
+** v0.28 - 22 June 2021
+ - V4: Improve USB bandwidth and double MCU clock speed to 144MHz
+   - Fixes "gw bandwidth" warnings
+ - Firmware: New command CMD_NOCLICK_STEP.
+   - Used by Rob Smith's WinUAE bridge to implement noclick
+ - "gw pin": Split into "gw pin set" and "gw pin get"
+
 ** v0.27 - 12 May 2021
  - EDSK: Support writing KBI-19 protection tracks
  - EDSK: Support next IDAM in preceding sector's GAP
