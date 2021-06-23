@@ -1181,13 +1181,23 @@ static struct {
     unsigned int todo;
     unsigned int min_delta;
     unsigned int max_delta;
+    unsigned int status;
+    uint32_t rand;
 } ss;
+
+static uint32_t ss_rand_next(uint32_t x)
+{
+    return (x&1) ? (x>>1) ^ 0x80000062 : x>>1;
+}
 
 static void sink_source_prep(const struct gw_sink_source_bytes *ssb)
 {
     ss.min_delta = INT_MAX;
     ss.max_delta = 0;
     ss.todo = ssb->nr_bytes;
+    ss.rand = ssb->seed;
+    ss.status = ACK_OKAY;
+    usb_packet.ready = FALSE;
 }
 
 static void ss_update_deltas(int len)
@@ -1214,8 +1224,20 @@ static void ss_update_deltas(int len)
 
 static void source_bytes(void)
 {
+    int i;
+
+    if (!usb_packet.ready) {
+        for (i = 0; i < usb_bulk_mps; i++) {
+            usb_packet.data[i] = (uint8_t)ss.rand;
+            ss.rand = ss_rand_next(ss.rand);
+        }
+        usb_packet.ready = TRUE;
+    }
+
     if (!ep_tx_ready(EP_TX))
         return;
+
+    usb_packet.ready = FALSE;
 
     if (ss.todo < usb_bulk_mps) {
         floppy_state = ST_command_wait;
@@ -1230,13 +1252,13 @@ static void source_bytes(void)
 
 static void sink_bytes(void)
 {
-    int len;
+    int i, len;
 
     if (ss.todo == 0) {
         /* We're done: Wait for space to write the ACK byte. */
         if (!ep_tx_ready(EP_TX))
             return;
-        u_buf[0] = ACK_OKAY;
+        u_buf[0] = ss.status;
         floppy_state = ST_command_wait;
         floppy_end_command(u_buf, 1);
         return; /* FINISHED */
@@ -1251,6 +1273,13 @@ static void sink_bytes(void)
     usb_read(EP_RX, usb_packet.data, len);
     ss.todo = (ss.todo <= len) ? 0 : ss.todo - len;
     ss_update_deltas(len);
+
+    /* Check data. */
+    for (i = 0; i < len; i++) {
+        if (usb_packet.data[i] != (uint8_t)ss.rand)
+            ss.status = ACK_BAD_COMMAND;
+        ss.rand = ss_rand_next(ss.rand);
+    }
 }
 
 

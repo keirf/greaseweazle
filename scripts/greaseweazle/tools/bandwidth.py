@@ -9,34 +9,53 @@
 
 description = "Report the available USB bandwidth for the Greaseweazle device."
 
-import sys
+import struct, sys
 
 from timeit import default_timer as timer
 
 from greaseweazle.tools import util
 from greaseweazle import usb as USB
 
+def generate_random_buffer(nr, seed):
+    dat = bytearray()
+    r = seed
+    for i in range(nr):
+        dat.append(r&255)
+        if r & 1:
+            r = (r>>1) ^ 0x80000062
+        else:
+            r >>= 1
+    return dat
+
 def measure_bandwidth(usb, args):
     print()
     print("%19s%-7s/   %-7s/   %-7s" % ("", "Min.", "Mean", "Max."))
 
-    w_nr = 1000000
+    seed = 0x12345678
+    w_nr = r_nr = 1000000
+    buf = generate_random_buffer(w_nr, seed)
+
     start = timer()
-    usb.sink_bytes(w_nr)
+    ack = usb.sink_bytes(buf, seed)
     end = timer()
     av_w_bw = (w_nr * 8) / ((end-start) * 1e6)
     min_w_bw, max_w_bw = usb.bw_stats()
     print("Write Bandwidth: %8.3f / %8.3f / %8.3f Mbps"
           % (min_w_bw, av_w_bw, max_w_bw))
+    if ack != 0:
+        print("ERROR: USB write data garbled (Host -> Device)")
+        return
     
-    r_nr = 1000000
     start = timer()
-    usb.source_bytes(r_nr)
+    sbuf = usb.source_bytes(r_nr, seed)
     end = timer()
     av_r_bw = (r_nr * 8) / ((end-start) * 1e6)
     min_r_bw, max_r_bw = usb.bw_stats()
     print("Read Bandwidth:  %8.3f / %8.3f / %8.3f Mbps"
           % (min_r_bw, av_r_bw, max_r_bw))
+    if sbuf is not None and sbuf != buf:
+        print("ERROR: USB read data garbled (Device -> Host)")
+        return
 
     est_min_bw = 0.9 * min(min_r_bw, min_w_bw)
     print()

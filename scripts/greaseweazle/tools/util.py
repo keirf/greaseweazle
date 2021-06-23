@@ -264,17 +264,17 @@ def usb_reopen(usb, is_update):
     raise serial.SerialException('Could not reopen port after mode switch')
 
 
-def usb_open(devicename, is_update=False, mode_check=True):
+def print_update_instructions(usb):
+    print("To perform an Update:")
+    if not usb.jumperless_update:
+        print(" - Disconnect from USB")
+        print(" - Install the Update Jumper at pins %s"
+              % ("RXI-TXO" if usb.hw_model != 1 else "DCLK-GND"))
+        print(" - Reconnect to USB")
+    print(" - Run \"gw update\" to install firmware v%u.%u" %
+          (version.major, version.minor))
 
-    def print_update_instructions(usb):
-        print("To perform an Update:")
-        if not usb.jumperless_update:
-            print(" - Disconnect from USB")
-            print(" - Install the Update Jumper at pins %s"
-                  % ("RXI-TXO" if usb.hw_model != 1 else "DCLK-GND"))
-            print(" - Reconnect to USB")
-        print(" - Run \"gw update\" to install firmware v%u.%u" %
-              (version.major, version.minor))
+def usb_open(devicename, is_update=False, mode_check=True):
 
     if devicename is None:
         devicename = find_port()

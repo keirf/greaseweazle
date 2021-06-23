@@ -197,6 +197,7 @@ struct packed gw_erase_flux {
 /* CMD_SINK_SOURCE_BYTES */
 struct packed gw_sink_source_bytes {
     uint32_t nr_bytes;
+    uint32_t seed;
 };
 
 /* CMD_{GET,SET}_PARAMS, index 0 */
