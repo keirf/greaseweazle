@@ -66,6 +66,7 @@ static SER_ID ser_id = (uint32_t *)0x1ffff7e8;
 enum {
     F1SM_basic = 0,
     F1SM_plus,
+    F1SM_plus_unbuffered,
 };
 
 struct board_config {

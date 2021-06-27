@@ -34,6 +34,11 @@ const static struct pin_mapping _user_pins_f1_plus[] = {
     { 4, _A,  3, _PP },
     { 6, _A,  1, _PP },
     { 0,  0,  0, _PP } };
+const static struct pin_mapping _user_pins_f1_plus_unbuffered[] = {
+    { 2, _B,  9, _OD },
+    { 4, _A,  3, _OD },
+    { 6, _A,  1, _OD },
+    { 0,  0,  0, _OD } };
 
 const static struct board_config _board_config[] = {
     [F1SM_basic] = {
@@ -43,6 +48,10 @@ const static struct board_config _board_config[] = {
     [F1SM_plus] = {
         .flippy    = TRUE,
         .user_pins = _user_pins_f1_plus,
+        .msel_pins = _msel_pins_f1_plus },
+    [F1SM_plus_unbuffered] = {
+        .flippy    = TRUE,
+        .user_pins = _user_pins_f1_plus_unbuffered,
         .msel_pins = _msel_pins_f1_plus }
 };
 
@@ -130,6 +139,7 @@ static void mcu_board_init(void)
 
     switch (gw_info.hw_submodel) {
     case F1SM_plus:
+    case F1SM_plus_unbuffered:
         /* /RDY input line is externally pulled up. */
         pu[_A] &= ~(1u << 8); /* PA8 */
         break;

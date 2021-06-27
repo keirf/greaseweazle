@@ -78,6 +78,7 @@ static void floppy_mcu_init(void)
         GPI_bus = (get_index() == LOW) ? GPI_pull_up : GPI_floating;
         break;
     case F1SM_plus:
+    case F1SM_plus_unbuffered:
         GPI_bus = GPI_floating;
         break;
     }
@@ -174,6 +175,7 @@ static uint8_t mcu_get_floppy_pin(unsigned int pin, uint8_t *p_level)
 {
     switch (gw_info.hw_submodel) {
     case F1SM_plus:
+    case F1SM_plus_unbuffered:
         if (pin == 34) {
             *p_level = gpio_read_pin(gpioa, 8);
             return ACK_OKAY;
