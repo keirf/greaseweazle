@@ -1536,7 +1536,6 @@ static void process_command(void)
         }
         break;
     }
-#if MCU != STM32F1
     case CMD_TEST_MODE: {
         uint32_t sig1 = *(uint32_t *)&u_buf[2];
         uint32_t sig2 = *(uint32_t *)&u_buf[6];
@@ -1548,7 +1547,6 @@ static void process_command(void)
             floppy_state = ST_testmode;
         goto out;
     }
-#endif
     case CMD_NOCLICK_STEP: {
         if (len != 2)
             goto bad_command;
@@ -1647,12 +1645,10 @@ void floppy_process(void)
         update_continue();
         break;
 
-#if MCU != STM32F1
     case ST_testmode:
         watchdog.armed = FALSE;
         testmode_process();
         break;
-#endif
 
     default:
         break;

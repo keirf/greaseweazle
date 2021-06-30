@@ -29,12 +29,6 @@ static unsigned int GPI_bus;
 #define pin_wrprot  8 /* PB8 */
 
 /* Output pins. */
-#define gpio_densel gpiob
-#define pin_densel  9 /* PB9 */
-#define gpio_sel   gpiob
-#define pin_sel    10 /* PB10 */
-#define gpio_mot   gpiob
-#define pin_mot    11 /* PB11 */
 #define gpio_dir   gpiob
 #define pin_dir    12 /* PB12 */
 #define gpio_step  gpiob
