@@ -20,6 +20,14 @@ static int bitarray_append(PyObject *bitarray, PyObject *value)
     return 1;
 }
 
+/* Like PyList_Append() but steals a reference to @item. */
+static int PyList_Append_SR(PyObject *list, PyObject *item)
+{
+    int rc = PyList_Append(list, item);
+    Py_DECREF(item);
+    return rc;
+}
+
 static PyObject *
 flux_to_bitcells(PyObject *self, PyObject *args)
 {
@@ -72,7 +80,7 @@ flux_to_bitcells(PyObject *self, PyObject *args)
             /* Check if we cross the index mark. */
             to_index -= clock;
             if (to_index < 0) {
-                if (PyList_Append(revolutions, PyLong_FromLong(nbits)) < 0)
+                if (PyList_Append_SR(revolutions, PyLong_FromLong(nbits)) < 0)
                     return NULL;
                 nbits = 0;
                 item = PyIter_Next(index_iter);
@@ -84,7 +92,7 @@ flux_to_bitcells(PyObject *self, PyObject *args)
 
             nbits += 1;
             ticks -= clock;
-            if (PyList_Append(time_array, PyFloat_FromDouble(clock)) < 0)
+            if (PyList_Append_SR(time_array, PyFloat_FromDouble(clock)) < 0)
                 return NULL;
             if (ticks < clock/2) {
                 if (!bitarray_append(bit_array, Py_True))
@@ -182,8 +190,9 @@ decode_flux(PyObject *self, PyObject *args)
                     goto oos;
                 val = _read_28bit(p);
                 p += 4;
-                if (PyList_Append(index, PyLong_FromLong(
-                                      ticks_since_index + ticks + val)) < 0)
+                if (PyList_Append_SR(
+                        index, PyLong_FromLong(
+                            ticks_since_index + ticks + val)) < 0)
                     goto out;
                 ticks_since_index = -(ticks + val);
                 break;
@@ -209,7 +218,7 @@ decode_flux(PyObject *self, PyObject *args)
                 val += *p++ - 1;
             }
             ticks += val;
-            if (PyList_Append(flux, PyLong_FromLong(ticks)) < 0)
+            if (PyList_Append_SR(flux, PyLong_FromLong(ticks)) < 0)
                 goto out;
             ticks_since_index += ticks;
             ticks = 0;
