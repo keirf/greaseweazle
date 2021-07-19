@@ -9,7 +9,7 @@
 # This is free and unencumbered software released into the public domain.
 # See the file COPYING for more details, or visit <http://unlicense.org>.
 
-import sys, time
+import sys, time, tracemalloc
 import importlib
 
 from greaseweazle import version
@@ -84,9 +84,15 @@ if len(argv) < 2 or argv[1] not in actions:
 mod = importlib.import_module('greaseweazle.tools.' + argv[1])
 main = mod.__dict__['main']
 try:
+    tracemalloc.start()
     res = main(argv)
     if res is None:
         res = 0
+    snapshot = tracemalloc.take_snapshot()
+    top_stats = snapshot.statistics('lineno')
+    print("[ Top 10 ]")
+    for stat in top_stats[:10]:
+        print(stat)
 except (IndexError, AssertionError, TypeError, KeyError):
     raise
 except KeyboardInterrupt:
