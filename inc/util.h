@@ -74,6 +74,8 @@ int snprintf(char *str, size_t size, const char *format, ...)
 #define htobe16(x) _rev16(x)
 #define htobe32(x) _rev32(x)
 
+uint32_t udiv64(uint64_t dividend, uint32_t divisor);
+
 /* Board-specific callouts */
 void board_init(void);
 void act_led(bool_t on);

@@ -142,6 +142,17 @@ char *strcpy(char *dest, const char *src)
     return dest;
 }
 
+/* 64:32->32q division requiring 32:32->64 multiply. Cortex M3+ */
+uint32_t udiv64(uint64_t dividend, uint32_t divisor)
+{
+    uint32_t x, q = 0;
+    for (x = 1u<<31; x != 0; x >>= 1) {
+        if (((uint64_t)(q|x)*divisor) <= dividend)
+            q |= x;
+    }
+    return q;
+}
+
 /*
  * Local variables:
  * mode: C

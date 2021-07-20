@@ -22,7 +22,7 @@
 #define TIM_PSC (SYSCLK_MHZ / SAMPLE_MHZ)
 #define sample_ns(x) (((x) * SAMPLE_MHZ) / 1000)
 #define sample_us(x) ((x) * SAMPLE_MHZ)
-#define time_from_samples(x) ((x) * TIME_MHZ / SAMPLE_MHZ)
+#define time_from_samples(x) udiv64((uint64_t)(x) * TIME_MHZ, SAMPLE_MHZ)
 
 #define write_pin(pin, level) \
     gpio_write_pin(gpio_##pin, pin_##pin, level ? O_TRUE : O_FALSE)
