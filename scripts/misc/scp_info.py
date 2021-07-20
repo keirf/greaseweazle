@@ -6,11 +6,16 @@ PRINT_DAT = 1
 PLOT_DAT  = 2
 
 def decode_flux(tdat):
-    fluxl = []
+    flux, fluxl = 0, []
     while tdat:
-        flux, = struct.unpack(">H", tdat[:2])
+        f, = struct.unpack(">H", tdat[:2])
         tdat = tdat[2:]
-        fluxl.append(flux / 40)
+        if f == 0:
+            flux += 65536
+        else:
+            flux += f
+            fluxl.append(flux / 40)
+            flux = 0
     return fluxl
 
 def dump_track(dat, trk_offs, trknr, show_dat):
@@ -41,7 +46,7 @@ def dump_track(dat, trk_offs, trknr, show_dat):
     fluxl = decode_flux(dat[trk_off+s_off:trk_off+e_off+e_nr*2])
     tot = 0.0
     i = 0
-    px, py = [], []
+    px, py = [0], [0]
     for x in fluxl:
         if show_dat == PRINT_DAT:
             bad = ""
@@ -49,7 +54,7 @@ def dump_track(dat, trk_offs, trknr, show_dat):
                or ((x > 6.6) and (x < 7.2)) or (x > 8.8):
                 bad = "BAD"
             print("%d: %f %s" % (i, x, bad))
-        else:
+        elif x < 50:
             px.append(tot/1000)
             py.append(x)
         i += 1
