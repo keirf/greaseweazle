@@ -3,6 +3,11 @@
 ** Keir Fraser <keir.xen@gmail.com>
 ************************************
 
+** v0.29 - 29 July 2021
+ - gw read/write: Fix memory leak, reducing memory usage by approx 10x
+ - gw bandwidth: Test USB connection integrity
+ - New board type: F1 Plus (Unbuffered)
+
 ** v0.28 - 22 June 2021
  - V4: Improve USB bandwidth and double MCU clock speed to 144MHz
    - Fixes "gw bandwidth" warnings
