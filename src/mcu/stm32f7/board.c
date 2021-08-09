@@ -213,7 +213,7 @@ static void mcu_board_init(void)
     case F7SM_slim:
         /* Extra pins should float in case they are inputs (drive->GW). */
         pu[_B] &= ~((1u << 0) | (1u << 12)); /* PB0, PB12 */
-        pu[_C] &= ~(1u << 8); /* PC8 */
+        pu[_C] &= ~((1u << 7) | ~(1u << 8)); /* PC7, PC8 */
         break;
 
     case F7SM_v3:

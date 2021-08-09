@@ -164,6 +164,12 @@ static uint8_t mcu_get_floppy_pin(unsigned int pin, uint8_t *p_level)
             return ACK_OKAY;
         }
         break;
+    case F7SM_slim:
+        if (pin == 34) {
+            *p_level = gpio_read_pin(gpioc, 7);
+            return ACK_OKAY;
+        }
+        break;
     }
     return ACK_BAD_PIN;
 }
