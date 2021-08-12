@@ -3,6 +3,10 @@
 ** Keir Fraser <keir.xen@gmail.com>
 ************************************
 
+** v0.30 - 12 August 2021
+ - New board type: V4 Slim (AT32F403 MCU, laptop drive interface)
+ - F7 Slim: Support Disk Change Detect (used by WinUAE floppy bridge)
+
 ** v0.29 - 29 July 2021
  - gw read/write: Fix memory leak, reducing memory usage by approx 10x
  - gw bandwidth: Test USB connection integrity

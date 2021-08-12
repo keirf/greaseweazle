@@ -1,6 +1,6 @@
 
 export FW_MAJOR := 0
-export FW_MINOR := 29
+export FW_MINOR := 30
 
 TARGETS := all blinky clean dist windist mrproper f1_ocd ocd flash start serial pysetup
 .PHONY: $(TARGETS)
