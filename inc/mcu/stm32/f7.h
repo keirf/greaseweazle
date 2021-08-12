@@ -99,15 +99,6 @@ enum {
     F7SM_v3,
 };
 
-struct board_config {
-    uint8_t hse_mhz;
-    bool_t hse_byp;
-    bool_t hs_usb;
-    bool_t flippy;
-    const struct pin_mapping *user_pins;
-    const struct pin_mapping *msel_pins;
-};
-
 void identify_board_config(void);
 
 /* On reset, SYSCLK=HSI at 16MHz. SYSCLK runs at 2MHz. */

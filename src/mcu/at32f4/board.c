@@ -12,7 +12,18 @@
 #define gpio_led gpiob
 #define pin_led 13
 
-const static struct pin_mapping _msel_pins[] = {
+/* V4 pin assignments */
+
+const static struct core_floppy_pins _core_floppy_pins_v4 = {
+    .trk0   = 4, /* PB4 */
+    .wrprot = 3, /* PB3 */
+    .dir    = 8, /* PB8 */
+    .step   = 6, /* PB6 */
+    .wgate  = 7, /* PB7 */
+    .head   = 5  /* PB5 */
+};
+
+const static struct pin_mapping _msel_pins_v4[] = {
     { 10, _A,  3 },
     { 12, _B,  9 },
     { 14, _A,  4 },
@@ -20,18 +31,48 @@ const static struct pin_mapping _msel_pins[] = {
     {  0,  0,  0 }
 };
 
-const static struct pin_mapping _user_pins[] = {
+const static struct pin_mapping _user_pins_v4[] = {
     {  2, _A,  6 },
     {  4, _A,  5 },
     {  6, _A,  7 },
     {  0,  0,  0 }
 };
 
-const static struct board_config _board_config = {
-    .flippy    = TRUE,
-    .user_pins = _user_pins,
-    .msel_pins = _msel_pins
+/* V4 Slim pin assignments */
+
+const static struct core_floppy_pins _core_floppy_pins_v4_slim = {
+    .trk0   = 7, /* PB7 */
+    .wrprot = 8, /* PB8 */
+    .dir    = 5, /* PB5 */
+    .step   = 6, /* PB6 */
+    .wgate  = 3, /* PB3 */
+    .head   = 9  /* PB9 */
 };
+
+const static struct pin_mapping _msel_pins_v4_slim[] = {
+    { 10, _B,  4 },
+    { 14, _B,  1 },
+    {  0,  0,  0 }
+};
+
+const static struct pin_mapping _user_pins_v4_slim[] = {
+    {  0,  0,  0 }
+};
+
+const static struct board_config _board_config[] = {
+    [F4SM_v4] = {
+        .hse_mhz   = 8,
+        .flippy    = TRUE,
+        .user_pins = _user_pins_v4,
+        .msel_pins = _msel_pins_v4 },
+    [F4SM_v4_slim] = {
+        .hse_mhz   = 16,
+        .hse_byp   = TRUE,
+        .user_pins = _user_pins_v4_slim,
+        .msel_pins = _msel_pins_v4_slim },
+};
+
+const struct core_floppy_pins *core_floppy_pins;
 
 /* Blink the activity LED to indicate fatal error. */
 void early_fatal(int blinks)
@@ -87,25 +128,35 @@ void identify_board_config(void)
     }
 
     /* Panic if the ID is unrecognised. */
-    if (id != 0)
+    if (id >= ARRAY_SIZE(_board_config))
         early_fatal(2);
 
     /* Single static config. */
     gw_info.hw_submodel = id;
-    board_config = &_board_config;
+    board_config = &_board_config[id];
 }
 
 static void mcu_board_init(void)
 {
-    gpio_pull_up_pins(gpioa, 0x0101); /* PA0,8 */
-    gpio_pull_up_pins(gpiob, 0x1803); /* PB0-1,11-12 */
-    gpio_pull_up_pins(gpioc, 0xffff); /* PC0-15 */
+    switch (gw_info.hw_submodel) {
+    case F4SM_v4:
+        gpio_pull_up_pins(gpioa, 0x0101); /* PA0,8 */
+        gpio_pull_up_pins(gpiob, 0x1803); /* PB0-1,11-12 */
+        gpio_pull_up_pins(gpioc, 0xffff); /* PC0-15 */
+        core_floppy_pins = &_core_floppy_pins_v4;
+        break;
+
+    case F4SM_v4_slim:
+        gpio_pull_up_pins(gpioa, 0x01fb); /* PA0-1,3-8 */
+        gpio_pull_up_pins(gpiob, 0x0800); /* PB11 */
+        gpio_pull_up_pins(gpioc, 0xffff); /* PC0-15 */
+        core_floppy_pins = &_core_floppy_pins_v4_slim;
+        break;
+    }
 
     /* Flippy TRK0_DISABLE output: Set inactive (LOW). */
-    gpio_configure_pin(gpiob, 14, GPO_pushpull(IOSPD_LOW, LOW));
-
-    /* /RDY input line is externally pulled up. */
-    gpio_configure_pin(gpiob, 15, GPI_floating);
+    if (board_config->flippy)
+        gpio_configure_pin(gpiob, 14, GPO_pushpull(IOSPD_LOW, LOW));
 }
 
 /*

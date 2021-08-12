@@ -61,7 +61,11 @@ void testmode_wdat_osc_off(void)
 
 uint8_t testmode_init(void)
 {
-    return ACK_OKAY;
+    switch (gw_info.hw_submodel) {
+    case F4SM_v4:
+        return ACK_OKAY;
+    }
+    return ACK_BAD_COMMAND;
 }
 
 /*

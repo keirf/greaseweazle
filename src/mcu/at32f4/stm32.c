@@ -15,6 +15,7 @@ unsigned int at32f4_series;
 static void clock_init(void)
 {
     uint32_t cfgr;
+    int i;
 
     if (at32f4_series == AT32F415) {
         /* Flash controller: reads require 4 wait states at 144MHz. */
@@ -22,9 +23,18 @@ static void clock_init(void)
     }
 
     /* Start up the external oscillator. */
+    if (board_config->hse_byp)
+        rcc->cr |= RCC_CR_HSEBYP;
     rcc->cr |= RCC_CR_HSEON;
-    while (!(rcc->cr & RCC_CR_HSERDY))
-        cpu_relax();
+
+    /* Wait up to approximately one second for the oscillator to start. 
+     * If it doesn't start, we indicate this via the status LED. */
+    i = 0;
+    while (!(rcc->cr & RCC_CR_HSERDY)) {
+        early_delay_ms(1);
+        if (i++ >= 1000)
+            early_fatal(3);
+    }
 
     /* PLLs, scalers, muxes. */
     cfgr = (RCC_CFGR_PLLMUL_18 |        /* PLL = 18*8MHz = 144MHz */
@@ -33,6 +43,9 @@ static void clock_init(void)
             RCC_CFGR_ADCPRE_DIV8 |
             RCC_CFGR_APB2PSC_2 |        /* APB2 = 144/2MHz = 72MHz */
             RCC_CFGR_APB1PSC_2);        /* APB1 = 144/2MHz = 72MHz */
+
+    if (board_config->hse_mhz == 16)
+        cfgr |= RCC_CFGR_HSE_PREDIV2;
 
     switch (at32f4_series) {
     case AT32F403:

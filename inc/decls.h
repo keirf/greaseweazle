@@ -30,6 +30,7 @@
 #endif
 #include "intrinsics.h"
 
+#include "board.h"
 #include "time.h"
 #include "timer.h"
 #include "usb.h"

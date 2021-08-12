@@ -20,19 +20,19 @@
 #define gpio_index  gpiob
 #define pin_index   10 /* PB10 */
 #define gpio_trk0   gpiob
-#define pin_trk0    4 /* PB4 */
+#define pin_trk0    (core_floppy_pins->trk0)
 #define gpio_wrprot gpiob
-#define pin_wrprot  3 /* PB3 */
+#define pin_wrprot  (core_floppy_pins->wrprot)
 
 /* Output pins. */
 #define gpio_dir   gpiob
-#define pin_dir    8  /* PB8 */
+#define pin_dir    (core_floppy_pins->dir)
 #define gpio_step  gpiob
-#define pin_step   6  /* PB6 */
+#define pin_step   (core_floppy_pins->step)
 #define gpio_wgate gpiob
-#define pin_wgate  7  /* PB7 */
+#define pin_wgate  (core_floppy_pins->wgate)
 #define gpio_head  gpiob
-#define pin_head   5  /* PB5 */
+#define pin_head   (core_floppy_pins->head)
 
 /* RDATA: Pin A15, Timer 2 Channel 1, DMA1 Channel 5. */
 #define gpio_rdata  gpioa
@@ -146,17 +146,29 @@ static void dma_wdata_start(void)
 
 static uint8_t mcu_get_floppy_pin(unsigned int pin, uint8_t *p_level)
 {
-    if (pin == 34) {
-        *p_level = gpio_read_pin(gpiob, 15);
-        return ACK_OKAY;
+    switch (gw_info.hw_submodel) {
+    case F4SM_v4:
+        if (pin == 34) {
+            *p_level = gpio_read_pin(gpiob, 15);
+            return ACK_OKAY;
+        }
+        break;
+    case F4SM_v4_slim:
+        if (pin == 34) {
+            *p_level = gpio_read_pin(gpiob, 12);
+            return ACK_OKAY;
+        }
+        break;
     }
     return ACK_BAD_PIN;
 }
 
 static void flippy_trk0_sensor(bool_t level)
 {
-    gpio_write_pin(gpiob, 14, level);
-    delay_us(10);
+    if (board_config->flippy) {
+        gpio_write_pin(gpiob, 14, level);
+        delay_us(10);
+    }
 }
 
 /*

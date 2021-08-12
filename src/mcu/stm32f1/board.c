@@ -140,7 +140,7 @@ static void mcu_board_init(void)
     switch (gw_info.hw_submodel) {
     case F1SM_plus:
     case F1SM_plus_unbuffered:
-        /* /RDY input line is externally pulled up. */
+        /* Floppy pin 34 input line is externally pulled up. */
         pu[_A] &= ~(1u << 8); /* PA8 */
         break;
     }

@@ -218,7 +218,7 @@ static void mcu_board_init(void)
 
     case F7SM_v3:
     case F7SM_lightning_plus:
-        /* /RDY input line is externally pulled up. */
+        /* Floppy pin 34 input line is externally pulled up. */
         pu[_C] &= ~(1u << 2); /* PC2 */
         break;
 

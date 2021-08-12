@@ -23,3 +23,20 @@ void early_fatal(int blinks) __attribute__((noreturn));
 #define AHB_MHZ (SYSCLK_MHZ / 1)  /* 144MHz */
 #define APB1_MHZ (SYSCLK_MHZ / 2) /* 72MHz */
 #define APB2_MHZ (SYSCLK_MHZ / 2) /* 72MHz */
+
+enum {
+    F4SM_v4 = 0,
+    F4SM_v4_slim,
+};
+
+/* Core floppy pin assignments vary between F4 submodels (except INDEX, RDATA, 
+ * and WDATA). All the following assignments are within GPIOB. */
+struct core_floppy_pins {
+    uint8_t trk0;
+    uint8_t wrprot;
+    uint8_t dir;
+    uint8_t step;
+    uint8_t wgate;
+    uint8_t head;
+};
+extern const struct core_floppy_pins *core_floppy_pins;
