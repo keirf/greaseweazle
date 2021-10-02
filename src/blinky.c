@@ -15,10 +15,6 @@
  * See the file COPYING for more details, or visit <http://unlicense.org>.
  */
 
-#define NR_I2C    2
-#define NR_SPI    2
-#define NR_TIM    4
-
 int EXC_reset(void) __attribute__((alias("main")));
 
 void IRQ_30(void) __attribute__((alias("IRQ_tim4")));
@@ -209,7 +205,12 @@ int main(void)
 {
     uint32_t id, dev_id, rev_id;
     unsigned int flash_kb;
+
+    /* Defaults for a Medium-Density 103 device. */
     unsigned int sram_kb = 20;
+    unsigned int nr_i2c = 2;
+    unsigned int nr_spi = 2;
+    unsigned int nr_tim = 4;
 
     /* Relocate DATA. Initialise BSS. */
     if (_sdat != _ldat)
@@ -242,10 +243,16 @@ int main(void)
     case 16:
         printk("STM32F103x4 Low-Density");
         sram_kb = 6;
+        nr_i2c = 1;
+        nr_spi = 1;
+        nr_tim = 3;
         break;
     case 32:
         printk("STM32F103x6 Low-Density");
         sram_kb = 10;
+        nr_i2c = 1;
+        nr_spi = 1;
+        nr_tim = 3;
         break;
     case 64:
         printk("STM32F103x8 Medium-Density");
@@ -270,38 +277,34 @@ int main(void)
     }
 
     /* Test I2C peripherals. */
-#if NR_I2C >= 1
-    rcc->apb1enr |= RCC_APB1ENR_I2C1EN;
-    i2c_test(i2c1, 1);
-#endif
-#if NR_I2C >= 2
-    rcc->apb1enr |= RCC_APB1ENR_I2C2EN;
-    i2c_test(i2c2, 2);
-#endif
+    if (nr_i2c >= 1) {
+        rcc->apb1enr |= RCC_APB1ENR_I2C1EN;
+        i2c_test(i2c1, 1);
+    }
+    if (nr_i2c >= 2) {
+        rcc->apb1enr |= RCC_APB1ENR_I2C2EN;
+        i2c_test(i2c2, 2);
+    }
 
     /* Test SPI peripherals. */
-#if NR_SPI >= 1
-    rcc->apb2enr |= RCC_APB2ENR_SPI1EN;
-    spi_test(spi1, 1);
-#endif
-#if NR_SPI >= 2
-    rcc->apb1enr |= RCC_APB1ENR_SPI2EN;
-    spi_test(spi2, 2);
-#endif
+    if (nr_spi >= 1) {
+        rcc->apb2enr |= RCC_APB2ENR_SPI1EN;
+        spi_test(spi1, 1);
+    }
+    if (nr_spi >= 2) {
+        rcc->apb1enr |= RCC_APB1ENR_SPI2EN;
+        spi_test(spi2, 2);
+    }
 
     /* Test TIM peripherals, set up to overflow every 500ms. */
-#if NR_TIM >= 1
-    tim_test(tim1, 1);
-#endif
-#if NR_TIM >= 2
-    tim_test(tim2, 2);
-#endif
-#if NR_TIM >= 3
-    tim_test(tim3, 3);
-#endif
-#if NR_TIM >= 4
-    tim_test(tim4, 4);
-#endif
+    if (nr_tim >= 1)
+        tim_test(tim1, 1);
+    if (nr_tim >= 2)
+        tim_test(tim2, 2);
+    if (nr_tim >= 3)
+        tim_test(tim3, 3);
+    if (nr_tim >= 4)
+        tim_test(tim4, 4);
 
     /* DMA tests (just simple memory-to-memory). */
     dma1->ifcr = DMA_IFCR_CGIF(1);
@@ -317,11 +320,17 @@ int main(void)
     flash_test(flash_kb);
 
     /* Enable TIM4 IRQ, to be triggered every 500ms. */
-    printk("Enable TIM4 IRQ... ");
-    IRQx_set_prio(IRQ_TIM4, TIMER_IRQ_PRI);
-    IRQx_clear_pending(IRQ_TIM4);
-    IRQx_enable(IRQ_TIM4);
-    report(TRUE);
+    if (nr_tim >= 4) {
+        printk("Enable TIM4 IRQ... ");
+        IRQx_set_prio(IRQ_TIM4, TIMER_IRQ_PRI);
+        IRQx_clear_pending(IRQ_TIM4);
+        IRQx_enable(IRQ_TIM4);
+        report(TRUE);
+    } else if (!failed) {
+        /* Constantly illuminate LEDs for a working Low-Density device. */
+        gpio_write_pin(gpiob, 12, LOW);
+        gpio_write_pin(gpioc, 13, LOW);
+    }
 
     /* Endlessly test SRAM by filling with pseudorandom junk and then 
      * testing the values read back okay. */
