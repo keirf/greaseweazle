@@ -171,7 +171,10 @@ def get_image_class(name):
     else:
         _, ext = os.path.splitext(name)
         error.check(ext.lower() in image_types,
-                    "%s: Unrecognised file suffix '%s' (known suffixes: %s)" % (name, ext, ', '.join(image_types)))
+                    """\
+%s: Unrecognised file suffix '%s'
+Known suffixes: %s"""
+                    % (name, ext, ', '.join(image_types)))
         typename = image_types[ext.lower()]
     mod = importlib.import_module('greaseweazle.image.' + typename.lower())
     return mod.__dict__[typename]
