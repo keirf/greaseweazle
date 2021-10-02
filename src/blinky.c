@@ -15,8 +15,6 @@
  * See the file COPYING for more details, or visit <http://unlicense.org>.
  */
 
-#define FLASH_KB 64
-#define SRAM_KB  20
 #define NR_I2C    2
 #define NR_SPI    2
 #define NR_TIM    4
@@ -182,15 +180,15 @@ static void dma_test(void *a, void *b, int nr)
     report((dmac == 1) && !memcmp(a, b, 1024));
 }
 
-static void flash_test(void)
+static void flash_test(unsigned int flash_kb)
 {
     uint32_t fp, *p;
     int i;
 
     /* Erase and write the last page of Flash. Check it reads back okay. */
-    printk("Testing %ukB Flash... ", FLASH_KB);
+    printk("Testing %ukB Flash... ", flash_kb);
     fpec_init();
-    fp = (uint32_t)(_stext + FLASH_KB*1024 - FLASH_PAGE_SIZE);
+    fp = (uint32_t)(_stext + flash_kb*1024 - FLASH_PAGE_SIZE);
     fpec_page_erase(fp);
     memset(_ebss, 0xff, FLASH_PAGE_SIZE);
     if (memcmp((void *)fp, _ebss, FLASH_PAGE_SIZE))
@@ -210,6 +208,8 @@ fail:
 int main(void)
 {
     uint32_t id, dev_id, rev_id;
+    unsigned int flash_kb;
+    unsigned int sram_kb = 20;
 
     /* Relocate DATA. Initialise BSS. */
     if (_sdat != _ldat)
@@ -235,7 +235,28 @@ int main(void)
            *(volatile uint16_t *)0x1ffff7ee,
            *(volatile uint16_t *)0x1ffff7f0,
            *(volatile uint16_t *)0x1ffff7f2);
-    printk("Flash Size  = %ukB\n", *(volatile uint16_t *)0x1ffff7e0);
+
+    flash_kb = *(volatile uint16_t *)0x1ffff7e0;
+    printk("Flash Size = %ukB (", flash_kb);
+    switch (flash_kb) {
+    case 16:
+        printk("STM32F103x4 Low-Density");
+        sram_kb = 6;
+        break;
+    case 32:
+        printk("STM32F103x6 Low-Density");
+        sram_kb = 10;
+        break;
+    case 64:
+        printk("STM32F103x8 Medium-Density");
+        break;
+    case 128:
+        printk("STM32F103xB Medium-Density");
+        break;
+    default:
+        printk("Unknown Device");
+    }
+    printk(")\n");
 
     id = dbg->mcu_idcode;
     dev_id = id & 0xfff;
@@ -245,7 +266,7 @@ int main(void)
     if (id != 0) {
         /* Erratum 2.3 in STM32F10xx8/B Errata Sheet. */
         /* I feel bad outright failing on this, so just warn. */
-        printk("**WARNING**: 10xx8/B device returned valid IDCODE! Fake?\n");
+        printk("**WARNING**: Device returned valid IDCODE! Fake?\n");
     }
 
     /* Test I2C peripherals. */
@@ -293,7 +314,7 @@ int main(void)
     dma_test(_stext+1, _ebss+1, 4);
 
     /* Test Flash. */
-    flash_test();
+    flash_test(flash_kb);
 
     /* Enable TIM4 IRQ, to be triggered every 500ms. */
     printk("Enable TIM4 IRQ... ");
@@ -304,14 +325,14 @@ int main(void)
 
     /* Endlessly test SRAM by filling with pseudorandom junk and then 
      * testing the values read back okay. */
-    printk("Testing %ukB SRAM (endless loop)...", SRAM_KB);
+    printk("Testing %ukB SRAM (endless loop)...", sram_kb);
     for (;;) {
         uint32_t *p = (uint32_t *)_ebss, sr = srand;
-        while (p < (uint32_t *)(0x20000000 + SRAM_KB*1024))
+        while (p < (uint32_t *)(0x20000000 + sram_kb*1024))
             *p++ = rand();
         srand = sr;
         p = (uint32_t *)_ebss;
-        while (p < (uint32_t *)(0x20000000 + SRAM_KB*1024)) {
+        while (p < (uint32_t *)(0x20000000 + sram_kb*1024)) {
             if (*p++ != rand()) {
                 report(FALSE);
                 IRQ_global_disable();
