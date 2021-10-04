@@ -51,14 +51,18 @@ typedef uint16_t timcnt_t;
 #define irq_index 40
 void IRQ_40(void) __attribute__((alias("IRQ_INDEX_changed"))); /* EXTI15_10 */
 
-/* We sometimes cast u_buf to uint32_t[], hence the alignment constraint. */
-#define U_BUF_SZ 16384
-static uint8_t u_buf[U_BUF_SZ] aligned(4);
+static unsigned int U_BUF_SZ;
 
 static void floppy_mcu_init(void)
 {
     const struct pin_mapping *mpin;
     const struct pin_mapping *upin;
+    unsigned int avail_kb;
+
+    avail_kb = sram_kb - ((((unsigned long)_ebss - 0x20000000) + 1023) >> 10);
+    for (U_BUF_SZ = 128; U_BUF_SZ > avail_kb; U_BUF_SZ >>= 1)
+        continue;
+    U_BUF_SZ <<= 10;
 
     /* Map PA15 -> TIM2 Ch1. */
     afio->mapr = (AFIO_MAPR_SWJ_ON_JTAG_OFF

@@ -84,6 +84,8 @@ class Ack:
     BadUnit         =  9
     BadPin          = 10
     BadCylinder     = 11
+    OutOfSRAM       = 12
+    OutOfFlash      = 13
     str = {
         Okay: "Okay",
         BadCommand: "Bad Command",
@@ -96,7 +98,9 @@ class Ack:
         NoBus: "No bus type (eg. Shugart, IBM/PC) specified",
         BadUnit: "Invalid unit number",
         BadPin: "Invalid pin",
-        BadCylinder: "Invalid cylinder"
+        BadCylinder: "Invalid cylinder",
+        OutOfSRAM: "Out of SRAM",
+        OutOfFlash: "Out of Flash"
     }
 
 

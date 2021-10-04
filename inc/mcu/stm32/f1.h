@@ -63,6 +63,8 @@ static SER_ID ser_id = (uint32_t *)0x1ffff7e8;
 /* No secondary RAM region */
 #define section_ext_ram
 
+extern unsigned int sram_kb;
+
 enum {
     F1SM_basic = 0,
     F1SM_plus,

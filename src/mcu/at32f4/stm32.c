@@ -12,6 +12,9 @@
 unsigned int FLASH_PAGE_SIZE = 2048;
 unsigned int at32f4_series;
 
+unsigned int flash_kb;
+unsigned int sram_kb;
+
 static void clock_init(void)
 {
     uint32_t cfgr;
@@ -115,14 +118,17 @@ static void peripheral_init(void)
 
 static void identify_mcu(void)
 {
-    unsigned int flash_kb = *(uint16_t *)0x1ffff7e0;
+    flash_kb = *(uint16_t *)0x1ffff7e0;
     if (flash_kb <= 128)
         FLASH_PAGE_SIZE = 1024;
 
     at32f4_series = *(uint8_t *)0x1ffff7f3; /* UID[95:88] */
     switch (at32f4_series) {
     case AT32F403:
+        sram_kb = 96;
+        break;
     case AT32F415:
+        sram_kb = 32;
         break;
     default:
         early_fatal(4);

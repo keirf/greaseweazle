@@ -91,6 +91,7 @@ bool_t gpio_pins_connected(GPIO gpio1, unsigned int pin1,
 void fpec_init(void);
 void fpec_page_erase(uint32_t flash_address);
 void fpec_write(const void *data, unsigned int size, uint32_t flash_address);
+extern unsigned int flash_kb;
 
 /* Pin mappings */
 enum { _A = 0, _B, _C, _D, _E, _F, _G, _H, _I };

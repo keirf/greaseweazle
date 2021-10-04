@@ -45,6 +45,8 @@ static const struct gw_delay factory_delay_params = {
     .watchdog = 10000
 };
 
+extern uint8_t u_buf[];
+
 #if MCU == STM32F1
 #include "mcu/stm32f1/floppy.c"
 #elif MCU == STM32F7
@@ -1302,12 +1304,22 @@ static void erase_old_bootloader(void)
         fpec_page_erase(p);
 }
 
-static void update_prep(uint32_t len)
+static uint8_t update_prep(uint32_t len)
 {
+    /* Just a bad-sized payload. Shouldn't even have got here. Bad command. */
+    if ((len & 3) || (len > BL_SIZE))
+        return ACK_BAD_COMMAND;
+
+    /* Doesn't fit in our RAM buffer? Return a special error code. */
+    if (len > U_BUF_SZ)
+        return ACK_OUT_OF_SRAM;
+
     floppy_state = ST_update_bootloader;
     update.len = len;
 
     printk("Update Bootloader: %u bytes\n", len);
+
+    return ACK_OKAY;
 }
 
 static void update_continue(void)
@@ -1390,11 +1402,9 @@ static void process_command(void)
         uint32_t u_len = *(uint32_t *)&u_buf[2];
         uint32_t signature = *(uint32_t *)&u_buf[6];
         if (len != 10) goto bad_command;
-        if (u_len & 3) goto bad_command;
-        if (u_len > BL_SIZE) goto bad_command;
         if (signature != 0xdeafbee3) goto bad_command;
-        update_prep(u_len);
-        break;
+        u_buf[1] = update_prep(u_len);
+        goto out;
     }
     case CMD_SEEK: {
         int8_t cyl = u_buf[2];

@@ -9,6 +9,8 @@
  * See the file COPYING for more details, or visit <http://unlicense.org>.
  */
 
+unsigned int flash_kb = 64;
+
 static void clock_init(void)
 {
     unsigned int hse = board_config->hse_mhz;

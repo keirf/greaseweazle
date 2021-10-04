@@ -10,13 +10,9 @@
  */
 
 #if MCU == STM32F1
-/*  8kB-64kB (56kB total) */
 #define FIRMWARE_START 0x08002000
-#define FIRMWARE_END   0x08010000
 #elif MCU == STM32F7 || MCU == AT32F4
-/* 16kB-64KB (48kB total) */
 #define FIRMWARE_START 0x08004000
-#define FIRMWARE_END   0x08010000
 #endif
 
 int EXC_reset(void) __attribute__((alias("main")));
@@ -32,7 +28,8 @@ static enum {
     ST_update,
 } state = ST_inactive;
 
-static uint8_t u_buf[2048] aligned(4);
+extern uint8_t u_buf[];
+#define U_BUF_SZ 2048
 static uint32_t u_prod;
 
 static bool_t upd_strapped;
@@ -81,23 +78,37 @@ static struct {
     uint32_t cur;
 } update;
 
-static void erase_old_firmware(void)
+static void erase_old_firmware(uint32_t len)
 {
     uint32_t p;
-    for (p = FIRMWARE_START; p < FIRMWARE_END; p += FLASH_PAGE_SIZE)
+    uint32_t start = FIRMWARE_START;
+    uint32_t end = start + len;
+    for (p = start; p < end; p += FLASH_PAGE_SIZE)
         fpec_page_erase(p);
 }
 
-static void update_prep(uint32_t len)
+static uint8_t update_prep(uint32_t len)
 {
+    unsigned int flash_end = (uint32_t)_stext + (flash_kb << 10);
+
+    /* Just a bad-sized payload. Shouldn't even have got here. Bad command. */
+    if (len & 3)
+        return ACK_BAD_COMMAND;
+
+    /* Doesn't fit in available Flash memory? Return a special error code. */
+    if (len > (flash_end - FIRMWARE_START))
+        return ACK_OUT_OF_FLASH;
+
     fpec_init();
-    erase_old_firmware();
+    erase_old_firmware(len);
 
     state = ST_update;
     update.cur = 0;
     update.len = len;
 
     printk("Update: %u bytes\n", len);
+
+    return ACK_OKAY;
 }
 
 static void update_continue(void)
@@ -105,7 +116,7 @@ static void update_continue(void)
     int len;
 
     if ((len = ep_rx_ready(EP_RX)) >= 0) {
-        len = min_t(int, len, update.len - update.cur);
+        len = min_t(int, len, update.len - update.cur - u_prod);
         usb_read(EP_RX, &u_buf[u_prod], len);
         u_prod += len;
     }
@@ -125,7 +136,7 @@ static void update_continue(void)
         state = ST_command_wait;
         end_command(u_buf, 1);
         if (crc)
-            erase_old_firmware();
+            erase_old_firmware(update.len);
     }
 }
 
@@ -155,9 +166,8 @@ static void process_command(void)
     case CMD_UPDATE: {
         uint32_t u_len = *(uint32_t *)&u_buf[2];
         if (len != 6) goto bad_command;
-        if (u_len & 3) goto bad_command;
-        update_prep(u_len);
-        break;
+        u_buf[1] = update_prep(u_len);
+        goto out;
     }
     case CMD_SWITCH_FW_MODE: {
         uint8_t mode = u_buf[2];
@@ -200,7 +210,7 @@ static void update_process(void)
         }
 
         len = ep_rx_ready(EP_RX);
-        if ((len >= 0) && (len < (sizeof(u_buf)-u_prod))) {
+        if ((len >= 0) && (len < (U_BUF_SZ-u_prod))) {
             usb_read(EP_RX, &u_buf[u_prod], len);
             u_prod += len;
         }
@@ -316,8 +326,10 @@ int main(void)
     board_init();
 
     printk("\n** Greaseweazle Update Bootloader v%u.%u\n", fw_major, fw_minor);
+#if MCU != STM32F1 /* Not enough Flash space */
     printk("** Keir Fraser <keir.xen@gmail.com>\n");
     printk("** https://github.com/keirf/Greaseweazle\n\n");
+#endif
 
     usb_init();
 

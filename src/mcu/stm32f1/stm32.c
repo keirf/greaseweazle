@@ -9,6 +9,9 @@
  * See the file COPYING for more details, or visit <http://unlicense.org>.
  */
 
+unsigned int flash_kb;
+unsigned int sram_kb;
+
 static void clock_init(void)
 {
     /* Flash controller: reads require 2 wait states at 72MHz. */
@@ -71,9 +74,20 @@ static void peripheral_init(void)
     gpio_init(gpioc);
 }
 
+static void identify_mcu(void)
+{
+    flash_kb = *(volatile uint16_t *)0x1ffff7e0;
+    switch (flash_kb) {
+    case 16: sram_kb =  6; break; /* STM31F103x4 Low Density */
+    case 32: sram_kb = 10; break; /* STM32F103x6 Low Density */
+    default: sram_kb = 20; break; /* STM32F103xx Medium Density */
+    }
+}
+
 void stm32_init(void)
 {
     cortex_init();
+    identify_mcu();
     clock_init();
     peripheral_init();
     cpu_sync();

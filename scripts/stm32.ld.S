@@ -7,7 +7,7 @@ MEMORY
   RAM (rwx)       : ORIGIN = 0x20000000, LENGTH = 20K
 #elif MCU == STM32F7
   RAM (rwx)       : ORIGIN = 0x20000000, LENGTH = 64K
-  EXT_RAM (rwx)   : ORIGIN = 0x20010000, LENGTH = 192K
+  EXT_RAM (rwx)   : ORIGIN = 0x20010000, LENGTH = 64K /* 192K - U_BUF_SZ */
 #elif MCU == AT32F4
   RAM (rwx)       : ORIGIN = 0x20000000, LENGTH = 32K
 #endif
@@ -58,6 +58,9 @@ SECTIONS
     *(.bss*)
     . = ALIGN(4);
     _ebss = .;
+#if MCU == STM32F1 || MCU == AT32F4
+    u_buf = .;
+#endif
   } >RAM
 
 #if MCU == STM32F7
@@ -68,6 +71,7 @@ SECTIONS
     *(.ext_ram)
     . = ALIGN(4);
     _ext_ram_end = .;
+    u_buf = .; /* 128K */
   } >EXT_RAM
 #endif
 

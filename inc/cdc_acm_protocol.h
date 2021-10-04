@@ -104,6 +104,8 @@
 #define ACK_BAD_UNIT        9
 #define ACK_BAD_PIN        10
 #define ACK_BAD_CYLINDER   11
+#define ACK_OUT_OF_SRAM    12
+#define ACK_OUT_OF_FLASH   13
 
 
 /*

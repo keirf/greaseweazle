@@ -114,7 +114,16 @@ def main(argv):
         usb = util.usb_open(args.device, is_update=not args.bootloader)
         update_firmware(usb, args)
     except USB.CmdError as error:
-        print("Command Failed: %s" % error)
+        if error.code == USB.Ack.OutOfSRAM and args.bootloader:
+            # Special warning for Low-Density F1 devices. The new bootloader
+            # cannot be fully buffered in the limited RAM available.
+            print("ERROR: Bootloader update unsupported on this device "
+                  "(insufficient SRAM)")
+        elif error.code == USB.Ack.OutOfFlash and not args.bootloader:
+            print("ERROR: New firmware is too large for this device "
+                  "(insufficient Flash memory)")
+        else:
+            print("Command Failed: %s" % error)
 
 
 if __name__ == "__main__":
