@@ -63,7 +63,8 @@ actions = [ 'info',
             'update',
             'pin',
             'reset',
-            'bandwidth' ]
+            'bandwidth',
+            'rpm' ]
 argv = sys.argv
 
 def usage():
