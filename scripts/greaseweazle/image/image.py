@@ -33,11 +33,12 @@ class Image:
 
     ## Default .to_file() constructor
     @classmethod
-    def to_file(cls, name):
+    def to_file(cls, name, fmt=None):
         error.check(not cls.read_only,
                     "%s: Cannot create %s image files" % (name, cls.__name__))
         obj = cls()
         obj.filename = name
+        obj.fmt = fmt
         return obj
 
     ## Above methods and class variables can be overridden by subclasses.

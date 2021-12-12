@@ -16,10 +16,11 @@ from greaseweazle.tools import util
 from greaseweazle import error
 from greaseweazle import usb as USB
 from greaseweazle.flux import Flux
+from greaseweazle.codec import formats
 
 
 def open_image(args, image_class):
-    image = image_class.to_file(args.file)
+    image = image_class.to_file(args.file, args.fmt_cls)
     if args.rate is not None:
         image.bitrate = args.rate
     for opt, val in args.file_opts.items():
@@ -137,16 +138,18 @@ def main(argv):
         image_class = util.get_image_class(args.file)
         if not args.format and hasattr(image_class, 'default_format'):
             args.format = image_class.default_format
-        decoder, def_tracks = None, None
+        decoder, def_tracks, args.fmt_cls = None, None, None
         if args.format:
             try:
-                mod = importlib.import_module('greaseweazle.codec.'
-                                              + args.format)
-                decoder = mod.decode_track
-            except (ModuleNotFoundError, AttributeError) as ex:
-                raise error.Fatal("Unknown format '%s'" % args.format) from ex
-            def_tracks = util.TrackSet(mod.default_trackset)
-            if args.revs is None: args.revs = mod.default_revs
+                args.fmt_cls = formats.formats[args.format]()
+            except KeyError as ex:
+                raise error.Fatal("""\
+Unknown format '%s'
+Known formats: %s"""
+                                  % (args.format, formats.print_formats()))
+            decoder = args.fmt_cls.decode_track
+            def_tracks = util.TrackSet(args.fmt_cls.default_trackset)
+            if args.revs is None: args.revs = args.fmt_cls.default_revs
         if def_tracks is None:
             def_tracks = util.TrackSet('c=0-81:h=0-1')
         if args.revs is None: args.revs = 3

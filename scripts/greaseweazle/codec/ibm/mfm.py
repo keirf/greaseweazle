@@ -5,14 +5,13 @@
 # This is free and unencumbered software released into the public domain.
 # See the file COPYING for more details, or visit <http://unlicense.org>.
 
-import copy, heapq, struct
+import copy, heapq, struct, functools
 import itertools as it
 from bitarray import bitarray
 import crcmod.predefined
 
 from greaseweazle.track import MasterTrack, RawTrack
 
-default_trackset = 'c=0-79:h=0-1'
 default_revs = 2
 
 iam_sync_bytes = b'\x52\x24' * 3
@@ -113,8 +112,6 @@ class IBM_MFM:
 
     def __init__(self, cyl, head):
         self.cyl, self.head = cyl, head
-        self.time_per_rev = 0.2
-        self.clock = 1e-6
         self.sectors = []
         self.iams = []
 
@@ -177,7 +174,7 @@ class IBM_MFM:
                     areas.append(Sector(idam, dam))
                 idam = None
             else:
-                print("Unknown mark %02x" % mark)
+                pass #print("Unknown mark %02x" % mark)
 
         if idam is not None:
             areas.append(idam)
@@ -289,12 +286,17 @@ class IBM_MFM_Formatted(IBM_MFM):
     def set_img_track(self, tdat):
         pos = 0
         self.sectors.sort(key = lambda x: x.idam.r)
+        totsize = functools.reduce(lambda x, y: x + (128<<y.idam.n),
+                                   self.sectors, 0)
+        if len(tdat) < totsize:
+            tdat += bytes(totsize - len(tdat))
         for s in self.sectors:
             s.crc = s.idam.crc = s.dam.crc = 0
             size = 128 << s.idam.n
             s.dam.data = tdat[pos:pos+size]
             pos += size
         self.sectors.sort(key = lambda x: x.start)
+        return totsize
 
     def get_img_track(self):
         tdat = bytearray()
@@ -342,11 +344,31 @@ class IBM_MFM_Predefined(IBM_MFM_Formatted):
             self.sectors.append(Sector(idam, dam))
             pos += 4 + size + 2 + self.gap_3
 
+    @classmethod
+    def decode_track(cls, cyl, head, track):
+        mfm = cls(cyl, head)
+        mfm.decode_raw(track)
+        return mfm
+
 
 class IBM_MFM_1M44(IBM_MFM_Predefined):
 
+    time_per_rev = 0.2
+    clock = 1e-6
+    
     gap_3  = 84 # Post-DAM
     nsec   = 18
+    id0    = 1
+    sz     = 2
+
+
+class IBM_MFM_720(IBM_MFM_Predefined):
+
+    time_per_rev = 0.2
+    clock = 2e-6
+    
+    gap_3  = 84 # Post-DAM
+    nsec   = 9
     id0    = 1
     sz     = 2
 
@@ -389,12 +411,6 @@ def decode(dat):
     for x,y in zip(dat[::2], dat[1::2]):
         out.append(decode_list[((x<<8)|y)&0x5555])
     return bytes(out)
-
-
-def decode_track(cyl, head, track):
-    mfm = IBM_MFM_1M44(cyl, head)
-    mfm.decode_raw(track)
-    return mfm
 
 
 # Local variables:

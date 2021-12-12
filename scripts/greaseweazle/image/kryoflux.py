@@ -41,7 +41,7 @@ class KryoFlux(Image):
 
 
     @classmethod
-    def to_file(cls, name):
+    def to_file(cls, name, fmt=None):
         return cls(name)
 
     @classmethod

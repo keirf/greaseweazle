@@ -156,7 +156,6 @@ class EDSKTrack:
 class EDSK(Image):
 
     read_only = True
-    default_format = 'ibm.mfm'
 
     def __init__(self):
         self.to_track = dict()

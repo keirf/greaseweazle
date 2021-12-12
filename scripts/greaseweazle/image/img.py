@@ -9,35 +9,42 @@ from greaseweazle import error
 from greaseweazle.codec.ibm import mfm
 from .image import Image
 
+import greaseweazle.codec.formats
+
 class IMG(Image):
 
-    default_format = 'ibm.mfm'
-
-    def __init__(self):
+    def __init__(self, name, fmt):
         self.to_track = dict()
+        error.check(fmt is not None and fmt.img_compatible, """\
+IMG requires compatible format specifier, eg: --format=ibm.1440
+Compatible formats: %s"""
+                    % greaseweazle.codec.formats.print_formats(
+                        lambda k, v: v.img_compatible))
+        self.filename = name
+        self.fmt = fmt
 
 
     @classmethod
-    def from_file(cls, name):
+    def from_file(cls, name, fmt):
 
         with open(name, "rb") as f:
             dat = f.read()
 
-        img = cls()
-
-        nsec = 18
-        tsz = nsec * 512
-        ncyl = len(dat) // (tsz*2)
+        img = cls(name, fmt)
 
         pos = 0
-        for cyl in range(ncyl):
-            for head in range(2):
-                track = mfm.IBM_MFM_1M44(cyl, head)
-                track.set_img_track(dat[pos:pos+tsz])
-                pos += tsz
-                img.to_track[cyl,head] = track
+        for t in fmt.tracks:
+            cyl, head = t.cyl, t.head
+            track = fmt.fmt(cyl, head)
+            pos += track.set_img_track(dat[pos:])
+            img.to_track[cyl,head] = track
 
         return img
+
+
+    @classmethod
+    def to_file(cls, name, fmt=None):
+        return cls(name, fmt)
 
 
     def get_track(self, cyl, side):

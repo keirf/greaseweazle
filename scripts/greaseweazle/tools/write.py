@@ -14,11 +14,16 @@ import sys
 from greaseweazle.tools import util
 from greaseweazle import error, track
 from greaseweazle import usb as USB
+from greaseweazle.codec import formats
 
 # Read and parse the image file.
 def open_image(args):
     cls = util.get_image_class(args.file)
-    return cls.from_file(args.file)
+    try:
+        image = cls.from_file(args.file)
+    except TypeError:
+        image = cls.from_file(args.file, args.fmt_cls)
+    return image
 
 # write_from_image:
 # Writes the specified image file to floppy disk.
@@ -147,6 +152,7 @@ def main(argv):
     parser.add_argument("--device", help="greaseweazle device name")
     parser.add_argument("--drive", type=util.drive_letter, default='A',
                         help="drive to write (A,B,0,1,2)")
+    parser.add_argument("--format", help="disk format")
     parser.add_argument("--tracks", type=util.TrackSet,
                         help="which tracks to write")
     parser.add_argument("--erase-empty", action="store_true",
@@ -163,19 +169,30 @@ def main(argv):
     args = parser.parse_args(argv[2:])
 
     try:
+        def_tracks, args.fmt_cls = None, None
+        if args.format:
+            try:
+                args.fmt_cls = formats.formats[args.format]()
+            except KeyError as ex:
+                raise error.Fatal("""\
+Unknown format '%s'
+Known formats: %s"""
+                                  % (args.format, formats.print_formats()))
+            def_tracks = util.TrackSet(args.fmt_cls.default_trackset)
+        if def_tracks is None:
+            def_tracks = util.TrackSet('c=0-81:h=0-1')
+        if args.tracks is not None:
+            def_tracks.update_from_trackspec(args.tracks.trackspec)
+        args.tracks = def_tracks
         usb = util.usb_open(args.device)
         image = open_image(args)
-        tracks = util.TrackSet('c=0-81:h=0-1')
-        if args.tracks is not None:
-            tracks.update_from_trackspec(args.tracks.trackspec)
-        args.tracks = tracks
         s = str(args.tracks)
         if args.precomp is not None:
             s += "; %s" % args.precomp
         print("Writing %s" % s)
         util.with_drive_selected(write_from_image, usb, args, image)
-    except USB.CmdError as error:
-        print("Command Failed: %s" % error)
+    except USB.CmdError as err:
+        print("Command Failed: %s" % err)
 
 
 if __name__ == "__main__":
