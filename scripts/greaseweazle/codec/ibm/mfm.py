@@ -364,17 +364,6 @@ class IBM_MFM_Predefined(IBM_MFM_Formatted):
         return mfm
 
 
-class IBM_MFM_1M44(IBM_MFM_Predefined):
-
-    time_per_rev = 0.2
-    clock = 1e-6
-    
-    gap_3  = 84 # Post-DAM
-    nsec   = 18
-    id0    = 1
-    sz     = 2
-
-
 class IBM_MFM_720(IBM_MFM_Predefined):
 
     time_per_rev = 0.2
@@ -389,6 +378,17 @@ class IBM_MFM_800(IBM_MFM_720):
 
     gap_3 = 30
     nsec  = 10
+
+class IBM_MFM_1200(IBM_MFM_720):
+
+    time_per_rev = 60/360
+    clock = 1e-6
+    nsec   = 15
+
+class IBM_MFM_1440(IBM_MFM_720):
+
+    clock = 1e-6
+    nsec   = 18
 
 class AtariST_SS_9SPT(IBM_MFM_720):
 
