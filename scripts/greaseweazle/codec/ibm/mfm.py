@@ -324,9 +324,22 @@ class IBM_MFM_Formatted(IBM_MFM):
 
 class IBM_MFM_Predefined(IBM_MFM_Formatted):
 
+    cskew = 0
+    hskew = 0
+    interleave = 1
+    
     def __init__(self, cyl, head):
 
         super().__init__(cyl, head)
+
+        # Create logical sector map in rotational order
+        sec_map = [-1] * self.nsec
+        pos = (cyl*self.cskew + head*self.hskew) % self.nsec
+        for i in range(self.nsec):
+            while sec_map[pos] != -1:
+                pos = (pos + 1) % self.nsec
+            sec_map[pos] = i
+            pos = (pos + self.interleave) % self.nsec
 
         pos = self.gap_4a
         if self.gap_1 is not None:
@@ -336,7 +349,7 @@ class IBM_MFM_Predefined(IBM_MFM_Formatted):
         for i in range(self.nsec):
             pos += self.gap_presync
             idam = IDAM(pos*16, (pos+10)*16, 0xffff,
-                        c=cyl, h=head, r=self.id0+i, n = self.sz)
+                        c=cyl, h=head, r=self.id0+sec_map[i], n = self.sz)
             pos += 10 + self.gap_2 + self.gap_presync
             size = 128 << self.sz
             dam = DAM(pos*16, (pos+4+size+2)*16, 0xffff,
@@ -371,6 +384,30 @@ class IBM_MFM_720(IBM_MFM_Predefined):
     nsec   = 9
     id0    = 1
     sz     = 2
+
+class AtariST_SS_9SPT(IBM_MFM_720):
+
+    gap_1 = None
+    cskew = 2
+
+class AtariST_DS_9SPT(IBM_MFM_720):
+
+    gap_1 = None
+    cskew = 4
+    hskew = 2
+
+class AtariST_10SPT(IBM_MFM_720):
+
+    gap_1 = None
+    gap_3 = 30
+    nsec  = 10
+
+class AtariST_11SPT(IBM_MFM_720):
+
+    clock = 2e-6 * 0.96 # long track
+    gap_1 = None
+    gap_3 = 3
+    nsec  = 11
 
 
 def mfm_encode(dat):

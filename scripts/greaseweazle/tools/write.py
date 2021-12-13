@@ -176,7 +176,7 @@ def main(argv):
             except KeyError as ex:
                 raise error.Fatal("""\
 Unknown format '%s'
-Known formats: %s"""
+Known formats:\n%s"""
                                   % (args.format, formats.print_formats()))
             def_tracks = util.TrackSet(args.fmt_cls.default_trackset)
         if def_tracks is None:

@@ -163,6 +163,7 @@ def get_image_class(name):
                     '.hfe': 'HFE',
                     '.ima': 'IMG',
                     '.img': 'IMG',
+                    '.st' : 'IMG',
                     '.ipf': 'IPF',
                     '.dsk': 'EDSK',
                     '.raw': 'KryoFlux' }

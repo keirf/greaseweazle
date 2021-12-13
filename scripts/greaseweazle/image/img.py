@@ -16,8 +16,8 @@ class IMG(Image):
     def __init__(self, name, fmt):
         self.to_track = dict()
         error.check(fmt is not None and fmt.img_compatible, """\
-IMG requires compatible format specifier, eg: --format=ibm.1440
-Compatible formats: %s"""
+Sector image requires compatible format specifier
+Compatible formats:\n%s"""
                     % greaseweazle.codec.formats.print_formats(
                         lambda k, v: v.img_compatible))
         self.filename = name

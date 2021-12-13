@@ -145,7 +145,7 @@ def main(argv):
             except KeyError as ex:
                 raise error.Fatal("""\
 Unknown format '%s'
-Known formats: %s"""
+Known formats:\n%s"""
                                   % (args.format, formats.print_formats()))
             decoder = args.fmt_cls.decode_track
             def_tracks = util.TrackSet(args.fmt_cls.default_trackset)
