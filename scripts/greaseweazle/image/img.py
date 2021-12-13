@@ -13,6 +13,8 @@ import greaseweazle.codec.formats
 
 class IMG(Image):
 
+    sides_swapped = False
+    
     def __init__(self, name, fmt):
         self.to_track = dict()
         error.check(fmt is not None and fmt.img_compatible, """\
@@ -33,8 +35,10 @@ Compatible formats:\n%s"""
         img = cls(name, fmt)
 
         pos = 0
-        for t in fmt.tracks:
+        for t in fmt.max_tracks:
             cyl, head = t.cyl, t.head
+            if img.sides_swapped:
+                head ^= 1
             track = fmt.fmt(cyl, head)
             pos += track.set_img_track(dat[pos:])
             img.to_track[cyl,head] = track
@@ -67,6 +71,8 @@ Compatible formats:\n%s"""
 
         for cyl in range(n_cyl):
             for head in range(n_side):
+                if self.sides_swapped:
+                    head ^= 1
                 if (cyl,head) in self.to_track:
                     tdat += self.to_track[cyl,head].get_img_track()
 

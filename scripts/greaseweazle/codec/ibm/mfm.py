@@ -385,6 +385,11 @@ class IBM_MFM_720(IBM_MFM_Predefined):
     id0    = 1
     sz     = 2
 
+class IBM_MFM_800(IBM_MFM_720):
+
+    gap_3 = 30
+    nsec  = 10
+
 class AtariST_SS_9SPT(IBM_MFM_720):
 
     gap_1 = None
