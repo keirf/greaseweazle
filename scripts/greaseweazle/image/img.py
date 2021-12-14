@@ -9,7 +9,7 @@ from greaseweazle import error
 from greaseweazle.codec.ibm import mfm
 from .image import Image
 
-import greaseweazle.codec.formats
+from greaseweazle.codec import formats
 
 class IMG(Image):
 
@@ -20,7 +20,7 @@ class IMG(Image):
         error.check(fmt is not None and fmt.img_compatible, """\
 Sector image requires compatible format specifier
 Compatible formats:\n%s"""
-                    % greaseweazle.codec.formats.print_formats(
+                    % formats.print_formats(
                         lambda k, v: v.img_compatible))
         self.filename = name
         self.fmt = fmt

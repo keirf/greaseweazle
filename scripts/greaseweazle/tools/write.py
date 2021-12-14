@@ -17,12 +17,11 @@ from greaseweazle import usb as USB
 from greaseweazle.codec import formats
 
 # Read and parse the image file.
-def open_image(args):
-    cls = util.get_image_class(args.file)
+def open_image(args, image_class):
     try:
-        image = cls.from_file(args.file)
+        image = image_class.from_file(args.file)
     except TypeError:
-        image = cls.from_file(args.file, args.fmt_cls)
+        image = image_class.from_file(args.file, args.fmt_cls)
     return image
 
 # write_from_image:
@@ -171,6 +170,9 @@ def main(argv):
     args = parser.parse_args(argv[2:])
 
     try:
+        image_class = util.get_image_class(args.file)
+        if not args.format and hasattr(image_class, 'default_format'):
+            args.format = image_class.default_format
         def_tracks, args.fmt_cls = None, None
         if args.format:
             try:
@@ -187,7 +189,7 @@ Known formats:\n%s"""
             def_tracks.update_from_trackspec(args.tracks.trackspec)
         args.tracks = def_tracks
         usb = util.usb_open(args.device)
-        image = open_image(args)
+        image = open_image(args, image_class)
         s = str(args.tracks)
         if args.precomp is not None:
             s += "; %s" % args.precomp

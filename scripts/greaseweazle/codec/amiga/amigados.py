@@ -21,13 +21,12 @@ bad_sector = b'-=[BAD SECTOR]=-' * 32
 
 class AmigaDOS:
 
-    DDSEC = 11
+    time_per_rev = 0.2
 
-    def __init__(self, tracknr, nsec=DDSEC):
-        self.tracknr = tracknr
-        self.nsec = nsec
-        self.sector = [None] * nsec
-        self.map = [None] * nsec
+    def __init__(self, cyl, head):
+        self.tracknr = cyl*2 + head
+        self.sector = [None] * self.nsec
+        self.map = [None] * self.nsec
 
     def summary_string(self):
         nsec, nbad = self.nsec, self.nr_missing()
@@ -60,9 +59,13 @@ class AmigaDOS:
         return tdat
 
     def set_adf_track(self, tdat):
+        totsize = self.nsec * 512
+        if len(tdat) < totsize:
+            tdat += bytes(totsize - len(tdat))
         self.map = list(range(self.nsec))
         for sec in self.map:
             self.sector[sec] = bytes(16), tdat[sec*512:(sec+1)*512]
+        return totsize
 
     def flux_for_writeout(self, *args, **kwargs):
         return self.raw_track().flux_for_writeout(args, kwargs)
@@ -72,7 +75,7 @@ class AmigaDOS:
 
 
     def decode_raw(self, track):
-        raw = RawTrack(clock = 2e-6, data = track)
+        raw = RawTrack(clock = self.clock, data = track)
         bits, _ = raw.get_all_data()
 
         for offs in bits.itersearch(sync):
@@ -128,7 +131,7 @@ class AmigaDOS:
             t += encode(bytes(2))
 
         # Add the pre-index gap.
-        tlen = 101376 * (self.nsec//11)
+        tlen = (int((self.time_per_rev / self.clock)) + 31) & ~31
         t += bytes(tlen//8-len(t))
 
         track = MasterTrack(
@@ -142,9 +145,24 @@ class AmigaDOS:
     def verify_track(self, flux):
         cyl = self.tracknr // 2
         head = self.tracknr & 1
-        readback_track = decode_track(cyl, head, flux)
+        readback_track = self.decode_track(cyl, head, flux)
         return (readback_track.nr_missing() == 0
                 and self.sector == readback_track.sector)
+
+    @classmethod
+    def decode_track(cls, cyl, head, track):
+        ados = cls(cyl, head)
+        ados.decode_raw(track)
+        return ados
+
+
+class AmigaDOS_DD(AmigaDOS):
+    nsec = 11
+    clock = 14/7093790
+
+class AmigaDOS_HD(AmigaDOS):
+    nsec = 22
+    clock = AmigaDOS_DD.clock / 2
 
 
 def mfm_encode(dat):
@@ -176,12 +194,6 @@ def checksum(dat):
     for i in range(0, len(dat), 4):
         csum ^= struct.unpack('>I', dat[i:i+4])[0]
     return (csum ^ (csum>>1)) & 0x55555555
-
-
-def decode_track(cyl, head, track):
-    ados = AmigaDOS(cyl*2 + head)
-    ados.decode_raw(track)
-    return ados
 
 
 # Local variables:

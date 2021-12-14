@@ -9,37 +9,52 @@ from greaseweazle import error
 import greaseweazle.codec.amiga.amigados as amigados
 from .image import Image
 
+from greaseweazle.codec import formats
+
 class ADF(Image):
 
     default_format = 'amiga.amigados'
 
-    def __init__(self):
-        self.sec_per_track = 11
+    def __init__(self, name, fmt):
         self.to_track = dict()
+        error.check(fmt is not None and fmt.adf_compatible, """\
+ADF image requires compatible format specifier
+Compatible formats:\n%s"""
+                    % formats.print_formats(lambda k, v: v.adf_compatible))
+        self.filename = name
+        self.fmt = fmt
 
 
     @classmethod
-    def from_file(cls, name):
+    def from_file(cls, name, fmt):
 
         with open(name, "rb") as f:
             dat = f.read()
 
-        adf = cls()
+        adf = cls(name, fmt)
 
-        nsec = adf.sec_per_track
-        error.check((len(dat) % (2*nsec*512)) == 0, "Bad ADF image")
-        ncyl = len(dat) // (2*nsec*512)
-        if ncyl > 90:
-            ncyl //= 2
-            nsec *= 2
-            adf.sec_per_track = nsec
+        while True:
+            nsec = fmt.fmt.nsec
+            error.check((len(dat) % (2*nsec*512)) == 0, "Bad ADF image length")
+            ncyl = len(dat) // (2*nsec*512)
+            if ncyl < 90:
+                break
+            error.check(nsec == 11, "Bad ADF image length")
+            fmt = adf.fmt = formats.Format_Amiga_AmigaDOS_HD()
 
-        for tnr in range(ncyl*2):
-            ados = amigados.AmigaDOS(tracknr=tnr, nsec=nsec)
-            ados.set_adf_track(dat[tnr*nsec*512:(tnr+1)*nsec*512])
+        pos = 0
+        for t in fmt.max_tracks:
+            tnr = t.cyl*2 + t.head
+            ados = fmt.fmt(t.cyl, t.head)
+            pos += ados.set_adf_track(dat[pos:])
             adf.to_track[tnr] = ados
 
         return adf
+
+
+    @classmethod
+    def to_file(cls, name, fmt=None):
+        return cls(name, fmt)
 
 
     def get_track(self, cyl, side):
@@ -66,13 +81,13 @@ class ADF(Image):
                 tdat += t.get_adf_track()
             elif tnr < 160:
                 # Pad empty/damaged tracks.
-                tdat += amigados.bad_sector * self.sec_per_track
+                tdat += amigados.bad_sector * self.fmt.fmt.nsec
             else:
                 # Do not extend past 160 tracks unless there is data.
                 break
 
         if ntracks < 160:
-            tdat += amigados.bad_sector * self.sec_per_track * (160 - ntracks)
+            tdat += amigados.bad_sector * self.fmt.fmt.nsec * (160 - ntracks)
 
         return tdat
 
