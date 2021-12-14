@@ -161,6 +161,7 @@ def split_opts(seq):
 def get_image_class(name):
     image_types = { '.adf': 'ADF',
                     '.d81': 'D81',
+                    '.dsd': 'DSD',
                     '.dsk': 'EDSK',
                     '.hfe': 'HFE',
                     '.ima': 'IMG',
@@ -168,6 +169,7 @@ def get_image_class(name):
                     '.ipf': 'IPF',
                     '.raw': 'KryoFlux',
                     '.scp': 'SCP',
+                    '.ssd': 'SSD',
                     '.st' : 'IMG' }
     if os.path.isdir(name):
         typename = 'KryoFlux'

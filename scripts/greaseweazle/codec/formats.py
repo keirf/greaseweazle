@@ -17,6 +17,26 @@ class Format:
         self.max_tracks = util.TrackSet(self.max_trackset)
         self.decode_track = self.fmt.decode_track
 
+class Format_Acorn_DFS_SS(Format):
+    img_compatible = True
+    default_trackset = 'c=0-39:h=0'
+    max_trackset = 'c=0-81:h=0'
+    def __init__(self):
+        import greaseweazle.codec.ibm.fm as m
+        self.fmt = m.Acorn_DFS
+        self.default_revs = m.default_revs
+        super().__init__()
+    
+class Format_Acorn_DFS_DS(Format):
+    img_compatible = True
+    default_trackset = 'c=0-39:h=0-1'
+    max_trackset = 'c=0-81:h=0-1'
+    def __init__(self):
+        import greaseweazle.codec.ibm.fm as m
+        self.fmt = m.Acorn_DFS
+        self.default_revs = m.default_revs
+        super().__init__()
+    
 class Format_Amiga_AmigaDOS_DD(Format):
     adf_compatible = True
     def __init__(self):
@@ -141,6 +161,8 @@ class Format_AtariST_880(Format):
     
     
 formats = {
+    'acorn.dfs.ss': Format_Acorn_DFS_SS,
+    'acorn.dfs.ds': Format_Acorn_DFS_DS,
     'amiga.amigados': Format_Amiga_AmigaDOS_DD,
     'amiga.amigados_hd': Format_Amiga_AmigaDOS_HD,
     'ibm.180': Format_IBM_180,
