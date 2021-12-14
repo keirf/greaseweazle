@@ -16,7 +16,8 @@ from greaseweazle import error
 from greaseweazle import usb as USB
 
 
-class CmdlineHelpFormatter(argparse.ArgumentDefaultsHelpFormatter):
+class CmdlineHelpFormatter(argparse.ArgumentDefaultsHelpFormatter,
+                           argparse.RawDescriptionHelpFormatter):
     def _get_help_string(self, action):
         help = action.help
         if '%no_default' in help:

@@ -148,7 +148,9 @@ class PrecompSpec:
 
 def main(argv):
 
-    parser = util.ArgumentParser(usage='%(prog)s [options] file')
+    epilog = "FORMAT options:\n" + formats.print_formats()
+    parser = util.ArgumentParser(usage='%(prog)s [options] file',
+                                 epilog=epilog)
     parser.add_argument("--device", help="greaseweazle device name")
     parser.add_argument("--drive", type=util.drive_letter, default='A',
                         help="drive to write (A,B,0,1,2)")

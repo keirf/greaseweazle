@@ -8,6 +8,7 @@
 from greaseweazle.image.img import IMG
 
 class D81(IMG):
+    default_format = 'commodore.1581'
     sides_swapped = True
 
 # Local variables:
