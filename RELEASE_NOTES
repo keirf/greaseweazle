@@ -3,6 +3,10 @@
 ** Keir Fraser <keir.xen@gmail.com>
 ************************************
 
+** v0.32 - 14 December 2021
+ - New format specifiers for IBM, Atari ST and Commodore 1581
+ - New image handlers for *.ST and *.D81
+
 ** v0.31 - 8 October 2021
  - F1: Support Low-Density STM32F103C6 chips, 32k Flash, 10k SRAM
  - V4: Increase USB buffer size from 16kB to 64kB
