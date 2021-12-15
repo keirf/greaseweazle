@@ -10,6 +10,7 @@
 import argparse, os, sys, serial, struct, time, re, platform
 import importlib
 import serial.tools.list_ports
+from collections import OrderedDict
 
 from greaseweazle import version
 from greaseweazle import error
@@ -158,21 +159,26 @@ def split_opts(seq):
     return name, opts
 
 
+image_types = OrderedDict(
+    { '.adf': 'ADF',
+      '.ads': ('ADS','acorn'),
+      '.adm': ('ADM','acorn'),
+      '.adl': ('ADL','acorn'),
+      '.d81': 'D81',
+      '.dsd': ('DSD','acorn'),
+      '.dsk': 'EDSK',
+      '.hfe': 'HFE',
+      '.ima': 'IMG',
+      '.img': 'IMG',
+      '.ipf': 'IPF',
+      '.raw': 'KryoFlux',
+      '.scp': 'SCP',
+      '.ssd': ('SSD','acorn'),
+      '.st' : 'IMG' })
+
 def get_image_class(name):
-    image_types = { '.adf': 'ADF',
-                    '.d81': 'D81',
-                    '.dsd': 'DSD',
-                    '.dsk': 'EDSK',
-                    '.hfe': 'HFE',
-                    '.ima': 'IMG',
-                    '.img': 'IMG',
-                    '.ipf': 'IPF',
-                    '.raw': 'KryoFlux',
-                    '.scp': 'SCP',
-                    '.ssd': 'SSD',
-                    '.st' : 'IMG' }
     if os.path.isdir(name):
-        typename = 'KryoFlux'
+        typespec = 'KryoFlux'
     else:
         _, ext = os.path.splitext(name)
         error.check(ext.lower() in image_types,
@@ -180,8 +186,12 @@ def get_image_class(name):
 %s: Unrecognised file suffix '%s'
 Known suffixes: %s"""
                     % (name, ext, ', '.join(image_types)))
-        typename = image_types[ext.lower()]
-    mod = importlib.import_module('greaseweazle.image.' + typename.lower())
+        typespec = image_types[ext.lower()]
+    if isinstance(typespec, tuple):
+        typename, classname = typespec
+    else:
+        typename, classname = typespec, typespec.lower()
+    mod = importlib.import_module('greaseweazle.image.' + classname)
     return mod.__dict__[typename]
 
 
