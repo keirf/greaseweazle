@@ -3,6 +3,12 @@
 ** Keir Fraser <keir.xen@gmail.com>
 ************************************
 
+** v0.33 - 14 December 2021
+ - Support high-density Amiga images (1760kB ADF)
+ - IPF: Automatic write verification
+ - New format specifiers for Acorn DFS and ADFS
+ - New image handlers for Acorn: ADS, ADM, ADL, SSD, DSD
+
 ** v0.32 - 14 December 2021
  - New format specifiers for IBM, Atari ST and Commodore 1581
  - New image handlers for *.ST and *.D81
