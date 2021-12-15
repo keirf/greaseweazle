@@ -5,6 +5,8 @@
 # This is free and unencumbered software released into the public domain.
 # See the file COPYING for more details, or visit <http://unlicense.org>.
 
+from collections import OrderedDict
+
 from greaseweazle.tools import util
 
 class Format:
@@ -34,6 +36,50 @@ class Format_Acorn_DFS_DS(Format):
     def __init__(self):
         import greaseweazle.codec.ibm.fm as m
         self.fmt = m.Acorn_DFS
+        self.default_revs = m.default_revs
+        super().__init__()
+
+class Format_Acorn_ADFS_160(Format):
+    img_compatible = True
+    default_trackset = 'c=0-39:h=0'
+    max_trackset = 'c=0-81:h=0'
+    def __init__(self):
+        import greaseweazle.codec.ibm.mfm as m
+        self.fmt = m.Acorn_ADFS_640
+        self.default_revs = m.default_revs
+        super().__init__()
+    
+class Format_Acorn_ADFS_320(Format):
+    img_compatible = True
+    default_trackset = 'c=0-79:h=0'
+    max_trackset = 'c=0-81:h=0'
+    def __init__(self):
+        import greaseweazle.codec.ibm.mfm as m
+        self.fmt = m.Acorn_ADFS_640
+        self.default_revs = m.default_revs
+        super().__init__()
+
+class Format_Acorn_ADFS_640(Format):
+    img_compatible = True
+    def __init__(self):
+        import greaseweazle.codec.ibm.mfm as m
+        self.fmt = m.Acorn_ADFS_640
+        self.default_revs = m.default_revs
+        super().__init__()
+    
+class Format_Acorn_ADFS_800(Format):
+    img_compatible = True
+    def __init__(self):
+        import greaseweazle.codec.ibm.mfm as m
+        self.fmt = m.Acorn_ADFS_800
+        self.default_revs = m.default_revs
+        super().__init__()
+    
+class Format_Acorn_ADFS_1600(Format):
+    img_compatible = True
+    def __init__(self):
+        import greaseweazle.codec.ibm.mfm as m
+        self.fmt = m.Acorn_ADFS_1600
         self.default_revs = m.default_revs
         super().__init__()
     
@@ -160,16 +206,16 @@ class Format_AtariST_880(Format):
         super().__init__()
     
     
-formats = {
+formats = OrderedDict({
     'acorn.dfs.ss': Format_Acorn_DFS_SS,
     'acorn.dfs.ds': Format_Acorn_DFS_DS,
+    'acorn.adfs.160': Format_Acorn_ADFS_160,
+    'acorn.adfs.320': Format_Acorn_ADFS_320,
+    'acorn.adfs.640': Format_Acorn_ADFS_640,
+    'acorn.adfs.800': Format_Acorn_ADFS_800,
+    'acorn.adfs.1600': Format_Acorn_ADFS_1600,
     'amiga.amigados': Format_Amiga_AmigaDOS_DD,
     'amiga.amigados_hd': Format_Amiga_AmigaDOS_HD,
-    'ibm.180': Format_IBM_180,
-    'ibm.360': Format_IBM_360,
-    'ibm.720': Format_IBM_720,
-    'ibm.1200': Format_IBM_1200,
-    'ibm.1440': Format_IBM_1440,
     'atarist.360': Format_AtariST_360,
     'atarist.400': Format_AtariST_400,
     'atarist.440': Format_AtariST_440,
@@ -177,11 +223,16 @@ formats = {
     'atarist.800': Format_AtariST_800,
     'atarist.880': Format_AtariST_880,
     'commodore.1581': Format_IBM_800,
-}
+    'ibm.180': Format_IBM_180,
+    'ibm.360': Format_IBM_360,
+    'ibm.720': Format_IBM_720,
+    'ibm.1200': Format_IBM_1200,
+    'ibm.1440': Format_IBM_1440,
+})
 
 def print_formats(f = None):
     s = ''
-    for k, v in sorted(formats.items()):
+    for k, v in formats.items():
         if not f or f(k, v):
             if s:
                 s += '\n'

@@ -414,6 +414,36 @@ class AtariST_11SPT(IBM_MFM_720):
     gap_3 = 3
     nsec  = 11
 
+class Acorn_ADFS_640(IBM_MFM_Predefined):
+
+    time_per_rev = 0.2
+    clock = 2e-6
+
+    gap_3 = 57
+    nsec  = 16
+    id0   = 0
+    sz    = 1
+
+class Acorn_ADFS_800(IBM_MFM_Predefined):
+
+    time_per_rev = 0.2
+    clock = 2e-6
+
+    gap_3 = 116
+    nsec  = 5
+    id0   = 0
+    sz    = 3
+
+class Acorn_ADFS_1600(IBM_MFM_Predefined):
+
+    time_per_rev = 0.2
+    clock = 1e-6
+
+    gap_3 = 116
+    nsec  = 10
+    id0   = 0
+    sz    = 3
+
 
 def mfm_encode(dat):
     y = 0
