@@ -8,8 +8,9 @@
 import os, sys
 import platform
 import ctypes as ct
+import itertools as it
 from bitarray import bitarray
-from greaseweazle.track import MasterTrack
+from greaseweazle.track import MasterTrack, RawTrack
 from greaseweazle import error
 from .image import Image
 
@@ -98,6 +99,52 @@ class DI_LOCK:
     SETWSEED  = 1<<14
     def_flags = (DENVAR | UPDATEFD | TYPE | OVLBIT | TRKBIT)
 
+class IPFTrack(MasterTrack):
+
+    verify_revs = 2
+    tolerance = 100
+
+    @staticmethod
+    def strong_data(sector, weak):
+        """Return list of sector data areas excluding weak sections."""
+        def range_next(i):
+            s,l = next(i)
+            return s, s+l
+        weak_tol = 16 # Skip this number of bits after a weak area
+        weak_iter = it.chain(weak, [(1<<30,1)])
+        ws,we = -1,-1
+        sector_iter = iter(sector)
+        s,e = range_next(sector_iter)
+        try:
+            while True:
+                while we <= s:
+                    ws,we = range_next(weak_iter)
+                    we += weak_tol
+                if ws < e:
+                    if s < ws:
+                        yield (s,ws-s)
+                    s = we
+                else:
+                    yield (s,e-s)
+                    s = e
+                if s >= e:
+                    s,e = range_next(sector_iter)
+        except StopIteration:
+            pass
+
+    def verify_track(self, flux):
+        flux.cue_at_index()
+        raw = RawTrack(clock = self.time_per_rev/len(self.bits), data = flux)
+        raw_bits, _ = raw.get_all_data()
+        for s,l in IPFTrack.strong_data(self.sectors, self.weak):
+            sector = self.bits[s:s+l]
+            # Search within an area +/- the pre-defined # bitcells tolerance
+            raw_area = raw_bits[max(self.splice + s - self.tolerance, 0)
+                                : self.splice + s + l + self.tolerance]
+            # All we care about is at least one match (this is a bit fuzzy)
+            if next(raw_area.itersearch(sector), None) is None:
+                return False
+        return True
 
 class IPF(Image):
 
@@ -220,13 +267,15 @@ class IPF(Image):
         # We don't really have access to the bitrate. It depends on RPM.
         # So we assume a rotation rate of 300 RPM (5 rev/sec).
         rpm = 300
-                
-        track = MasterTrack(
+
+        track = IPFTrack(
             bits = trackbuf,
             time_per_rev = 60/rpm,
             bit_ticks = timebuf,
             splice = ti.overlap,
             weak = weak)
+        track.verify = track
+        track.sectors = data
         return track
 
 
