@@ -55,6 +55,8 @@ class Flux:
 
     def flux_for_writeout(self):
 
+        error.check(self.index_cued,
+                    "Cannot write non-index-cued raw flux")
         error.check(self.splice == 0 or len(self.index_list) > 1,
                     "Cannot write single-revolution unaligned raw flux")
         splice_at_index = (self.splice == 0)

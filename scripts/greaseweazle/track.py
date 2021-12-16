@@ -8,7 +8,7 @@
 import binascii
 import itertools as it
 from bitarray import bitarray
-from greaseweazle.flux import WriteoutFlux
+from greaseweazle.flux import Flux, WriteoutFlux
 from greaseweazle import optimised
 
 # Precompensation to apply to a MasterTrack for writeout.
@@ -126,7 +126,7 @@ class MasterTrack:
             # Similarly modify the last bit of the weak region.
             bits[e-1] = not(bits[e-2] or bits[e])
 
-        if cue_at_index:
+        if cue_at_index or not for_writeout:
             # Rotate data to start at the index.
             index = -self.splice % bitlen
             if index != 0:
@@ -193,10 +193,17 @@ class MasterTrack:
             flux_list.append(flux_ticks)
 
         # Package up the flux for return.
-        flux = WriteoutFlux(ticks_to_index, flux_list,
-                            ticks_to_index / self.time_per_rev,
-                            index_cued = cue_at_index,
-                            terminate_at_index = splice_at_index)
+        if for_writeout:
+            flux = WriteoutFlux(ticks_to_index, flux_list,
+                                ticks_to_index / self.time_per_rev,
+                                index_cued = cue_at_index,
+                                terminate_at_index = splice_at_index)
+        else:
+            flux = Flux([ticks_to_index]*2, flux_list*2,
+                        ticks_to_index / self.time_per_rev,
+                        index_cued = True)
+            flux.splice = sum(bit_ticks[:self.splice])
+
         return flux
 
 

@@ -20,8 +20,10 @@ from greaseweazle.codec import formats
 def open_image(args, image_class):
     try:
         image = image_class.from_file(args.file)
+        args.raw_image_class = True
     except TypeError:
         image = image_class.from_file(args.file, args.fmt_cls)
+        args.raw_image_class = False
     return image
 
 # write_from_image:
@@ -51,6 +53,9 @@ def write_from_image(usb, args, image):
         if track is None:
             usb.erase_track(drive.ticks_per_rev * 1.1)
             continue
+
+        if args.raw_image_class and args.fmt_cls is not None:
+            track = args.fmt_cls.decode_track(cyl, head, track).raw_track()
 
         if args.precomp is not None:
             track.precomp = args.precomp.track_precomp(cyl)

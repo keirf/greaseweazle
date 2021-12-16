@@ -67,11 +67,8 @@ class AmigaDOS:
             self.sector[sec] = bytes(16), tdat[sec*512:(sec+1)*512]
         return totsize
 
-    def flux_for_writeout(self, *args, **kwargs):
-        return self.raw_track().flux_for_writeout(args, kwargs)
-
     def flux(self, *args, **kwargs):
-        return self.raw_track().flux(args, kwargs)
+        return self.raw_track().flux(*args, **kwargs)
 
 
     def decode_raw(self, track):

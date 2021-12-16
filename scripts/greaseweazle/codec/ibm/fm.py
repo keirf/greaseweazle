@@ -70,11 +70,8 @@ class IBM_FM:
     def nr_missing(self):
         return len(list(filter(lambda x: x.crc != 0, self.sectors)))
 
-    def flux_for_writeout(self, *args, **kwargs):
-        return self.raw_track().flux_for_writeout(args, kwargs)
-
     def flux(self, *args, **kwargs):
-        return self.raw_track().flux(args, kwargs)
+        return self.raw_track().flux(*args, **kwargs)
 
 
     def decode_raw(self, track):
