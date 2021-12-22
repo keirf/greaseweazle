@@ -109,7 +109,7 @@ class SCP(Image):
             dat = f.read()
 
         header = struct.unpack("<3s9BI", dat[0:16])
-        (sig, _, _, nr_revs, _, _, flags, _, single_sided, _, _) = header
+        sig, _, disk_type, nr_revs, _, _, flags, _, single_sided, _, _ = header
         error.check(sig == b"SCP", "SCP: Bad signature")
 
         index_cued = flags & 1 or nr_revs == 1
@@ -184,17 +184,25 @@ class SCP(Image):
                 track.splice = splices[trknr]
             scp.to_track[trknr] = track
 
+        s = scp.side_count()
+
+        # C64 images with halftracks are genberated by Supercard Pro using
+        # consecutive track numbers. That needs fixup here for our layout.
+        # We re-use the legacy-single-sided fixup below.
+        if (single_sided == 0 and disk_type == 0
+            and s[1] and s[0]==s[1]+1 and s[0] < 42):
+            single_sided = 1
+            print('SCP: Importing C64 image with halftracks')
 
         # Some tools produce (or used to produce) single-sided images using
         # consecutive entries in the TLUT. This needs fixing up.
-        s = scp.side_count()
         if single_sided and s[0] and s[1]:
             new_dict = dict()
             for tnr in scp.to_track:
                 new_dict[tnr*2+single_sided-1] = scp.to_track[tnr]
             scp.to_track = new_dict
             print('SCP: Imported legacy single-sided image')
-            
+
         return scp
 
 
