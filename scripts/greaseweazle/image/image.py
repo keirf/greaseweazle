@@ -41,6 +41,17 @@ class Image:
         obj.fmt = fmt
         return obj
 
+    # Maximum non-empty cylinder on each head, or -1 if no cylinders exist.
+    # Returns a list of integers, indexed by head.
+    def max_cylinder(self):
+        r = list()
+        for h in range(2):
+            for c in range(100, -2, -1):
+                if c < 0 or self.get_track(c,h) is not None:
+                    r.append(c)
+                    break
+        return r
+
     ## Above methods and class variables can be overridden by subclasses.
     ## Additionally, subclasses must provide following public interfaces:
 
