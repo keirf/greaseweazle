@@ -75,7 +75,7 @@ dist:
 windist: pysetup
 	rm -rf $(PROJ)-$(VER) ipf ipf.zip
 	[ -e $(PROJ)-$(VER).zip ] || \
-	curl -L https://github.com/keirf/Greaseweazle/releases/download/$(VER)/$(PROJ)-$(VER).zip --output $(PROJ)-$(VER).zip
+	curl -L https://github.com/keirf/greaseweazle/releases/download/$(VER)/$(PROJ)-$(VER).zip --output $(PROJ)-$(VER).zip
 	$(UNZIP) $(PROJ)-$(VER).zip
 	cp -a scripts/setup.py $(PROJ)-$(VER)/scripts
 	cp -a scripts/greaseweazle/optimised/optimised* $(PROJ)-$(VER)/scripts/greaseweazle/optimised
