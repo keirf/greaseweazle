@@ -18,41 +18,43 @@ jobs:
     - name: Dependency packages (apt)
       run: |
         sudo apt update
-        sudo apt -y install git gcc-arm-none-eabi python3-pip srecord stm32flash zip
+        sudo apt -y install git python3-pip zip
 
     - name: Dependency packages (pip)
       run: python3 -m pip install --user bitarray crcmod pyserial
 
     - name: Build dist
       run: |
-        export VER=${{ steps.vars.outputs.sha_short }}
+        export P=greaseweazle-tools
+        export V=${{ steps.vars.outputs.sha_short }}
         make dist
         mkdir -p _cidist
-        rm Greaseweazle-v*.zip
-        mv Greaseweazle-v* Greaseweazle-$VER
-        rm Greaseweazle-$VER/RELEASE_NOTES
-        git rev-parse HEAD >Greaseweazle-$VER/COMMIT
-        echo "commit = '$(git rev-parse HEAD)'" >>Greaseweazle-$VER/scripts/greaseweazle/version.py 
-        zip -r Greaseweazle-$VER.zip Greaseweazle-$VER
-        mv Greaseweazle-$VER.zip _cidist/
+        rm $P-v*.zip
+        mv $P-v* $P-$V
+        rm $P-$V/RELEASE_NOTES
+        git rev-parse HEAD >$P-$V/COMMIT
+        echo "commit = '$(git rev-parse HEAD)'" >>$P-$V/scripts/greaseweazle/version.py 
+        zip -r $P-$V.zip $P-$V
+        mv $P-$V.zip _cidist/
 
     - name: Build debug dist
       run: |
-        export VER=${{ steps.vars.outputs.sha_short }}-debug
+        export P=greaseweazle-tools
+        export V=${{ steps.vars.outputs.sha_short }}-debug
         env debug=y make dist
-        rm Greaseweazle-v*.zip
-        mv Greaseweazle-v* Greaseweazle-$VER
-        rm Greaseweazle-$VER/RELEASE_NOTES
-        git rev-parse HEAD >Greaseweazle-$VER/COMMIT
-        echo debug >>Greaseweazle-$VER/COMMIT
-        echo "commit = '$(git rev-parse HEAD)'" >>Greaseweazle-$VER/scripts/greaseweazle/version.py 
-        zip -r Greaseweazle-$VER.zip Greaseweazle-$VER
-        mv Greaseweazle-$VER.zip _cidist/
+        rm $P-v*.zip
+        mv $P-v* $P-$V
+        rm $P-$V/RELEASE_NOTES
+        git rev-parse HEAD >$P-$V/COMMIT
+        echo debug >>$P-$V/COMMIT
+        echo "commit = '$(git rev-parse HEAD)'" >>$P-$V/scripts/greaseweazle/version.py 
+        zip -r $P-$V.zip $P-$V
+        mv $P-$V.zip _cidist/
 
     - name: Upload artifacts
       uses: actions/upload-artifact@v2
       with:
-        name: Greaseweazle.CI.${{ steps.vars.outputs.sha_short }}
+        name: greaseweazle-tools.ci.${{ steps.vars.outputs.sha_short }}
         path: _cidist
 
   build-windows:
@@ -70,7 +72,7 @@ jobs:
     - name: Download Ubuntu build
       uses: actions/download-artifact@v2
       with:
-        name: Greaseweazle.CI.${{ steps.vars.outputs.sha_short }}
+        name: greaseweazle-tools.ci.${{ steps.vars.outputs.sha_short }}
 
     - name: Set up Python
       uses: actions/setup-python@v2
@@ -90,8 +92,8 @@ jobs:
     - name: Upload artifacts
       uses: actions/upload-artifact@v2
       with:
-        name: Greaseweazle.CI.${{ steps.vars.outputs.sha_short }}
-        path: Greaseweazle-${{ steps.vars.outputs.sha_short }}-win.zip
+        name: greaseweazle-tools.ci.${{ steps.vars.outputs.sha_short }}
+        path: greaseweazle-tools-${{ steps.vars.outputs.sha_short }}-win.zip
 
   finalise:
     needs: build-windows
@@ -108,20 +110,21 @@ jobs:
     - name: Download artifacts
       uses: actions/download-artifact@v2
       with:
-        name: Greaseweazle.CI.${{ steps.vars.outputs.sha_short }}
+        name: greaseweazle-tools.ci.${{ steps.vars.outputs.sha_short }}
 
     - name: Remove 64-bit DLLS
       run: |
-        export VER=${{ steps.vars.outputs.sha_short }}
-        unzip Greaseweazle-$VER-win.zip
+        export P=greaseweazle-tools
+        export V=${{ steps.vars.outputs.sha_short }}
+        unzip $P-$V-win.zip
         find . -name 'api-ms-*' | xargs rm -f
-        find Greaseweazle-$VER/lib -name 'python*.dll' | xargs rm -f
-        find Greaseweazle-$VER/lib -name 'vcruntime140.dll' | xargs rm -f
-        rm Greaseweazle-$VER-win.zip
-        zip -r Greaseweazle-$VER-win.zip Greaseweazle-$VER
+        find $P-$V/lib -name 'python*.dll' | xargs rm -f
+        find $P-$V/lib -name 'vcruntime140.dll' | xargs rm -f
+        rm $P-$V-win.zip
+        zip -r $P-$V-win.zip $P-$V
 
     - name: Upload finalised artifacts
       uses: actions/upload-artifact@v2
       with:
-        name: Greaseweazle.CI.${{ steps.vars.outputs.sha_short }}
-        path: Greaseweazle-${{ steps.vars.outputs.sha_short }}-win.zip
+        name: greaseweazle-tools.ci.${{ steps.vars.outputs.sha_short }}
+        path: greaseweazle-tools-${{ steps.vars.outputs.sha_short }}-win.zip

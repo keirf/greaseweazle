@@ -7,7 +7,6 @@
 *.hex
 *.orig
 *.rej
-*.rld
 *.upd
 *.adf
 *.hfe
@@ -17,4 +16,4 @@
 scripts/greaseweazle/version.py
 scripts/greaseweazle/optimised/optimised*
 scripts/c_ext/build/
-Greaseweazle-*
+greaseweazle-tools-*

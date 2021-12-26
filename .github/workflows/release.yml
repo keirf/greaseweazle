@@ -21,7 +21,7 @@ jobs:
     - name: Dependency packages (apt)
       run: |
         sudo apt update
-        sudo apt -y install git gcc-arm-none-eabi python3-pip srecord stm32flash zip
+        sudo apt -y install git python3-pip zip
 
     - name: Dependency packages (pip)
       run: python3 -m pip install --user bitarray crcmod pyserial
@@ -32,8 +32,8 @@ jobs:
     - name: Upload artifacts
       uses: actions/upload-artifact@v2
       with:
-        name: Greaseweazle.CI.${{ steps.vars.outputs.ref }}
-        path: Greaseweazle-${{ steps.vars.outputs.ref }}.zip
+        name: greaseweazle-tools.ci.${{ steps.vars.outputs.ref }}
+        path: greaseweazle-tools-${{ steps.vars.outputs.ref }}.zip
 
   build-windows:
     needs: build-ubuntu
@@ -50,7 +50,7 @@ jobs:
     - name: Download Ubuntu build
       uses: actions/download-artifact@v2
       with:
-        name: Greaseweazle.CI.${{ steps.vars.outputs.ref }}
+        name: greaseweazle-tools.ci.${{ steps.vars.outputs.ref }}
 
     - name: Set up Python
       uses: actions/setup-python@v2
@@ -69,8 +69,8 @@ jobs:
     - name: Upload artifacts
       uses: actions/upload-artifact@v2
       with:
-        name: Greaseweazle.CI.${{ steps.vars.outputs.ref }}
-        path: Greaseweazle-${{ steps.vars.outputs.ref }}-win.zip
+        name: greaseweazle-tools.ci.${{ steps.vars.outputs.ref }}
+        path: greaseweazle-tools-${{ steps.vars.outputs.ref }}-win.zip
 
   finalise:
     needs: build-windows
@@ -87,17 +87,18 @@ jobs:
     - name: Download artifacts
       uses: actions/download-artifact@v2
       with:
-        name: Greaseweazle.CI.${{ steps.vars.outputs.ref }}
+        name: greaseweazle-tools.ci.${{ steps.vars.outputs.ref }}
 
     - name: Remove 64-bit DLLS
       run: |
-        export VER=${{ steps.vars.outputs.ref }}
-        unzip Greaseweazle-$VER-win.zip
+        export P=greaseweazle-tools
+        export V=${{ steps.vars.outputs.ref }}
+        unzip $P-$V-win.zip
         find . -name 'api-ms-*' | xargs rm -f
-        find Greaseweazle-$VER/lib -name 'python*.dll' | xargs rm -f
-        find Greaseweazle-$VER/lib -name 'vcruntime140.dll' | xargs rm -f
-        rm Greaseweazle-$VER-win.zip
-        zip -r Greaseweazle-$VER-win.zip Greaseweazle-$VER
+        find $P-$V/lib -name 'python*.dll' | xargs rm -f
+        find $P-$V/lib -name 'vcruntime140.dll' | xargs rm -f
+        rm $P-$V-win.zip
+        zip -r $P-$V-win.zip $P-$V
 
     - name: Create Release
       id: create_release
@@ -106,7 +107,7 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         tag_name: ${{ github.ref }}
-        release_name: ${{ steps.vars.outputs.ref }}
+        release_name: Greaseweazle Tools ${{ steps.vars.outputs.ref }}
         body: "[**Release Notes:**](https://github.com/keirf/greaseweazle/blob/master/RELEASE_NOTES)"
         draft: false
         prerelease: false
@@ -117,8 +118,8 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: Greaseweazle-${{ steps.vars.outputs.ref }}-win.zip
-        asset_name: Greaseweazle-${{ steps.vars.outputs.ref }}-win.zip
+        asset_path: greaseweazle-tools-${{ steps.vars.outputs.ref }}-win.zip
+        asset_name: greaseweazle-tools-${{ steps.vars.outputs.ref }}-win.zip
         asset_content_type: application/zip
 
     - name: Upload Release Asset (Other)
@@ -127,6 +128,6 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: Greaseweazle-${{ steps.vars.outputs.ref }}.zip
-        asset_name: Greaseweazle-${{ steps.vars.outputs.ref }}.zip
+        asset_path: greaseweazle-tools-${{ steps.vars.outputs.ref }}.zip
+        asset_name: greaseweazle-tools-${{ steps.vars.outputs.ref }}.zip
         asset_content_type: application/zip
