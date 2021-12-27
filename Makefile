@@ -31,7 +31,7 @@ dist: all
 	mkdir -p $(PROJ)-$(VER)/scripts/greaseweazle/tools
 	mkdir -p $(PROJ)-$(VER)/scripts/misc
 	cp -a COPYING $(PROJ)-$(VER)/
-	cp -a README.md $(PROJ)-$(VER)/
+	cp -a README $(PROJ)-$(VER)/
 	cp -a gw $(PROJ)-$(VER)/
 	cp -a scripts/49-greaseweazle.rules $(PROJ)-$(VER)/scripts/
 	cp -a scripts/setup.sh $(PROJ)-$(VER)/scripts/

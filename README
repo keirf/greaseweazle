@@ -1,0 +1,14 @@
+Greaseweazle Tools
+------------------
+Keir Fraser <keir.xen@gmail.com>
+https://github.com/keirf/greaseweazle
+
+This distribution contains host tools for controlling a Greaseweazle
+USB device.
+
+Greaseweazle documentation and downloads:
+  https://github.com/keirf/greaseweazle/wiki/
+
+Source code, and all binary releases, are freely redistributable in
+any form. Please see the the COPYING file included in this
+distribution.

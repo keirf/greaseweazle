@@ -1,10 +1,14 @@
-# Greaseweazle
+# Greaseweazle: Tools
 
-*Tools and USB interface for accessing a floppy drive at the raw flux level.*
+*Tools for accessing a floppy drive at the raw flux level.*
 
 ![CI Badge][ci-badge]
 ![Downloads Badge][downloads-badge]
 ![Version Badge][version-badge]
+
+This repository contains the host tools for controlling a Greaseweazle
+USB device, including source code and binary releases. Find the device
+firmware repository [here][firmware].
 
 ### [Purchase a ready-made Greaseweazle][rmb]
 ### [Download Greaseweazle][Downloads]
@@ -15,6 +19,7 @@
 Greaseweazle source code, and all binary releases, are freely redistributable
 in any form. Please see the [license](COPYING).
 
+[firmware]: https://github.com/keirf/greaseweazle-firmware
 [rmb]: https://github.com/keirf/greaseweazle/wiki/Ready-Made-Boards
 [Downloads]: https://github.com/keirf/greaseweazle/wiki/Downloads
 
