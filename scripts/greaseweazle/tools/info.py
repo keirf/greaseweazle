@@ -9,6 +9,7 @@
 
 description = "Display information about the Greaseweazle setup."
 
+import requests, re
 import sys, serial
 
 from greaseweazle.tools import util
@@ -35,6 +36,14 @@ speed_id = { 0: 'Full Speed (12 Mbit/s)',
 def print_info_line(name, value, tab=0):
     print(''.ljust(tab) + (name + ':').ljust(12-tab) + value)
 
+def latest_firmware():
+    rsp = requests.get('https://api.github.com/repos/keirf/'
+                       'greaseweazle-firmware/releases/latest', timeout=5)
+    tag = rsp.json()['tag_name']
+    r = re.match(r'v(\d+)\.(\d+)', tag)
+    major, minor = int(r.group(1)), int(r.group(2))
+    return major, minor
+
 def main(argv):
 
     parser = util.ArgumentParser(usage='%(prog)s [options]')
@@ -47,7 +56,7 @@ def main(argv):
 
     print_info_line('Host Tools', 'v%d.%d' % (version.major, version.minor))
 
-    print('Greaseweazle:')
+    print('Device:')
 
     try:
         usb = util.usb_open(args.device, mode_check=False)
@@ -64,7 +73,7 @@ def main(argv):
     port = usb.port_info
 
     if port.device:
-        print_info_line('Device', port.device, tab=2)
+        print_info_line('Port', port.device, tab=2)
 
     try:
         model = model_id[usb.hw_model][usb.hw_submodel]
@@ -86,8 +95,16 @@ def main(argv):
         speed = 'Unknown (0x%02X)' % usb.usb_speed
     print_info_line('USB Rate', speed, tab=2)
 
+    usb_update_mode, usb_version = usb.update_mode, usb.version
+
     if mode_switched:
         usb = util.usb_reopen(usb, not args.bootloader)
+
+    if not usb_update_mode:
+        latest_version = latest_firmware()
+        if latest_version > usb_version:
+            print('\n*** New firmware v%d.%d is available' % latest_version)
+            util.print_update_instructions(usb)
 
 
 if __name__ == "__main__":

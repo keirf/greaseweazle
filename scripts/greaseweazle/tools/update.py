@@ -9,7 +9,7 @@
 
 description = "Update the Greaseweazle device firmware to current version."
 
-import requests, zipfile, io
+import requests, zipfile, io, re
 import sys, serial, struct, os
 import crcmod.predefined
 
@@ -90,6 +90,8 @@ def download_latest():
     rsp = requests.get('https://api.github.com/repos/keirf/'
                        'greaseweazle-firmware/releases/latest', timeout=5)
     tag = rsp.json()['tag_name']
+    r = re.match(r'v(\d+)\.(\d+)', tag)
+    major, minor = r.group(1), r.group(2)
     name = 'greaseweazle-firmware-'+tag+'.upd'
     print('Downloading latest firmware: '+name)
     rsp = requests.get('https://github.com/keirf/greaseweazle-firmware'
