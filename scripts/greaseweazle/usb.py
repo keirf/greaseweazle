@@ -181,8 +181,7 @@ class Unit:
             return
         # We are running main firmware: Check whether an update is needed.
         # We can use only the GetInfo command if the firmware is out of date.
-        self.update_needed = (self.version < EARLIEST_SUPPORTED_FIRMWARE or
-                              self.version > (version.major, version.minor))
+        self.update_needed = (self.version < EARLIEST_SUPPORTED_FIRMWARE)
         if self.update_needed:
             return
         # Initialise the delay properties with current firmware values.

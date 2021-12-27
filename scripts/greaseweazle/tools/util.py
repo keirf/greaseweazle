@@ -289,8 +289,7 @@ def print_update_instructions(usb):
         print(" - Install the Update Jumper at pins %s"
               % ("RXI-TXO" if usb.hw_model != 1 else "DCLK-GND"))
         print(" - Reconnect to USB")
-    print(" - Run \"gw update\" to install firmware v%u.%u" %
-          (version.major, version.minor))
+    print(" - Run \"gw update\" to install latest firmware")
 
 def usb_open(devicename, is_update=False, mode_check=True):
 
