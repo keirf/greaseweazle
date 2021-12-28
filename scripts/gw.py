@@ -35,6 +35,11 @@ try:
 except ImportError:
     missing_modules.append("pyserial")
 
+try:
+    import requests
+except ImportError:
+    missing_modules.append("requests")
+
 if missing_modules:
     print("""\
 ** Missing Python modules: %s
