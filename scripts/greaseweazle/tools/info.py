@@ -64,9 +64,7 @@ def main(argv):
         print('  Not found')
         sys.exit(0)
 
-    mode_switched = (usb.jumperless_update
-                     and usb.update_mode != args.bootloader
-                     and not (usb.update_mode and usb.update_jumpered))
+    mode_switched = usb.can_mode_switch and usb.update_mode != args.bootloader
     if mode_switched:
         usb = util.usb_reopen(usb, args.bootloader)
         

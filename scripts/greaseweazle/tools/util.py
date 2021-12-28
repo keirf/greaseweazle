@@ -278,6 +278,7 @@ def usb_reopen(usb, is_update):
             new_usb = USB.Unit(new_ser)
             new_usb.port_info = port_info(devicename)
             new_usb.jumperless_update = usb.jumperless_update
+            new_usb.can_mode_switch = usb.can_mode_switch
             return new_usb
     raise serial.SerialException('Could not reopen port after mode switch')
 
@@ -291,22 +292,11 @@ def print_update_instructions(usb):
         print(" - Reconnect to USB")
     print(" - Run \"gw update\" to download and install latest firmware")
 
-def usb_open(devicename, is_update=False, mode_check=True):
 
-    if devicename is None:
-        devicename = find_port()
-    
-    usb = USB.Unit(serial.Serial(devicename))
-    usb.port_info = port_info(devicename)
-    is_win7 = (platform.system() == 'Windows' and platform.release() == '7')
-    usb.jumperless_update = ((usb.hw_model, usb.hw_submodel) != (1, 0)
-                             and not is_win7)
-
-    if not mode_check:
-        return usb
+def usb_mode_check(usb, is_update):
 
     if usb.update_mode and not is_update:
-        if usb.jumperless_update and not usb.update_jumpered:
+        if usb.can_mode_switch:
             usb = usb_reopen(usb, is_update)
             if not usb.update_mode:
                 return usb
@@ -321,10 +311,10 @@ def usb_open(devicename, is_update=False, mode_check=True):
         sys.exit(1)
 
     if is_update and not usb.update_mode:
-        if usb.jumperless_update:
+        if usb.can_mode_switch:
             usb = usb_reopen(usb, is_update)
             error.check(usb.update_mode, """\
-Greaseweazle F7 did not change to Firmware Update Mode as requested.
+Greaseweazle did not change to Firmware Update Mode as requested.
 If the problem persists, install the Update Jumper at pins RXI-TXO.""")
             return usb
         print("ERROR: Greaseweazle is not in Firmware Update Mode")
@@ -336,6 +326,25 @@ If the problem persists, install the Update Jumper at pins RXI-TXO.""")
               % (usb.major, usb.minor))
         print_update_instructions(usb)
         sys.exit(1)
+
+    return usb
+
+
+def usb_open(devicename, is_update=False, mode_check=True):
+
+    if devicename is None:
+        devicename = find_port()
+    
+    usb = USB.Unit(serial.Serial(devicename))
+    usb.port_info = port_info(devicename)
+    is_win7 = (platform.system() == 'Windows' and platform.release() == '7')
+    usb.jumperless_update = ((usb.hw_model, usb.hw_submodel) != (1, 0)
+                             and not is_win7)
+    usb.can_mode_switch = (usb.jumperless_update
+                           and not (usb.update_mode and usb.update_jumpered))
+
+    if mode_check:
+        usb = usb_mode_check(usb, is_update)
 
     return usb
     
