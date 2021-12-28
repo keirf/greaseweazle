@@ -1,7 +1,17 @@
 ************************************
-** Greaseweazle Release Notes
+** Greaseweazle Tools Release Notes
 ** Keir Fraser <keir.xen@gmail.com>
 ************************************
+
+** v0.34 - 28 December 2021
+ - Firmware is now released separately from the host tools
+ - gw update: Automatically download the latest firmware from GitHub
+ - Fix read/write raw files (HFE, SCP, etc) when --format is specified
+ - Allow Acorn ADF images to be read and written using --format specifier
+ - Support SCP images containing Supercard Pro C64 dumps including halftracks
+
+-------------------------------------------------------------------------
+All versions below include firmware and host tools in a combined release.
 
 ** v0.33 - 14 December 2021
  - Support high-density Amiga images (1760kB ADF)

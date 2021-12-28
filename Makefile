@@ -1,6 +1,6 @@
 
 export FW_MAJOR := 0
-export FW_MINOR := 33
+export FW_MINOR := 34
 
 TARGETS := all clean dist windist mrproper pysetup
 .PHONY: $(TARGETS)
