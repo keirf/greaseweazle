@@ -3,7 +3,7 @@ from greaseweazle import version
 
 buildOptions = dict(
     packages = ['greaseweazle'],
-    excludes = ['tkinter', 'test', 'distutils', 'email'],
+    excludes = ['tkinter', 'test', 'distutils'],
     include_msvcr = True)
 
 base = 'Console'
