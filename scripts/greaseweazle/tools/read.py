@@ -160,6 +160,8 @@ Known formats:\n%s"""
         args.tracks = def_tracks
         
         print(("Reading %s revs=" % args.tracks) + str(args.revs))
+        if args.format:
+            print("Format " + args.format)
         with open_image(args, image_class) as image:
             util.with_drive_selected(read_to_image, usb, args, image,
                                      decoder=decoder)

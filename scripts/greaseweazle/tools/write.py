@@ -195,10 +195,11 @@ Known formats:\n%s"""
         args.tracks = def_tracks
         usb = util.usb_open(args.device)
         image = open_image(args, image_class)
-        s = str(args.tracks)
+        print("Writing " + str(args.tracks))
         if args.precomp is not None:
-            s += "; %s" % args.precomp
-        print("Writing %s" % s)
+            print(args.precomp)
+        if args.format:
+            print("Format " + args.format)
         util.with_drive_selected(write_from_image, usb, args, image)
     except USB.CmdError as err:
         print("Command Failed: %s" % err)

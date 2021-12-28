@@ -7,6 +7,7 @@
 
 from greaseweazle import error
 import greaseweazle.codec.amiga.amigados as amigados
+from .img import IMG
 from .image import Image
 
 from greaseweazle.codec import formats
@@ -17,7 +18,7 @@ class ADF(Image):
 
     def __init__(self, name, fmt):
         self.to_track = dict()
-        error.check(fmt is not None and fmt.adf_compatible, """\
+        error.check(fmt.adf_compatible, """\
 ADF image requires compatible format specifier
 Compatible formats:\n%s"""
                     % formats.print_formats(lambda k, v: v.adf_compatible))
@@ -27,6 +28,9 @@ Compatible formats:\n%s"""
 
     @classmethod
     def from_file(cls, name, fmt):
+
+        if fmt.img_compatible: # Acorn ADF
+            return IMG.from_file(name, fmt)
 
         with open(name, "rb") as f:
             dat = f.read()
@@ -53,7 +57,9 @@ Compatible formats:\n%s"""
 
 
     @classmethod
-    def to_file(cls, name, fmt=None):
+    def to_file(cls, name, fmt):
+        if fmt.img_compatible: # Acorn ADF
+            return IMG.to_file(name, fmt)
         return cls(name, fmt)
 
 
