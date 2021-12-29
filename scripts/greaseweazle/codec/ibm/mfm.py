@@ -440,6 +440,16 @@ class Acorn_ADFS_1600(IBM_MFM_Predefined):
     id0   = 0
     sz    = 3
 
+class Sega_SF7(IBM_MFM_Predefined):
+
+    time_per_rev = 0.2
+    clock = 2e-6
+
+    gap_3 = 42
+    nsec  = 16
+    id0   = 1
+    sz    = 1
+
 
 def mfm_encode(dat):
     y = 0
