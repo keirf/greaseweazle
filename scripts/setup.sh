@@ -6,4 +6,4 @@ if [ ! -d ./scripts/c_ext ]; then
     exit 1;
 fi ;
 $PYTHON -m pip install --user bitarray crcmod pyserial requests
-(cd ./scripts/c_ext && $PYTHON setup.py install --install-platlib=../greaseweazle/optimised)
+$PYTHON -m pip install ./scripts/c_ext --target=./scripts/greaseweazle/optimised --upgrade

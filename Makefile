@@ -20,7 +20,8 @@ VER := v$(FW_MAJOR).$(FW_MINOR)
 all: scripts/greaseweazle/version.py
 
 clean::
-	rm -rf scripts/greaseweazle/optimised/optimised* scripts/c_ext/build
+	rm -rf scripts/greaseweazle/optimised/optimised*
+	rm -rf scripts/c_ext/*.egg-info scripts/c_ext/build
 	rm -f scripts/greaseweazle/*.pyc
 	rm -f scripts/greaseweazle/version.py
 	find . -name __pycache__ | xargs rm -rf
