@@ -3,6 +3,10 @@
 ** Keir Fraser <keir.xen@gmail.com>
 ************************************
 
+** v0.35 - 30 December 2021
+ - Fix Windows distribution to include optimised data routines
+ - Support Sega SF-700 disk format (sega.sf7) and .SF7 image suffix
+
 ** v0.34 - 28 December 2021
  - Firmware is now released separately from the host tools
  - gw update: Automatically download the latest firmware from GitHub
