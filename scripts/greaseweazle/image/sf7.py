@@ -8,7 +8,7 @@
 from greaseweazle.image.img import IMG
 
 class SF7(IMG):
-    default_format = 'sega.sf7'
+    default_format = 'sega.sf7000'
 
 # Local variables:
 # python-indent: 4

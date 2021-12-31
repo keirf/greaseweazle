@@ -205,13 +205,13 @@ class Format_AtariST_880(Format):
         self.default_revs = m.default_revs
         super().__init__()
     
-class Format_Sega_SF7(Format):
+class Format_Sega_SF7000(Format):
     img_compatible = True
     default_trackset = 'c=0-39:h=0'
     max_trackset = 'c=0-81:h=0'
     def __init__(self):
         import greaseweazle.codec.ibm.mfm as m
-        self.fmt = m.Sega_SF7
+        self.fmt = m.Sega_SF7000
         self.default_revs = m.default_revs
         super().__init__()
 
@@ -238,7 +238,7 @@ formats = OrderedDict({
     'ibm.720': Format_IBM_720,
     'ibm.1200': Format_IBM_1200,
     'ibm.1440': Format_IBM_1440,
-    'sega.sf7': Format_Sega_SF7,
+    'sega.sf7000': Format_Sega_SF7000,
 })
 
 def print_formats(f = None):

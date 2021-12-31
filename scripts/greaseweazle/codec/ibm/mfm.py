@@ -440,7 +440,7 @@ class Acorn_ADFS_1600(IBM_MFM_Predefined):
     id0   = 0
     sz    = 3
 
-class Sega_SF7(IBM_MFM_Predefined):
+class Sega_SF7000(IBM_MFM_Predefined):
 
     time_per_rev = 0.2
     clock = 2e-6
