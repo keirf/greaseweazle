@@ -98,7 +98,7 @@ def read_to_image(usb, args, image, decoder=None):
 
     for t in args.tracks:
         cyl, head = t.cyl, t.head
-        usb.seek(t.physical_cyl, head)
+        usb.seek(t.physical_cyl, t.physical_head)
         dat = read_with_retry(usb, args, cyl, head, decoder)
         s = "T%u.%u: %s" % (cyl, head, dat.summary_string())
         if hasattr(dat, 'nr_missing') and dat.nr_missing() != 0:

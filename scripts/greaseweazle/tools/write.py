@@ -48,7 +48,7 @@ def write_from_image(usb, args, image):
         print("\r%sing Track %u.%u..." %
               ("Writ" if track is not None else "Eras", cyl, head),
               end="", flush=True)
-        usb.seek(t.physical_cyl, head)
+        usb.seek(t.physical_cyl, t.physical_head)
 
         if track is None:
             usb.erase_track(drive.ticks_per_rev * 1.1)

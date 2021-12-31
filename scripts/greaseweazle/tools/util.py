@@ -72,11 +72,13 @@ class TrackSet:
             for c in ts.cyls:
                 for h in ts.heads:
                     pc = c*ts.step + ts.h_off[h]
-                    l.append((pc, h, c))
+                    ph = 1-h if ts.hswap else h
+                    l.append((pc, ph, c, h))
             l.sort()
             self.l = iter(l)
         def __next__(self):
-            self.physical_cyl, self.head, self.cyl = next(self.l)
+            (self.physical_cyl, self.physical_head,
+             self.cyl, self.head) = next(self.l)
             return self
     
     def __init__(self, trackspec):
@@ -84,6 +86,7 @@ class TrackSet:
         self.heads = list()
         self.h_off = [0]*2
         self.step = 1
+        self.hswap = False
         self.trackspec = ''
         self.update_from_trackspec(trackspec)
 
@@ -91,6 +94,9 @@ class TrackSet:
         """Update a TrackSet based on a trackspec."""
         self.trackspec += trackspec
         for x in trackspec.split(':'):
+            if x == 'hswap':
+                self.hswap = True
+                continue
             k,v = x.split('=')
             if k == 'c':
                 cyls = [False]*100
@@ -129,6 +135,7 @@ class TrackSet:
                 self.step = int(v)
                 if self.step <= 0: raise ValueError()
             else:
+                print(k,v)
                 raise ValueError()
         
     def __str__(self):
@@ -139,6 +146,7 @@ class TrackSet:
             if x != 0:
                 s += ':h%d.off=%s%d' % (i, '+' if x >= 0 else '', x)
         if self.step != 1: s += ':step=%d' % self.step
+        if self.hswap: s += ':hswap'
         return s
 
     def __iter__(self):
