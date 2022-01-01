@@ -8,10 +8,4 @@ ZIP = zip -r
 UNZIP = unzip
 endif
 
-# Force execution of pattern rules (for which PHONY cannot be directly used).
-.PHONY: FORCE
-FORCE:
-
-.PHONY: clean
-
 .SECONDARY:
