@@ -36,7 +36,6 @@ jobs:
         path: greaseweazle-tools-${{ steps.vars.outputs.ref }}.zip
 
   build-windows:
-    needs: build-ubuntu
     runs-on: windows-2019
     steps:
 
@@ -46,11 +45,6 @@ jobs:
       id: vars
       run: |
         echo "::set-output name=ref::$(echo ${{ github.ref }} | sed -e's#.*/##')"
-
-    - name: Download Ubuntu build
-      uses: actions/download-artifact@v2
-      with:
-        name: greaseweazle-tools.ci.${{ steps.vars.outputs.ref }}
 
     - name: Set up Python
       uses: actions/setup-python@v2
@@ -73,7 +67,7 @@ jobs:
         path: greaseweazle-tools-${{ steps.vars.outputs.ref }}-win.zip
 
   finalise:
-    needs: build-windows
+    needs: [build-ubuntu, build-windows]
     runs-on: ubuntu-20.04
     steps:
 
@@ -91,10 +85,10 @@ jobs:
 
     - name: Remove 64-bit DLLS
       run: |
-        export P=greaseweazle-tools
-        export V=${{ steps.vars.outputs.ref }}
+        P=greaseweazle-tools
+        V=${{ steps.vars.outputs.ref }}
         unzip $P-$V-win.zip
-        find . -name 'api-ms-*' | xargs rm -f
+        find $P-$V -name 'api-ms-*' | xargs rm -f
         find $P-$V/lib -name 'python*.dll' | xargs rm -f
         find $P-$V/lib -name 'vcruntime140.dll' | xargs rm -f
         rm $P-$V-win.zip

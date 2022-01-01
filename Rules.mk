@@ -1,8 +1,3 @@
-TOOL_PREFIX = arm-none-eabi-
-CC = $(TOOL_PREFIX)gcc
-OBJCOPY = $(TOOL_PREFIX)objcopy
-LD = $(TOOL_PREFIX)ld
-
 ifeq ($(OS), Windows_NT)
 PYTHON = python
 ZIP = "C:/Program Files/7-Zip/7z.exe" a
@@ -13,52 +8,6 @@ ZIP = zip -r
 UNZIP = unzip
 endif
 
-ifneq ($(VERBOSE),1)
-TOOL_PREFIX := @$(TOOL_PREFIX)
-endif
-
-FLAGS  = -g -Os -nostdlib -std=gnu99 -iquote $(ROOT)/inc
-FLAGS += -Wall -Werror -Wno-format -Wdeclaration-after-statement
-FLAGS += -Wstrict-prototypes -Wredundant-decls -Wnested-externs
-FLAGS += -fno-common -fno-exceptions -fno-strict-aliasing
-FLAGS += -mlittle-endian -mthumb -mfloat-abi=soft
-FLAGS += -Wno-unused-value -ffunction-sections
-
-ifeq ($(mcu),stm32f1)
-FLAGS += -mcpu=cortex-m3 -DSTM32F1=1 -DMCU=1
-stm32f1=y
-else ifeq ($(mcu),stm32f7)
-FLAGS += -mcpu=cortex-m7 -DSTM32F7=7 -DMCU=7
-stm32f7=y
-else ifeq ($(mcu),at32f4)
-FLAGS += -mcpu=cortex-m4 -DAT32F4=4 -DMCU=4
-at32f4=y
-endif
-
-ifneq ($(debug),y)
-FLAGS += -DNDEBUG
-endif
-
-ifeq ($(bootloader),y)
-FLAGS += -DBOOTLOADER=1
-endif
-
-FLAGS += -MMD -MF .$(@F).d
-DEPS = .*.d
-
-FLAGS += $(FLAGS-y)
-
-CFLAGS += $(CFLAGS-y) $(FLAGS) -include decls.h
-AFLAGS += $(AFLAGS-y) $(FLAGS) -D__ASSEMBLY__
-LDFLAGS += $(LDFLAGS-y) $(FLAGS) -Wl,--gc-sections
-
-RULES_MK := y
-
-include Makefile
-
-SUBDIRS += $(SUBDIRS-y)
-OBJS += $(OBJS-y) $(patsubst %,%/build.o,$(SUBDIRS))
-
 # Force execution of pattern rules (for which PHONY cannot be directly used).
 .PHONY: FORCE
 FORCE:
@@ -66,51 +15,3 @@ FORCE:
 .PHONY: clean
 
 .SECONDARY:
-
-build.o: $(OBJS)
-	$(LD) -r -o $@ $^
-
-%/build.o: FORCE
-	$(MAKE) -f $(ROOT)/Rules.mk -C $* build.o
-
-%.o: %.c Makefile
-	@echo CC $@
-	$(CC) $(CFLAGS) -c $< -o $@
-
-%.o: %.S Makefile
-	@echo AS $@
-	$(CC) $(AFLAGS) -c $< -o $@
-
-%.ld: %.ld.S Makefile
-	@echo CPP $@
-	$(CC) -P -E $(AFLAGS) $< -o $@
-
-%.elf: $(OBJS) %.ld Makefile
-	@echo LD $@
-	$(CC) $(LDFLAGS) -T$(*F).ld $(OBJS) -o $@
-	chmod a-x $@
-
-%.hex: %.elf
-	@echo OBJCOPY $@
-	$(OBJCOPY) -O ihex $< $@
-	chmod a-x $@
-
-%.bin: %.elf
-	@echo OBJCOPY $@
-	$(OBJCOPY) -O binary $< $@
-	chmod a-x $@
-
-%.o: $(RPATH)/%.c Makefile
-	@echo CC $@
-	$(CC) $(CFLAGS) -c $< -o $@
-
-%.o: $(RPATH)/%.S Makefile
-	@echo AS $@
-	$(CC) $(AFLAGS) -c $< -o $@
-
-clean:: $(addprefix _clean_,$(SUBDIRS) $(SUBDIRS-n) $(SUBDIRS-))
-	rm -f *.orig *.rej *~ *.o *.elf *.hex *.bin *.ld $(DEPS)
-_clean_%: FORCE
-	$(MAKE) -f $(ROOT)/Rules.mk -C $* clean
-
--include $(DEPS)

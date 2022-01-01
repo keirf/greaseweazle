@@ -1,21 +1,14 @@
 
-export FW_MAJOR := 0
-export FW_MINOR := 35
+export MAJOR := 0
+export MINOR := 35
 
-TARGETS := all clean dist windist mrproper pysetup
+include Rules.mk
+
+TARGETS := all clean dist _windist windist mrproper pysetup
 .PHONY: $(TARGETS)
 
-ifneq ($(RULES_MK),y)
-
-export ROOT := $(CURDIR)
-
-$(TARGETS):
-	$(MAKE) -f $(ROOT)/Rules.mk $@
-
-else
-
 PROJ = greaseweazle-tools
-VER := v$(FW_MAJOR).$(FW_MINOR)
+VER := v$(MAJOR).$(MINOR)
 
 all: scripts/greaseweazle/version.py
 
@@ -43,11 +36,9 @@ dist: all
 	cp -a RELEASE_NOTES $(PROJ)-$(VER)/
 	$(ZIP) $(PROJ)-$(VER).zip $(PROJ)-$(VER)
 
-windist: pysetup
-	rm -rf $(PROJ)-$(VER) ipf ipf.zip
-	[ -e $(PROJ)-$(VER).zip ] || \
-	curl -L https://github.com/keirf/greaseweazle/releases/download/$(VER)/$(PROJ)-$(VER).zip --output $(PROJ)-$(VER).zip
-	$(UNZIP) $(PROJ)-$(VER).zip
+_windist:
+	rm -rf ipf ipf.zip
+	PYTHON=$(PYTHON) . ./scripts/setup.sh
 	cp -a scripts/setup.py $(PROJ)-$(VER)/scripts
 	cp -a scripts/greaseweazle/optimised/optimised* $(PROJ)-$(VER)/scripts/greaseweazle/optimised
 	cd $(PROJ)-$(VER)/scripts && $(PYTHON) setup.py build
@@ -59,14 +50,13 @@ windist: pysetup
 	rm -rf ipf ipf.zip
 	$(ZIP) $(PROJ)-$(VER)-win.zip $(PROJ)-$(VER)
 
+windist:
+	$(MAKE) dist
+	$(MAKE) _windist
+
 mrproper: clean
 	rm -rf $(PROJ)-* ipf ipf.zip
 
 scripts/greaseweazle/version.py: Makefile
-	echo "major = $(FW_MAJOR)" >$@
-	echo "minor = $(FW_MINOR)" >>$@
-
-pysetup: scripts/greaseweazle/version.py
-	PYTHON=$(PYTHON) . ./scripts/setup.sh
-
-endif
+	echo "major = $(MAJOR)" >$@
+	echo "minor = $(MINOR)" >>$@

@@ -14,6 +14,7 @@ jobs:
       id: vars
       run: |
         echo "::set-output name=sha_short::$(git rev-parse --short HEAD)"
+        echo "::set-output name=sha_long::$(git rev-parse HEAD)"
 
     - name: Dependency packages (apt)
       run: |
@@ -25,40 +26,23 @@ jobs:
 
     - name: Build dist
       run: |
-        export P=greaseweazle-tools
-        export V=${{ steps.vars.outputs.sha_short }}
-        make dist
-        mkdir -p _cidist
-        rm $P-v*.zip
-        mv $P-v* $P-$V
+        P=greaseweazle-tools
+        V=${{ steps.vars.outputs.sha_short }}
+        VL=${{ steps.vars.outputs.sha_long }}
+        make dist VER=$V
+        rm $P-$V.zip
         rm $P-$V/RELEASE_NOTES
-        git rev-parse HEAD >$P-$V/COMMIT
-        echo "commit = '$(git rev-parse HEAD)'" >>$P-$V/scripts/greaseweazle/version.py 
+        echo "$VL" >$P-$V/COMMIT
+        echo "commit = '$VL'" >>$P-$V/scripts/greaseweazle/version.py 
         zip -r $P-$V.zip $P-$V
-        mv $P-$V.zip _cidist/
-
-    - name: Build debug dist
-      run: |
-        export P=greaseweazle-tools
-        export V=${{ steps.vars.outputs.sha_short }}-debug
-        env debug=y make dist
-        rm $P-v*.zip
-        mv $P-v* $P-$V
-        rm $P-$V/RELEASE_NOTES
-        git rev-parse HEAD >$P-$V/COMMIT
-        echo debug >>$P-$V/COMMIT
-        echo "commit = '$(git rev-parse HEAD)'" >>$P-$V/scripts/greaseweazle/version.py 
-        zip -r $P-$V.zip $P-$V
-        mv $P-$V.zip _cidist/
 
     - name: Upload artifacts
       uses: actions/upload-artifact@v2
       with:
         name: greaseweazle-tools.ci.${{ steps.vars.outputs.sha_short }}
-        path: _cidist
+        path: greaseweazle-tools-${{ steps.vars.outputs.sha_short }}.zip
 
   build-windows:
-    needs: build-ubuntu
     runs-on: windows-2019
     steps:
 
@@ -68,11 +52,7 @@ jobs:
       id: vars
       run: |
         echo "::set-output name=sha_short::$(git rev-parse --short HEAD)"
-
-    - name: Download Ubuntu build
-      uses: actions/download-artifact@v2
-      with:
-        name: greaseweazle-tools.ci.${{ steps.vars.outputs.sha_short }}
+        echo "::set-output name=sha_long::$(git rev-parse HEAD)"
 
     - name: Set up Python
       uses: actions/setup-python@v2
@@ -87,7 +67,15 @@ jobs:
 
     - name: Build dist
       run: |
-        make windist VER=${{ steps.vars.outputs.sha_short }}
+        $P="greaseweazle-tools"
+        $V="${{ steps.vars.outputs.sha_short }}"
+        $VL="${{ steps.vars.outputs.sha_long }}"
+        make dist VER=$V
+        rm $P-$V.zip
+        rm $P-$V/RELEASE_NOTES
+        echo "$VL" >$P-$V/COMMIT
+        echo "commit = '$VL'" >>$P-$V/scripts/greaseweazle/version.py 
+        make _windist VER=$V
 
     - name: Upload artifacts
       uses: actions/upload-artifact@v2
@@ -96,7 +84,7 @@ jobs:
         path: greaseweazle-tools-${{ steps.vars.outputs.sha_short }}-win.zip
 
   finalise:
-    needs: build-windows
+    needs: [build-ubuntu, build-windows]
     runs-on: ubuntu-20.04
     steps:
 
@@ -112,12 +100,12 @@ jobs:
       with:
         name: greaseweazle-tools.ci.${{ steps.vars.outputs.sha_short }}
 
-    - name: Remove 64-bit DLLS
+    - name: Fix up Windows distribution
       run: |
-        export P=greaseweazle-tools
-        export V=${{ steps.vars.outputs.sha_short }}
+        P=greaseweazle-tools
+        V=${{ steps.vars.outputs.sha_short }}
         unzip $P-$V-win.zip
-        find . -name 'api-ms-*' | xargs rm -f
+        find $P-$V -name 'api-ms-*' | xargs rm -f
         find $P-$V/lib -name 'python*.dll' | xargs rm -f
         find $P-$V/lib -name 'vcruntime140.dll' | xargs rm -f
         rm $P-$V-win.zip
