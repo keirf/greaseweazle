@@ -20,14 +20,15 @@ class Image:
         return self
 
     def __exit__(self, type, value, tb):
+        save = type is None or type is KeyboardInterrupt
         try:
-            if type is None:
+            if save:
                 # No error: Normal writeout.
                 self.file.write(self.get_image())
         finally:
             # Always close the file.
             self.file.close()
-        if type is not None:
+        if not save:
             # An error occurred: We remove the target file.
             os.remove(self.filename)
 
