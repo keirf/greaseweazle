@@ -12,7 +12,7 @@ from greaseweazle import error
 from greaseweazle.flux import Flux
 from greaseweazle import optimised
 
-EARLIEST_SUPPORTED_FIRMWARE = (0, 25)
+EARLIEST_SUPPORTED_FIRMWARE = (0, 31)
 
 ## Control-Path command set
 class ControlCmd:
@@ -462,29 +462,13 @@ class Unit:
     ## source_bytes:
     ## Command Greaseweazle to source 'nr' garbage bytes.
     def source_bytes(self, nr, seed):
-        try:
-            self._send_cmd(struct.pack("<2B2I", Cmd.SourceBytes, 10, nr, seed))
-            dat = self.ser.read(nr)
-        except CmdError as error:
-            if error.code != Ack.BadCommand:
-                raise
-            # Firmware v0.28 and earlier
-            self._send_cmd(struct.pack("<2BI", Cmd.SourceBytes, 6, nr))
-            self.ser.read(nr)
-            dat = None
-        return dat
+        self._send_cmd(struct.pack("<2B2I", Cmd.SourceBytes, 10, nr, seed))
+        return self.ser.read(nr)
 
     ## sink_bytes:
     ## Command Greaseweazle to sink given data buffer.
     def sink_bytes(self, dat, seed):
-        try:
-            self._send_cmd(struct.pack("<2BII", Cmd.SinkBytes, 10,
-                                       len(dat), seed))
-        except CmdError as error:
-            if error.code != Ack.BadCommand:
-                raise
-            # Firmware v0.28 and earlier
-            self._send_cmd(struct.pack("<2BI", Cmd.SinkBytes, 6, len(dat)))
+        self._send_cmd(struct.pack("<2BII", Cmd.SinkBytes, 10, len(dat), seed))
         self.ser.write(dat)
         (ack,) = struct.unpack("B", self.ser.read(1))
         return ack
