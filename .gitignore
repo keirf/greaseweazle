@@ -18,5 +18,4 @@ scripts/greaseweazle/optimised/optimised*
 scripts/c_ext/build/
 scripts/c_ext/*.egg-info/
 greaseweazle-tools-*
-scripts/setup.sh
-scripts/setup.sh
+
