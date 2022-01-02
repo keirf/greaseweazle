@@ -9,7 +9,6 @@
 
 import argparse, os, sys, serial, struct, time, re, platform
 import importlib
-import logging
 import serial.tools.list_ports
 from collections import OrderedDict
 
@@ -225,6 +224,7 @@ def valid_ser_id(ser_id):
 
 def score_port(x, old_port=None):
     score = 0
+    
     if x.manufacturer == "Keir Fraser" and x.product == "Greaseweazle":
         score = 20
     elif x.vid == 0x1209 and x.pid == 0x4d69:
@@ -233,8 +233,8 @@ def score_port(x, old_port=None):
     elif x.vid == 0x1209 and x.pid == 0x0001:
         # Our old shared Test PID. It's not guaranteed to be us.
         score = 10
-    elif x.vid in (0x2E8A, 0x239A):
-        # Something from adafruit or raspberry pi
+    elif (x.vid, x.pid) in ((0x239A, 0x8022), (0x2E8A, 0x000A)):
+        # Adafruit Feather M4, RP2040 Pico
         score = 5
     if score > 0 and valid_ser_id(x.serial_number):
         # A valid serial id is a good sign unless this is a reopen, and
@@ -256,10 +256,8 @@ def score_port(x, old_port=None):
 
 def find_port(old_port=None):
     best_score, best_port = 0, None
-    logging.debug("Found these serial ports:")
     for x in serial.tools.list_ports.comports():
         score = score_port(x, old_port)
-        logging.debug("%s (%04X / %04X) with score of %d" % (x, x.vid, x.pid, score))
         if score > best_score:
             best_score, best_port = score, x
     if best_port:
