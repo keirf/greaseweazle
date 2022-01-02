@@ -16,7 +16,7 @@ class Image:
     ## Context manager for image objects created using .to_file()
 
     def __enter__(self):
-        self.file = open(self.filename, "wb")
+        self.file = open(self.filename, ('wb','xb')[self.noclobber])
         return self
 
     def __exit__(self, type, value, tb):
@@ -33,12 +33,13 @@ class Image:
 
     ## Default .to_file() constructor
     @classmethod
-    def to_file(cls, name, fmt=None):
+    def to_file(cls, name, fmt, noclobber):
         error.check(not cls.read_only,
                     "%s: Cannot create %s image files" % (name, cls.__name__))
         obj = cls()
         obj.filename = name
         obj.fmt = fmt
+        obj.noclobber = noclobber
         return obj
 
     # Maximum non-empty cylinder on each head, or -1 if no cylinders exist.

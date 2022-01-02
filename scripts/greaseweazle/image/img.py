@@ -47,9 +47,10 @@ Compatible formats:\n%s"""
 
 
     @classmethod
-    def to_file(cls, name, fmt=None):
-        return cls(name, fmt)
-
+    def to_file(cls, name, fmt, noclobber):
+        img = cls(name, fmt)
+        img.noclobber = noclobber
+        return img
 
     def get_track(self, cyl, side):
         if (cyl,side) not in self.to_track:

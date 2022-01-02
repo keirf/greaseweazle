@@ -57,10 +57,12 @@ Compatible formats:\n%s"""
 
 
     @classmethod
-    def to_file(cls, name, fmt):
+    def to_file(cls, name, fmt, noclobber):
         if fmt.img_compatible: # Acorn ADF
-            return IMG.to_file(name, fmt)
-        return cls(name, fmt)
+            return IMG.to_file(name, fmt, noclobber)
+        adf = cls(name, fmt)
+        adf.noclobber = noclobber
+        return adf
 
 
     def get_track(self, cyl, side):

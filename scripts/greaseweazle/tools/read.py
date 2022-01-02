@@ -20,7 +20,7 @@ from greaseweazle.codec import formats
 
 
 def open_image(args, image_class):
-    image = image_class.to_file(args.file, args.fmt_cls)
+    image = image_class.to_file(args.file, args.fmt_cls, args.no_clobber)
     if args.rate is not None:
         image.bitrate = args.rate
     for opt, val in args.file_opts.items():
@@ -128,6 +128,8 @@ def main(argv):
     parser.add_argument("--rpm", type=int, help="convert drive speed to RPM")
     parser.add_argument("--retries", type=int, default=3,
                         help="number of retries on decode failure")
+    parser.add_argument("-n", "--no-clobber", action="store_true",
+                        help="do not overwrite an existing file")
     parser.add_argument("file", help="output filename")
     parser.description = description
     parser.prog += ' ' + argv[1]

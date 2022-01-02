@@ -41,8 +41,10 @@ class KryoFlux(Image):
 
 
     @classmethod
-    def to_file(cls, name, fmt=None):
-        return cls(name)
+    def to_file(cls, name, fmt, noclobber):
+        kf = cls(name)
+        kf.noclobber = noclobber
+        return kf
 
     @classmethod
     def from_file(cls, name):
@@ -219,7 +221,7 @@ class KryoFlux(Image):
         dat += struct.pack('<2BH', Op.OOB, OOB.EOF, 0x0d0d)
 
         name = self.basename + '%02d.%d.raw' % (cyl, side)
-        with open(name, 'wb') as f:
+        with open(name, ('wb','xb')[self.noclobber]) as f:
                 f.write(dat)
 
 
