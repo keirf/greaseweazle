@@ -29,7 +29,7 @@ model_id = { 1: { 0: 'F1',
                   5: 'F7 Lightning Plus',
                   6: 'F7 Slim',
                   7: 'F7 v3 "Thunderbolt"' },
-             8: { 0: 'Adafruit Floppy Generic',}
+             8: { 0: 'Adafruit Floppy Interface supported by Greaseweazle tools',}
              }
 
 speed_id = { 0: 'Full Speed (12 Mbit/s)',
