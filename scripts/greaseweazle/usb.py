@@ -218,6 +218,9 @@ class Unit:
     ## Seek the selected drive's heads to the specified track (cyl, head).
     def seek(self, cyl, head):
         self._send_cmd(struct.pack("2Bb", Cmd.Seek, 3, cyl))
+        error.check(cyl < 0 or (cyl != 0) == self.get_pin(26),
+                    "Track0 signal %s after seek to cylinder %d"
+                    % (('absent', 'asserted')[cyl!=0], cyl))
         self._send_cmd(struct.pack("3B", Cmd.Head, 3, head))
 
 
@@ -238,7 +241,7 @@ class Unit:
     def get_pin(self, pin):
         self._send_cmd(struct.pack("3B", Cmd.GetPin, 3, pin))
         v, = struct.unpack("B", self.ser.read(1))
-        return v
+        return bool(v)
 
 
     ## power_on_reset:
