@@ -12,6 +12,13 @@
 import sys, time
 import importlib
 
+# NSB 2nd Feb 2022
+# Disable buffered stdout output so that processes on Windows
+# can receive line-by-line output
+import os
+if os.environ.get('OS','') == 'Windows_NT':
+    sys.stdout = sys.stderr
+
 from greaseweazle import version
 if hasattr(version, 'commit'):
     print("""*** TEST/PRE-RELEASE: commit %s
