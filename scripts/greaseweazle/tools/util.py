@@ -224,7 +224,6 @@ def valid_ser_id(ser_id):
 
 def score_port(x, old_port=None):
     score = 0
-    
     if x.manufacturer == "Keir Fraser" and x.product == "Greaseweazle":
         score = 20
     elif x.vid == 0x1209 and x.pid == 0x4d69:
