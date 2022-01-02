@@ -28,7 +28,9 @@ model_id = { 1: { 0: 'F1',
                   4: 'F7 Plus (Ant Goffart, v2)',
                   5: 'F7 Lightning Plus',
                   6: 'F7 Slim',
-                  7: 'F7 v3 "Thunderbolt"' } }
+                  7: 'F7 v3 "Thunderbolt"' },
+             8: { 0: 'Adafruit Floppy Generic',}
+             }
 
 speed_id = { 0: 'Full Speed (12 Mbit/s)',
              1: 'High Speed (480 Mbit/s)' }
