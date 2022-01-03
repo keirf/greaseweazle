@@ -31,8 +31,6 @@ class AmigaDOS:
     def summary_string(self):
         nsec, nbad = self.nsec, self.nr_missing()
         s = "AmigaDOS (%d/%d sectors)" % (nsec - nbad, nsec)
-        if nbad != 0:
-            s += " - %d sectors missing" % nbad
         return s
 
     # private

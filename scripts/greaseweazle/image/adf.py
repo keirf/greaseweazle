@@ -18,8 +18,8 @@ class ADF(Image):
 
     def __init__(self, name, fmt):
         self.to_track = dict()
-        error.check(fmt.adf_compatible, """\
-ADF image requires compatible format specifier
+        error.check(fmt is not None and fmt.adf_compatible, """\
+ADF image requires compatible format conversion
 Compatible formats:\n%s"""
                     % formats.print_formats(lambda k, v: v.adf_compatible))
         self.filename = name
@@ -29,7 +29,7 @@ Compatible formats:\n%s"""
     @classmethod
     def from_file(cls, name, fmt):
 
-        if fmt.img_compatible: # Acorn ADF
+        if fmt is not None and fmt.img_compatible: # Acorn ADF
             return IMG.from_file(name, fmt)
 
         with open(name, "rb") as f:
@@ -58,7 +58,7 @@ Compatible formats:\n%s"""
 
     @classmethod
     def to_file(cls, name, fmt, noclobber):
-        if fmt.img_compatible: # Acorn ADF
+        if fmt is not None and fmt.img_compatible: # Acorn ADF
             return IMG.to_file(name, fmt, noclobber)
         adf = cls(name, fmt)
         adf.noclobber = noclobber

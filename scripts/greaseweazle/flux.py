@@ -34,6 +34,16 @@ class Flux:
                 % (len(self.list), sum(self.list)*1000/self.sample_freq))
 
 
+    def append(self, flux):
+        error.check(self.sample_freq == flux.sample_freq,
+                    "Cannot append flux with different sample frequency")
+        # Any trailing flux is incorporated into the first revolution of
+        # the appended flux.
+        rev0 = flux.index_list[0] + sum(self.list) - sum(self.index_list)
+        self.index_list += [rev0] + flux.index_list[1:]
+        self.list += flux.list
+
+
     def cue_at_index(self):
 
         if self.index_cued:

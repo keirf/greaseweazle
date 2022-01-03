@@ -20,7 +20,8 @@ from greaseweazle.codec import formats
 
 
 def open_image(args, image_class):
-    image = image_class.to_file(args.file, args.fmt_cls, args.no_clobber)
+    image = image_class.to_file(
+        args.file, None if args.raw else args.fmt_cls, args.no_clobber)
     for opt, val in args.file_opts.items():
         error.check(hasattr(image, 'opts') and hasattr(image.opts, opt),
                     "%s: Invalid file option: %s" % (args.file, opt))
@@ -36,19 +37,31 @@ def read_and_normalise(usb, args, revs, ticks=0):
 
 
 def read_with_retry(usb, args, cyl, head, decoder):
+
     flux = read_and_normalise(usb, args, args.revs, args.ticks)
     if decoder is None:
-        return flux
+        print("T%u.%u: %s" % (cyl, head, flux.summary_string()))
+        return flux, flux
+
     dat = decoder(cyl, head, flux)
-    if dat.nr_missing() != 0:
-        for retry in range(args.retries):
-            print("T%u.%u: %s - Retrying (%d)"
-                  % (cyl, head, dat.summary_string(), retry+1))
-            flux = read_and_normalise(usb, args, max(args.revs, 3))
-            dat.decode_raw(flux)
-            if dat.nr_missing() == 0:
-                break
-    return dat
+
+    retry = 0
+    while True:
+        print("T%u.%u: %s from %s" % (cyl, head, dat.summary_string(),
+                                      flux.summary_string()))
+        if dat.nr_missing() == 0:
+            break
+        if retry == args.retries:
+            print("T%u.%u: Giving up: %d sectors missing"
+                  % (cyl, head, dat.nr_missing()))
+            break
+        retry += 1
+        print("T%u.%u: Retry #%d" % (cyl, head, retry))
+        _flux = read_and_normalise(usb, args, max(args.revs, 3))
+        dat.decode_raw(_flux)
+        flux.append(_flux)
+
+    return flux, dat
 
 
 def print_summary(args, summary):
@@ -97,13 +110,10 @@ def read_to_image(usb, args, image, decoder=None):
     for t in args.tracks:
         cyl, head = t.cyl, t.head
         usb.seek(t.physical_cyl, t.physical_head)
-        dat = read_with_retry(usb, args, cyl, head, decoder)
-        s = "T%u.%u: %s" % (cyl, head, dat.summary_string())
-        if hasattr(dat, 'nr_missing') and dat.nr_missing() != 0:
-            s += " - Giving up"
-        print(s)
-        summary[cyl,head] = dat
-        image.emit_track(cyl, head, dat)
+        flux, dat = read_with_retry(usb, args, cyl, head, decoder)
+        if decoder is not None:
+            summary[cyl,head] = dat
+        image.emit_track(cyl, head, flux if args.raw else dat)
 
     if decoder is not None:
         print_summary(args, summary)
@@ -117,11 +127,13 @@ def main(argv):
     parser.add_argument("--device", help="device name (COM/serial port)")
     parser.add_argument("--drive", type=util.drive_letter, default='A',
                         help="drive to read (A,B,0,1,2)")
-    parser.add_argument("--format", help="disk format")
+    parser.add_argument("--format", help="disk format (output is converted unless --raw)")
     parser.add_argument("--revs", type=int,
                         help="number of revolutions to read per track")
     parser.add_argument("--tracks", type=util.TrackSet,
                         help="which tracks to read")
+    parser.add_argument("--raw", action="store_true",
+                        help="output raw stream (--format verifies only)")
     parser.add_argument("--rpm", type=int, help="convert drive speed to RPM")
     parser.add_argument("--retries", type=int, default=3,
                         help="number of retries on decode failure")

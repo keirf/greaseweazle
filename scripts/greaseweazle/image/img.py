@@ -18,7 +18,7 @@ class IMG(Image):
     def __init__(self, name, fmt):
         self.to_track = dict()
         error.check(fmt is not None and fmt.img_compatible, """\
-Sector image requires compatible format specifier
+Sector image requires compatible format conversion
 Compatible formats:\n%s"""
                     % formats.print_formats(
                         lambda k, v: v.img_compatible))

@@ -60,8 +60,6 @@ class IBM_FM:
     def summary_string(self):
         nsec, nbad = len(self.sectors), self.nr_missing()
         s = "IBM FM (%d/%d sectors)" % (nsec - nbad, nsec)
-        if nbad != 0:
-            s += " - %d sectors missing" % nbad
         return s
 
     def has_sec(self, sec_id):
