@@ -23,7 +23,7 @@ def level(letter):
 def pin_set(argv):
 
     parser = util.ArgumentParser(usage='%(prog)s [options] pin level')
-    parser.add_argument("--device", help="greaseweazle device name")
+    parser.add_argument("--device", help="device name (COM/serial port)")
     parser.add_argument("pin", type=int, help="pin number")
     parser.add_argument("level", type=level, help="pin level (H,L)")
     parser.description = description
@@ -48,7 +48,7 @@ def _pin_get(usb, args, **_kwargs):
 def pin_get(argv):
 
     parser = util.ArgumentParser(usage='%(prog)s [options] pin')
-    parser.add_argument("--device", help="greaseweazle device name")
+    parser.add_argument("--device", help="device name (COM/serial port)")
     parser.add_argument("--drive", type=util.drive_letter, default='A',
                         help="drive to read (A,B,0,1,2)")
     parser.add_argument("pin", type=int, help="pin number")

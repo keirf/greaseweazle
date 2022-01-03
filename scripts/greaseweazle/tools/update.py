@@ -103,7 +103,7 @@ def main(argv):
 
     parser = util.ArgumentParser(allow_abbrev=False, usage='%(prog)s [options] [file]')
     parser.add_argument("file", nargs="?", help="update filename")
-    parser.add_argument("--device", help="greaseweazle device name")
+    parser.add_argument("--device", help="device name (COM/serial port)")
     parser.add_argument("--force", action="store_true",
                         help="force update even if firmware is older")
     parser.add_argument("--bootloader", action="store_true",

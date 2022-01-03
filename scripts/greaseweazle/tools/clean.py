@@ -36,7 +36,7 @@ def clean(usb, args):
 def main(argv):
 
     parser = util.ArgumentParser(usage='%(prog)s [options]')
-    parser.add_argument("--device", help="greaseweazle device name")
+    parser.add_argument("--device", help="device name (COM/serial port)")
     parser.add_argument("--drive", type=util.drive_letter, default='A',
                         help="drive to write (A,B,0,1,2)")
     parser.add_argument("--cyls", type=int, default=80,

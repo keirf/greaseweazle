@@ -75,7 +75,7 @@ def measure_bandwidth(usb, args):
 def main(argv):
 
     parser = util.ArgumentParser(usage='%(prog)s [options]')
-    parser.add_argument("--device", help="greaseweazle device name")
+    parser.add_argument("--device", help="device name (COM/serial port)")
     parser.description = description
     parser.prog += ' ' + argv[1]
     args = parser.parse_args(argv[2:])
