@@ -12,10 +12,30 @@ from greaseweazle.track import MasterTrack, RawTrack
 from bitarray import bitarray
 from .image import Image
 
+class HFEOpts:
+    """bitrate: Bitrate of new HFE image file.
+    """
+    
+    def __init__(self):
+        self._bitrate = 250 # double density micro-diskette
+
+    @property
+    def bitrate(self):
+        return self._bitrate
+    @bitrate.setter
+    def bitrate(self, bitrate):
+        try:
+            self._bitrate = int(bitrate)
+            if self._bitrate <= 0:
+                raise ValueError
+        except ValueError:
+            raise error.Fatal("HFE: Invalid bitrate: '%s'" % bitrate)
+
+
 class HFE(Image):
 
     def __init__(self):
-        self.bitrate = 250 # XXX real bitrate?
+        self.opts = HFEOpts()
         # Each track is (bitlen, rawbytes).
         # rawbytes is a bytes() object in little-endian bit order.
         self.to_track = dict()
@@ -33,10 +53,9 @@ class HFE(Image):
         error.check(sig == b"HXCPICFE" and f_rev <= 1, "Not a valid HFE file")
         error.check(0 < n_cyl, "HFE: Invalid #cyls")
         error.check(0 < n_side < 3, "HFE: Invalid #sides")
-        error.check(bitrate != 0, "HFE: Invalid bitrate")
 
         hfe = cls()
-        hfe.bitrate = bitrate
+        hfe.opts.bitrate = bitrate
 
         tlut = dat[tlut_base*512:tlut_base*512+n_cyl*4]
         
@@ -64,14 +83,14 @@ class HFE(Image):
         tdat.frombytes(rawbytes)
         track = MasterTrack(
             bits = tdat[:bitlen],
-            time_per_rev = bitlen / (2000*self.bitrate))
+            time_per_rev = bitlen / (2000*self.opts.bitrate))
         return track
 
 
     def emit_track(self, cyl, side, track):
         flux = track.flux()
         flux.cue_at_index()
-        raw = RawTrack(clock = 5e-4 / self.bitrate, data = flux)
+        raw = RawTrack(clock = 5e-4 / self.opts.bitrate, data = flux)
         bits, _ = raw.get_revolution(0)
         bits.bytereverse()
         self.to_track[cyl,side] = (len(bits), bits.tobytes())
@@ -93,7 +112,7 @@ class HFE(Image):
             s1 = self.to_track[i,1] if (i,1) in self.to_track else None
             if s0 is None and s1 is None:
                 # Dummy data for empty cylinders. Assumes 300RPM.
-                nr_bytes = 100 * self.bitrate
+                nr_bytes = 100 * self.opts.bitrate
                 tlut += struct.pack("<2H", len(tdat)//512 + 2, nr_bytes)
                 tdat += bytes([0x88] * (nr_bytes+0x1ff & ~0x1ff))
             else:
@@ -117,7 +136,7 @@ class HFE(Image):
                              n_cyl,
                              n_side,
                              0xff, # unknown encoding
-                             self.bitrate,
+                             self.opts.bitrate,
                              0,    # rpm (unused)
                              0xff, # unknown interface
                              1,    # rsvd

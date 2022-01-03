@@ -21,8 +21,6 @@ from greaseweazle.codec import formats
 
 def open_image(args, image_class):
     image = image_class.to_file(args.file, args.fmt_cls, args.no_clobber)
-    if args.rate is not None:
-        image.bitrate = args.rate
     for opt, val in args.file_opts.items():
         error.check(hasattr(image, 'opts') and hasattr(image.opts, opt),
                     "%s: Invalid file option: %s" % (args.file, opt))
@@ -124,7 +122,6 @@ def main(argv):
                         help="number of revolutions to read per track")
     parser.add_argument("--tracks", type=util.TrackSet,
                         help="which tracks to read")
-    parser.add_argument("--rate", type=int, help="data rate (kbit/s)")
     parser.add_argument("--rpm", type=int, help="convert drive speed to RPM")
     parser.add_argument("--retries", type=int, default=3,
                         help="number of retries on decode failure")
