@@ -19,7 +19,7 @@ from greaseweazle import version
 from greaseweazle import usb as USB
 
 def update_firmware(usb, dat, args):
-    '''Updates the Greaseweazle firmware using the specified Update File.'''
+    '''Updates the device firmware using the specified Update File.'''
 
     if args.bootloader:
         ack = usb.update_bootloader(dat)
@@ -37,7 +37,7 @@ def update_firmware(usb, dat, args):
         print("Done.")
     
         if not usb.jumperless_update:
-            print("** Disconnect Greaseweazle and remove the Update Jumper")
+            print("** Unplug device and remove the Update Jumper")
 
 
 def extract_update(usb, dat, args):

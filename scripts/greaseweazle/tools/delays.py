@@ -7,8 +7,7 @@
 # This is free and unencumbered software released into the public domain.
 # See the file COPYING for more details, or visit <http://unlicense.org>.
 
-description = "Display (and optionally modify) Greaseweazle \
-drive-delay parameters."
+description = "Display (and optionally modify) drive-delay parameters."
 
 import sys
 

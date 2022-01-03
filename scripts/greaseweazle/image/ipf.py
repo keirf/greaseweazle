@@ -316,7 +316,7 @@ def open_libcaps():
     error.check("lib" in locals(), """\
 Could not find SPS/CAPS IPF decode library
 For installation instructions please read the wiki:
-<https://github.com/keirf/Greaseweazle/wiki/IPF-Images>""")
+<https://github.com/keirf/greaseweazle/wiki/IPF-Images>""")
     
     # We have opened the library. Now initialise it.
     res = lib.CAPSInit()

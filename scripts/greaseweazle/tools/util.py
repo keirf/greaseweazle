@@ -309,7 +309,7 @@ def usb_mode_check(usb, is_update):
             usb = usb_reopen(usb, is_update)
             if not usb.update_mode:
                 return usb
-        print("ERROR: Greaseweazle is in Firmware Update Mode")
+        print("ERROR: Device is in Firmware Update Mode")
         print(" - The only available action is \"gw update\"")
         if usb.update_jumpered:
             print(" - For normal operation disconnect from USB and remove "
@@ -323,15 +323,15 @@ def usb_mode_check(usb, is_update):
         if usb.can_mode_switch:
             usb = usb_reopen(usb, is_update)
             error.check(usb.update_mode, """\
-Greaseweazle did not change to Firmware Update Mode as requested.
+Device did not change to Firmware Update Mode as requested.
 If the problem persists, install the Update Jumper at pins RXI-TXO.""")
             return usb
-        print("ERROR: Greaseweazle is not in Firmware Update Mode")
+        print("ERROR: Device is not in Firmware Update Mode")
         print_update_instructions(usb)
         sys.exit(1)
 
     if not usb.update_mode and usb.update_needed:
-        print("ERROR: Greaseweazle firmware v%u.%u is unsupported"
+        print("ERROR: Device firmware v%u.%u is unsupported"
               % (usb.major, usb.minor))
         print_update_instructions(usb)
         sys.exit(1)
