@@ -232,9 +232,6 @@ def score_port(x, old_port=None):
     elif x.vid == 0x1209 and x.pid == 0x0001:
         # Our old shared Test PID. It's not guaranteed to be us.
         score = 10
-    elif (x.vid, x.pid) in ((0x239A, 0x8022), (0x2E8A, 0x000A)):
-        # Adafruit Feather M4, RP2040 Pico
-        score = 5
     if score > 0 and valid_ser_id(x.serial_number):
         # A valid serial id is a good sign unless this is a reopen, and
         # the serials don't match!
