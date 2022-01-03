@@ -9,7 +9,7 @@
 # This is free and unencumbered software released into the public domain.
 # See the file COPYING for more details, or visit <http://unlicense.org>.
 
-import sys, time
+import sys, time, struct
 import importlib
 
 from greaseweazle import version
@@ -92,7 +92,7 @@ try:
     res = main(argv)
     if res is None:
         res = 0
-except (IndexError, AssertionError, TypeError, KeyError):
+except (IndexError, AssertionError, TypeError, KeyError, struct.error):
     raise
 except KeyboardInterrupt:
     if backtrace: raise
