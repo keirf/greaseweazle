@@ -28,7 +28,8 @@ model_id = { 1: { 0: 'F1',
                   4: 'F7 Plus (Ant Goffart, v2)',
                   5: 'F7 Lightning Plus',
                   6: 'F7 Slim',
-                  7: 'F7 v3 "Thunderbolt"' } }
+                  7: 'F7 v3 "Thunderbolt"' },
+             8: { 0: 'Adafruit Floppy Generic' } }
 
 speed_id = { 0: 'Full Speed (12 Mbit/s)',
              1: 'High Speed (480 Mbit/s)' }
@@ -75,6 +76,8 @@ def main(argv):
 
     try:
         model = model_id[usb.hw_model][usb.hw_submodel]
+        if usb.hw_model != 8:
+            model = 'Greaseweazle ' + model
     except KeyError:
         model = 'Unknown (0x%02X%02X)' % (usb.hw_model, usb.hw_submodel)
     print_info_line('Model', model, tab=2)
