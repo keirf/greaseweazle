@@ -130,8 +130,9 @@ class IBM_MFM:
         return self.raw_track().flux(*args, **kwargs)
 
     def decode_raw(self, track):
-        track.cue_at_index()
-        raw = RawTrack(clock = self.clock, data = track)
+        flux = track.flux()
+        flux.cue_at_index()
+        raw = RawTrack(clock = self.clock, data = flux)
         bits, _ = raw.get_all_data()
 
         areas = []

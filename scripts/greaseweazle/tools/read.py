@@ -10,7 +10,6 @@
 description = "Read a disk to the specified image file."
 
 import sys
-import importlib
 
 from greaseweazle.tools import util
 from greaseweazle import error

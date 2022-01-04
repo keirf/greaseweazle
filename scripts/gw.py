@@ -51,6 +51,7 @@ For installation instructions please read the wiki:
 actions = [ 'info',
             'read',
             'write',
+            'convert',
             'erase',
             'clean',
             'seek',

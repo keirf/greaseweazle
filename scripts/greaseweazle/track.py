@@ -50,6 +50,10 @@ class MasterTrack:
     def bitrate(self):
         return len(self.bits) / self.time_per_rev
 
+    def scale(self, factor):
+        """Scale up index timing by specified factor."""
+        self.time_per_rev *= factor
+
     # bits: Track bitcell data, aligned to the write splice (bitarray or bytes)
     # time_per_rev: Time per revolution, in seconds (float)
     # bit_ticks: Per-bitcell time values, in unitless 'ticks'
@@ -71,7 +75,7 @@ class MasterTrack:
     def __str__(self):
         s = "\nMaster Track: splice @ %d\n" % self.splice
         s += (" %d bits, %.1f kbit/s"
-              % (len(self.bits), self.bitrate))
+              % (len(self.bits), self.bitrate/1000))
         if self.bit_ticks:
             s += " (variable)"
         s += ("\n %.1f ms / rev (%.1f rpm)"
@@ -81,6 +85,16 @@ class MasterTrack:
             if len(self.weak) > 1: s += "s"
             s += ": " + ", ".join(str(n) for _,n in self.weak) + " bits"
         #s += str(binascii.hexlify(self.bits.tobytes()))
+        return s
+
+    def summary_string(self):
+        s = ('Master Track (%d bits, %.1f kbit/s, %.1f rpm'
+             % (len(self.bits), self.bitrate/1000, 60 / self.time_per_rev))
+        if self.bit_ticks:
+            s += ', variable'
+        if len(self.weak) > 0:
+            s += ', weak'
+        s += ')'
         return s
 
     def flux_for_writeout(self, cue_at_index=True):
