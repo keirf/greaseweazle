@@ -90,12 +90,16 @@ class IBM_FM:
 
         for offs in bits.itersearch(sync_prefix):
             offs += 16
+            if len(bits) < offs+1*16:
+                continue
             mark = decode(bits[offs:offs+1*16].tobytes())[0]
             clock = decode(bits[offs-1:offs+1*16-1].tobytes())[0]
             if clock != 0xc7:
                 continue
             if mark == IBM_FM.IDAM:
                 s, e = offs, offs+7*16
+                if len(bits) < e:
+                    continue
                 b = decode(bits[s:e].tobytes())
                 c,h,r,n = struct.unpack(">x4B2x", b)
                 crc = crc16.new(b).crcValue
@@ -108,6 +112,8 @@ class IBM_FM:
                 else:
                     sz = 128 << idam.n
                     s, e = offs, offs+(1+sz+2)*16
+                    if len(bits) < e:
+                        continue
                     b = decode(bits[s:e].tobytes())
                     crc = crc16.new(b).crcValue
                     dam = DAM(s, e, crc, mark=mark, data=b[1:-2])

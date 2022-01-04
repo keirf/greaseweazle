@@ -141,6 +141,8 @@ class IBM_MFM:
         ## 1. Calculate offsets within dump
         
         for offs in bits.itersearch(iam_sync):
+            if len(bits) < offs+4*16:
+                continue
             mark = decode(bits[offs+3*16:offs+4*16].tobytes())[0]
             if mark == IBM_MFM.IAM:
                 areas.append(IAM(offs, offs+4*16))
@@ -148,9 +150,13 @@ class IBM_MFM:
 
         for offs in bits.itersearch(sync):
 
+            if len(bits) < offs+4*16:
+                continue
             mark = decode(bits[offs+3*16:offs+4*16].tobytes())[0]
             if mark == IBM_MFM.IDAM:
                 s, e = offs, offs+10*16
+                if len(bits) < e:
+                    continue
                 b = decode(bits[s:e].tobytes())
                 c,h,r,n = struct.unpack(">4x4B2x", b)
                 crc = crc16.new(b).crcValue
@@ -163,6 +169,8 @@ class IBM_MFM:
                 else:
                     sz = 128 << idam.n
                     s, e = offs, offs+(4+sz+2)*16
+                    if len(bits) < e:
+                        continue
                     b = decode(bits[s:e].tobytes())
                     crc = crc16.new(b).crcValue
                     dam = DAM(s, e, crc, mark=mark, data=b[4:-2])
