@@ -45,9 +45,8 @@ def write_from_image(usb, args, image):
         if track is None and not args.erase_empty:
             continue
 
-        print("\r%sing Track %u.%u..." %
-              ("Writ" if track is not None else "Eras", cyl, head),
-              end="", flush=True)
+        print("%sing Track %u.%u" %
+              ("Writ" if track is not None else "Eras", cyl, head))
         usb.seek(t.physical_cyl, t.physical_head)
 
         if track is None:
@@ -55,7 +54,11 @@ def write_from_image(usb, args, image):
             continue
 
         if args.raw_image_class and args.fmt_cls is not None:
-            track = args.fmt_cls.decode_track(cyl, head, track).raw_track()
+            track = args.fmt_cls.decode_track(cyl, head, track)
+            error.check(track.nr_missing() == 0,
+                        'T%u.%u: %u missing sectors in input image'
+                        % (cyl, head, track.nr_missing()))
+            track = track.raw_track()
 
         if args.precomp is not None:
             track.precomp = args.precomp.track_precomp(cyl)
@@ -101,11 +104,8 @@ def write_from_image(usb, args, image):
             if verified:
                 verified_count += 1
                 break
-            if retry == 0:
-                print()
         error.check(verified, "Failed to verify Track %u.%u" % (cyl, head))
 
-    print()
     if not_verified_count == 0:
         print("All tracks verified")
     else:
