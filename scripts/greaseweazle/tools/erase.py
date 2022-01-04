@@ -22,11 +22,9 @@ def erase(usb, args):
 
     for t in args.tracks:
         cyl, head = t.cyl, t.head
-        print("\rErasing Track %u.%u..." % (cyl, head), end="")
+        print("Erasing Track %u.%u" % (cyl, head))
         usb.seek(t.physical_cyl, t.physical_head)
         usb.erase_track(drive_ticks * 1.1)
-
-    print()
 
 
 def main(argv):
