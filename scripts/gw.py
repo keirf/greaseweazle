@@ -12,6 +12,10 @@
 import sys, time, struct
 import importlib
 
+# Put all logging/printing on stderr. This keeps stdout clean for future use,
+# and prevents excessive output buffering (stderr is unbuffered).
+sys.stdout = sys.stderr
+
 from greaseweazle import version
 if hasattr(version, 'commit'):
     print("""*** TEST/PRE-RELEASE: commit %s
