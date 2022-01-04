@@ -88,7 +88,7 @@ class MasterTrack:
         return s
 
     def summary_string(self):
-        s = ('Master Track (%d bits, %.1f kbit/s, %.1f rpm'
+        s = ('Bitcells (%d bits, %.1f kbit/s, %.1f rpm'
              % (len(self.bits), self.bitrate/1000, 60 / self.time_per_rev))
         if self.bit_ticks:
             s += ', variable'
