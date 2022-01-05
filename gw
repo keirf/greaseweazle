@@ -2,8 +2,8 @@
 
 import sys, os
 
-if sys.version_info < (3,0,0):
-    print('** FATAL ERROR: Greaseweazle requires Python 3')
+if sys.version_info < (3,7,0):
+    print('** FATAL ERROR: Greaseweazle requires Python 3.7 or later')
     sys.exit(1)
 
 # Update the search path and import the real script

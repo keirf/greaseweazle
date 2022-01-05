@@ -14,8 +14,7 @@ import importlib
 
 # Put all logging/printing on stderr. This keeps stdout clean for future use.
 # Configure line buffering, even if the logging output is not to a console.
-if sys.version_info >= (3,7,0):
-    sys.stderr.reconfigure(line_buffering=True)
+sys.stderr.reconfigure(line_buffering=True)
 sys.stdout = sys.stderr
 
 from greaseweazle import version
