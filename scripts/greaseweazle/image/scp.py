@@ -151,9 +151,6 @@ class SCP(Image):
                 pos += chk_len
 
         scp = cls()
-        scp.nr_revs = nr_revs
-        if not index_cued:
-            scp.nr_revs -= 1
 
         for trknr in range(len(trk_offs)):
             
@@ -167,10 +164,22 @@ class SCP(Image):
             error.check(sig == b"TRK", "SCP: Missing track signature")
             error.check(tnr == trknr, "SCP: Wrong track number in header")
             thdr = thdr[4:] # Remove TRK header
-            if not index_cued: # Remove first partial revolution
+
+            # Strip empty trailing revolutions (old versions of FluxEngine).
+            while thdr:
+                e_ticks, e_nr, e_off = struct.unpack("<3I", thdr[-12:])
+                if e_nr != 0 and e_ticks != 0:
+                    break
+                thdr = thdr[:-12]
+            # Bail if all revolutions are empty.
+            if not thdr:
+                continue
+
+            # Clip the first revolution if it's not flagged as index cued
+            # and there's more than one revolution.
+            if not index_cued and len(thdr) > 12:
                 thdr = thdr[12:]
             s_off, = struct.unpack("<I", thdr[8:12])
-            _, e_nr, e_off = struct.unpack("<3I", thdr[-12:])
 
             e_off += e_nr*2
             if s_off == e_off:
