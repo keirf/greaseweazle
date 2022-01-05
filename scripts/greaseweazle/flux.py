@@ -142,6 +142,14 @@ class WriteoutFlux(Flux):
         return s
 
 
+    def summary_string(self):
+        s = ("Flux: %.1fms period, %.1f ms total, %s"
+             % (self.index_list[0]*1000/self.sample_freq,
+                sum(self.list)*1000/self.sample_freq,
+                ("Write all", "Terminate at index")[self.terminate_at_index]))
+        return s
+
+
     def flux_for_writeout(self):
         return self
  

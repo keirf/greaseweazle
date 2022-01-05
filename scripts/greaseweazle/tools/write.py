@@ -45,11 +45,10 @@ def write_from_image(usb, args, image):
         if track is None and not args.erase_empty:
             continue
 
-        print("%sing Track %u.%u" %
-              ("Writ" if track is not None else "Eras", cyl, head))
         usb.seek(t.physical_cyl, t.physical_head)
 
         if track is None:
+            print("T%u.%u: Erasing Track" % (cyl, head))
             usb.erase_track(drive.ticks_per_rev * 1.1)
             continue
 
@@ -80,9 +79,12 @@ def write_from_image(usb, args, image):
         # Encode the flux times for Greaseweazle, and write them out.
         verified = False
         for retry in range(args.retries+1):
+            s = "T%u.%u: Writing Track" % (cyl, head)
             if retry != 0:
-                print("T%u.%u: Verify Failure - Retry (%d)"
-                      % (cyl, head, retry))
+                s += " (Verify Failure: Retry #%u)" % retry
+            else:
+                s += " (%s)" % flux.summary_string()
+            print(s)
             usb.write_track(flux_list = flux_list,
                             cue_at_index = flux.index_cued,
                             terminate_at_index = flux.terminate_at_index)

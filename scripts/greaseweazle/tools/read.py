@@ -46,8 +46,11 @@ def read_with_retry(usb, args, cyl, head, decoder):
 
     retry = 0
     while True:
-        print("T%u.%u: %s from %s" % (cyl, head, dat.summary_string(),
-                                      flux.summary_string()))
+        s = "T%u.%u: %s from %s" % (cyl, head, dat.summary_string(),
+                                    flux.summary_string())
+        if retry != 0:
+            s += " (Retry #%u)" % retry
+        print(s)
         if dat.nr_missing() == 0:
             break
         if retry == args.retries:
@@ -55,7 +58,6 @@ def read_with_retry(usb, args, cyl, head, decoder):
                   % (cyl, head, dat.nr_missing()))
             break
         retry += 1
-        print("T%u.%u: Retry #%d" % (cyl, head, retry))
         _flux = read_and_normalise(usb, args, max(args.revs, 3))
         dat.decode_raw(_flux)
         flux.append(_flux)
