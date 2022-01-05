@@ -17,7 +17,7 @@ class HFEOpts:
     """
     
     def __init__(self):
-        self._bitrate = 250 # double density micro-diskette
+        self._bitrate = None
 
     @property
     def bitrate(self):
@@ -88,6 +88,14 @@ class HFE(Image):
 
 
     def emit_track(self, cyl, side, track):
+        if self.opts.bitrate is None:
+            t = track.raw_track() if hasattr(track, 'raw_track') else track
+            b = getattr(t, 'bitrate', None)
+            error.check(hasattr(t, 'bitrate'),
+                        'HFE: Requires bitrate to be specified'
+                        ' (eg. filename.hfe::bitrate=500)')
+            self.opts.bitrate = round(t.bitrate / 2e3)
+            print('HFE: Data bitrate detected: %d kbit/s' % self.opts.bitrate)
         flux = track.flux()
         flux.cue_at_index()
         raw = RawTrack(clock = 5e-4 / self.opts.bitrate, data = flux)
