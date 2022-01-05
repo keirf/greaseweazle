@@ -3,6 +3,20 @@
 ** Keir Fraser <keir.xen@gmail.com>
 ************************************
 
+** v0.36 - 5 January 2022
+ - Tools now require firmware >= v0.31
+ - New commands: gw convert, gw rpm
+ - gw read, gw convert: New option --no-clobber prevents file overwrites
+ - gw read: Save partial output image file on ctrl-c
+ - gw read: Option --rate replaced by HFE sub-option 'bitrate'
+ - gw read: New option --raw forces raw flux output even if --format specified
+ - Recognise new third-party hardware: "Adafruit Floppy Generic"
+ - Sanity check TRK0 signal after every head seek
+ - Rename sega.sf7 format to sega.sf7000
+ - New --tracks sub-option hswap: Treat side 1 as side 0 and vice versa
+ - ibm mfm, fm: Fix parsing sectors that extend past end of dump
+ - All output is now to stderr (consistent, and unbuffered)
+
 ** v0.35 - 30 December 2021
  - Fix Windows distribution to include optimised data routines
  - Support Sega SF-7000 disk format (sega.sf7) and .SF7 image suffix
