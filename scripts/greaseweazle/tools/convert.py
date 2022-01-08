@@ -7,7 +7,7 @@
 
 description = "Convert between image formats."
 
-import sys
+import sys, copy
 
 import greaseweazle.tools.read
 from greaseweazle.tools import util
@@ -43,7 +43,7 @@ def convert(args, in_image, out_image, decoder=None):
 
         cyl, head = t.cyl, t.head
 
-        track = in_image.get_track(cyl, head)
+        track = in_image.get_track(t.physical_cyl, t.physical_head)
         if track is None:
             continue
 
@@ -57,9 +57,14 @@ def convert(args, in_image, out_image, decoder=None):
             dat = decoder(cyl, head, track)
             print("T%u.%u: %s from %s" % (cyl, head, dat.summary_string(),
                                           track.summary_string()))
-            summary[cyl,head] = dat
+        summary[cyl,head] = dat
 
-        out_image.emit_track(cyl, head, dat)
+    for t in args.out_tracks:
+        cyl, head = t.cyl, t.head
+        if (cyl, head) not in summary:
+            continue
+        dat = summary[cyl,head]
+        out_image.emit_track(t.physical_cyl, t.physical_head, dat)
 
     if decoder is not None:
         greaseweazle.tools.read.print_summary(args, summary)
@@ -72,8 +77,13 @@ def main(argv):
                                  epilog=epilog)
     parser.add_argument("--format", help="disk format")
     parser.add_argument("--tracks", type=util.TrackSet,
-                        help="which tracks to convert")
-    parser.add_argument("--rpm", type=int, help="convert drive speed to RPM")
+                        help="which tracks to read & convert from input",
+                        metavar="TSPEC")
+    parser.add_argument("--out-tracks", type=util.TrackSet,
+                        help="which tracks to output (default: --tracks)",
+                        metavar="TSPEC")
+    parser.add_argument("--rpm", type=int, help="convert drive speed to RPM",
+                        metavar="N")
     parser.add_argument("-n", "--no-clobber", action="store_true",
                         help="do not overwrite an existing file")
     parser.add_argument("in_file", help="input filename")
@@ -102,14 +112,18 @@ Unknown format '%s'
 Known formats:\n%s"""
                               % (args.format, formats.print_formats()))
         decoder = args.fmt_cls.decode_track
-        def_tracks = args.fmt_cls.default_tracks
+        def_tracks = copy.copy(args.fmt_cls.default_tracks)
     if def_tracks is None:
         def_tracks = util.TrackSet('c=0-81:h=0-1')
+    out_def_tracks = copy.copy(def_tracks)
     if args.tracks is not None:
         def_tracks.update_from_trackspec(args.tracks.trackspec)
     args.tracks = def_tracks
+    if args.out_tracks is not None:
+        out_def_tracks.update_from_trackspec(args.out_tracks.trackspec)
+    args.out_tracks = out_def_tracks
 
-    print("Converting %s" % args.tracks)
+    print("Converting %s -> %s" % (args.tracks, args.out_tracks))
     if args.format:
         print("Format " + args.format)
 
