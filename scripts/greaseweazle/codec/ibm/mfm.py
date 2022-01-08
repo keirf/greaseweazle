@@ -330,10 +330,14 @@ class IBM_MFM_Predefined(IBM_MFM_Formatted):
     cskew = 0
     hskew = 0
     interleave = 1
-    
+    hswap = False
+
     def __init__(self, cyl, head):
 
         super().__init__(cyl, head)
+
+        if self.hswap:
+            head = 1-head
 
         # Create logical sector map in rotational order
         sec_map = [-1] * self.nsec
@@ -376,11 +380,6 @@ class IBM_MFM_720(IBM_MFM_Predefined):
     nsec   = 9
     id0    = 1
     sz     = 2
-
-class IBM_MFM_800(IBM_MFM_720):
-
-    gap_3 = 30
-    nsec  = 10
 
 class IBM_MFM_1200(IBM_MFM_720):
 
@@ -446,6 +445,12 @@ class Acorn_ADFS_1600(IBM_MFM_Predefined):
     nsec  = 10
     id0   = 0
     sz    = 3
+
+class Commodore_1581(IBM_MFM_720):
+
+    gap_3 = 30
+    nsec  = 10
+    hswap = True
 
 class Sega_SF7000(IBM_MFM_Predefined):
 

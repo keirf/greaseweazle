@@ -99,6 +99,14 @@ class Format_Amiga_AmigaDOS_HD(Format):
         self.default_revs = m.default_revs
         super().__init__()
     
+class Format_Commodore_1581(Format):
+    img_compatible = True
+    def __init__(self):
+        import greaseweazle.codec.ibm.mfm as m
+        self.fmt = m.Commodore_1581
+        self.default_revs = m.default_revs
+        super().__init__()
+    
 class Format_IBM_180(Format):
     img_compatible = True
     default_trackset = 'c=0-39:h=0'
@@ -124,14 +132,6 @@ class Format_IBM_720(Format):
     def __init__(self):
         import greaseweazle.codec.ibm.mfm as m
         self.fmt = m.IBM_MFM_720
-        self.default_revs = m.default_revs
-        super().__init__()
-    
-class Format_IBM_800(Format):
-    img_compatible = True
-    def __init__(self):
-        import greaseweazle.codec.ibm.mfm as m
-        self.fmt = m.IBM_MFM_800
         self.default_revs = m.default_revs
         super().__init__()
     
@@ -232,7 +232,7 @@ formats = OrderedDict({
     'atarist.720': Format_AtariST_720,
     'atarist.800': Format_AtariST_800,
     'atarist.880': Format_AtariST_880,
-    'commodore.1581': Format_IBM_800,
+    'commodore.1581': Format_Commodore_1581,
     'ibm.180': Format_IBM_180,
     'ibm.360': Format_IBM_360,
     'ibm.720': Format_IBM_720,
