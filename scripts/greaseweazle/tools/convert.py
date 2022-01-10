@@ -118,6 +118,8 @@ Known formats:\n%s"""
     out_def_tracks = copy.copy(def_tracks)
     if args.tracks is not None:
         def_tracks.update_from_trackspec(args.tracks.trackspec)
+        out_def_tracks.cyls = copy.copy(def_tracks.cyls)
+        out_def_tracks.heads = copy.copy(def_tracks.heads)
     args.tracks = def_tracks
     if args.out_tracks is not None:
         out_def_tracks.update_from_trackspec(args.out_tracks.trackspec)
