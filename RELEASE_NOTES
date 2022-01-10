@@ -3,6 +3,15 @@
 ** Keir Fraser <keir.xen@gmail.com>
 ************************************
 
+** v0.37 - 10 January 2022
+ - Require Python >= v3.7 (ignore this for Windows binary builds)
+ - Logging output to stderr is now buffered no more than per-line
+ - HFE: Auto-detect output bitrate if possible, else require on command line
+ - gw convert: Fix crash when printing summary information
+ - gw convert: Fix --tracks= handling to respect step= and hswap
+ - gw convert: New option --out-tracks to allow step= and hswap override
+ - D81 (commodore.1581): Fix sector header H field: should be swapped
+
 ** v0.36 - 5 January 2022
  - Tools now require firmware >= v0.31
  - New commands: gw convert, gw rpm
