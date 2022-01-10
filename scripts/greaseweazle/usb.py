@@ -44,6 +44,7 @@ class Cmd:
     SinkBytes       = 19
     GetPin          = 20
     TestMode        = 21
+    NoClickStep     = 22
     str = {
         GetInfo: "GetInfo",
         Update: "Update",
@@ -66,7 +67,8 @@ class Cmd:
         SourceBytes: "SourceBytes",
         SinkBytes: "SinkBytes",
         GetPin: "GetPin",
-        TestMode: "TestMode"
+        TestMode: "TestMode",
+        NoClickStep: "NoClickStep"
     }
 
 
@@ -218,9 +220,17 @@ class Unit:
     ## Seek the selected drive's heads to the specified track (cyl, head).
     def seek(self, cyl, head):
         self._send_cmd(struct.pack("2Bb", Cmd.Seek, 3, cyl))
-        error.check(cyl < 0 or (cyl != 0) == self.get_pin(26),
+        trk0 = not self.get_pin(26)
+        if cyl == 0 and not trk0:
+            # This can happen with Kryoflux flippy-modded Panasonic drives
+            # which may not assert the /TRK0 signal when stepping *inward*
+            # from cylinder -1. We can check this by attempting a fake outward
+            # step, which is exactly NoClickStep's purpose.
+            self._send_cmd(struct.pack("2B", Cmd.NoClickStep, 2))
+            trk0 = not self.get_pin(26) # now re-sample /TRK0
+        error.check(cyl < 0 or (cyl == 0) == trk0,
                     "Track0 signal %s after seek to cylinder %d"
-                    % (('absent', 'asserted')[cyl!=0], cyl))
+                    % (('absent', 'asserted')[trk0], cyl))
         self._send_cmd(struct.pack("3B", Cmd.Head, 3, head))
 
 
