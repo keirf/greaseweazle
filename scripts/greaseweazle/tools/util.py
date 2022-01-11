@@ -101,13 +101,15 @@ class TrackSet:
             if k == 'c':
                 cyls = [False]*100
                 for crange in v.split(','):
-                    m = re.match('(\d\d?)(-(\d\d?))?$', crange)
+                    m = re.match('(\d\d?)(-(\d\d?)(/(\d))?)?$', crange)
                     if m is None: raise ValueError()
                     if m.group(3) is None:
-                        s,e = int(m.group(1)), int(m.group(1))
+                        s,e,step = int(m.group(1)), int(m.group(1)), 1
                     else:
-                        s,e = int(m.group(1)), int(m.group(3))
-                    for c in range(s, e+1):
+                        s,e,step = int(m.group(1)), int(m.group(3)), 1
+                        if m.group(5) is not None:
+                            step = int(m.group(5))
+                    for c in range(s, e+1, step):
                         cyls[c] = True
                 self.cyls = []
                 for c in range(len(cyls)):
