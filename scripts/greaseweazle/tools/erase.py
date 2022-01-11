@@ -24,7 +24,12 @@ def erase(usb, args):
         cyl, head = t.cyl, t.head
         print("T%u.%u: Erasing Track" % (cyl, head))
         usb.seek(t.physical_cyl, t.physical_head)
-        usb.erase_track(drive_ticks * 1.1)
+        if args.hfreq:
+            usb.write_track(flux_list = [ round(drive_ticks * 1.1) ],
+                            cue_at_index = False,
+                            terminate_at_index = False)
+        else:
+            usb.erase_track(drive_ticks * 1.1)
 
 
 def main(argv):
@@ -35,6 +40,8 @@ def main(argv):
                         help="drive to write (A,B,0,1,2)")
     parser.add_argument("--tracks", type=util.TrackSet,
                         help="which tracks to erase")
+    parser.add_argument("--hfreq", action="store_true",
+                        help="erase by writing a high-frequency signal")
     parser.description = description
     parser.prog += ' ' + argv[1]
     args = parser.parse_args(argv[2:])
