@@ -71,7 +71,8 @@ class TrackSet:
             l = []
             for c in ts.cyls:
                 for h in ts.heads:
-                    pc = c*ts.step + ts.h_off[h]
+                    pc = c//-ts.step if ts.step < 0 else c*ts.step
+                    pc += ts.h_off[h]
                     ph = 1-h if ts.hswap else h
                     l.append((pc, ph, c, h))
             l.sort()
@@ -134,8 +135,8 @@ class TrackSet:
                 if m is None: raise ValueError()
                 self.h_off[h] = int(m.group(1))
             elif k == 'step':
-                self.step = int(v)
-                if self.step <= 0: raise ValueError()
+                m = re.match('1/(\d)$', v)
+                self.step = -int(m.group(1)) if m is not None else int(v)
             else:
                 print(k,v)
                 raise ValueError()
@@ -147,7 +148,9 @@ class TrackSet:
             x = self.h_off[i]
             if x != 0:
                 s += ':h%d.off=%s%d' % (i, '+' if x >= 0 else '', x)
-        if self.step != 1: s += ':step=%d' % self.step
+        if self.step != 1:
+            s += ':step=' + (('1/%d' % -self.step) if self.step < 0
+                             else ('%d' % self.step))
         if self.hswap: s += ':hswap'
         return s
 
