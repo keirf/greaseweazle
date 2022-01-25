@@ -35,13 +35,19 @@ class Flux:
 
 
     def append(self, flux):
-        error.check(self.sample_freq == flux.sample_freq,
-                    "Cannot append flux with different sample frequency")
+        # Scale the new flux if required, to match existing sample frequency.
+        # This will result in floating-point flux values.
+        if self.sample_freq == flux.sample_freq:
+            f_list, i_list = flux.list, flux.index_list
+        else:
+            factor = self.sample_freq / flux.sample_freq
+            f_list = [x*factor for x in flux.list]
+            i_list = [x*factor for x in flux.index_list]
         # Any trailing flux is incorporated into the first revolution of
         # the appended flux.
-        rev0 = flux.index_list[0] + sum(self.list) - sum(self.index_list)
-        self.index_list += [rev0] + flux.index_list[1:]
-        self.list += flux.list
+        rev0 = i_list[0] + sum(self.list) - sum(self.index_list)
+        self.index_list += [rev0] + i_list[1:]
+        self.list += f_list
 
 
     def cue_at_index(self):
