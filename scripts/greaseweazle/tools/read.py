@@ -35,7 +35,11 @@ def read_and_normalise(usb, args, revs, ticks=0):
     return flux
 
 
-def read_with_retry(usb, args, cyl, head, decoder):
+def read_with_retry(usb, args, t, decoder):
+
+    cyl, head = t.cyl, t.head
+
+    usb.seek(t.physical_cyl, t.physical_head)
 
     flux = read_and_normalise(usb, args, args.revs, args.ticks)
     if decoder is None:
@@ -44,19 +48,25 @@ def read_with_retry(usb, args, cyl, head, decoder):
 
     dat = decoder(cyl, head, flux)
 
-    retry = 0
+    seek_retry, retry = 0, 0
     while True:
         s = "T%u.%u: %s from %s" % (cyl, head, dat.summary_string(),
                                     flux.summary_string())
         if retry != 0:
-            s += " (Retry #%u)" % retry
+            s += " (Retry #%u.%u)" % (seek_retry, retry)
         print(s)
         if dat.nr_missing() == 0:
             break
-        if retry == args.retries:
-            print("T%u.%u: Giving up: %d sectors missing"
-                  % (cyl, head, dat.nr_missing()))
-            break
+        if (retry % args.retries) == 0:
+            if seek_retry == args.seek_retries:
+                print("T%u.%u: Giving up: %d sectors missing"
+                      % (cyl, head, dat.nr_missing()))
+                break
+            if retry != 0:
+                usb.seek(0, 0)
+                usb.seek(t.physical_cyl, t.physical_head)
+            seek_retry += 1
+            retry = 0
         retry += 1
         _flux = read_and_normalise(usb, args, max(args.revs, 3))
         dat.decode_raw(_flux)
@@ -115,8 +125,7 @@ def read_to_image(usb, args, image, decoder=None):
 
     for t in args.tracks:
         cyl, head = t.cyl, t.head
-        usb.seek(t.physical_cyl, t.physical_head)
-        flux, dat = read_with_retry(usb, args, cyl, head, decoder)
+        flux, dat = read_with_retry(usb, args, t, decoder)
         if decoder is not None:
             summary[cyl,head] = dat
         image.emit_track(cyl, head, flux if args.raw else dat)
@@ -134,15 +143,18 @@ def main(argv):
     parser.add_argument("--drive", type=util.drive_letter, default='A',
                         help="drive to read (A,B,0,1,2)")
     parser.add_argument("--format", help="disk format (output is converted unless --raw)")
-    parser.add_argument("--revs", type=int,
+    parser.add_argument("--revs", type=int, metavar="N",
                         help="number of revolutions to read per track")
-    parser.add_argument("--tracks", type=util.TrackSet,
+    parser.add_argument("--tracks", type=util.TrackSet, metavar="TSPEC",
                         help="which tracks to read")
     parser.add_argument("--raw", action="store_true",
                         help="output raw stream (--format verifies only)")
-    parser.add_argument("--rpm", type=int, help="convert drive speed to RPM")
-    parser.add_argument("--retries", type=int, default=3,
-                        help="number of retries on decode failure")
+    parser.add_argument("--rpm", type=int, metavar="N",
+                        help="convert drive speed to RPM")
+    parser.add_argument("--retries", type=int, default=3, metavar="N",
+                        help="number of retries per seek-retry")
+    parser.add_argument("--seek-retries", type=int, default=3, metavar="N",
+                        help="number of seek retries")
     parser.add_argument("-n", "--no-clobber", action="store_true",
                         help="do not overwrite an existing file")
     parser.add_argument("file", help="output filename")
