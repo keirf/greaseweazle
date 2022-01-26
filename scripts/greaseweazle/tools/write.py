@@ -161,13 +161,13 @@ def main(argv):
     parser.add_argument("--drive", type=util.drive_letter, default='A',
                         help="drive to write (A,B,0,1,2)")
     parser.add_argument("--format", help="disk format")
-    parser.add_argument("--tracks", type=util.TrackSet,
+    parser.add_argument("--tracks", type=util.TrackSet, metavar="TSPEC",
                         help="which tracks to write")
     parser.add_argument("--erase-empty", action="store_true",
                         help="erase empty tracks (default: skip)")
     parser.add_argument("--no-verify", action="store_true",
                         help="disable verify")
-    parser.add_argument("--retries", type=int, default=3,
+    parser.add_argument("--retries", type=int, default=3, metavar="N",
                         help="number of retries on verify failure")
     parser.add_argument("--precomp", type=PrecompSpec,
                         help="write precompensation")

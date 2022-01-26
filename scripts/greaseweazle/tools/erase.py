@@ -38,7 +38,7 @@ def main(argv):
     parser.add_argument("--device", help="device name (COM/serial port)")
     parser.add_argument("--drive", type=util.drive_letter, default='A',
                         help="drive to write (A,B,0,1,2)")
-    parser.add_argument("--tracks", type=util.TrackSet,
+    parser.add_argument("--tracks", type=util.TrackSet, metavar="TSPEC",
                         help="which tracks to erase")
     parser.add_argument("--hfreq", action="store_true",
                         help="erase by writing a high-frequency signal")
