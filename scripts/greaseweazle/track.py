@@ -224,8 +224,12 @@ class MasterTrack:
 # Track data generated from flux.
 class RawTrack:
 
-    def __init__(self, clock, data):
+    # clock: Expected time per raw bitcell, in seconds (float)
+    # data: Flux object, or a form convertible to a Flux object
+    # time_per_rev: Expected time per revolution, in seconds (optional, float)
+    def __init__(self, clock, data, time_per_rev=None):
         self.clock = clock
+        self.time_per_rev = time_per_rev
         self.clock_max_adj = 0.10
         self.pll_period_adj = 0.05
         self.pll_phase_adj = 0.60
@@ -261,6 +265,9 @@ class RawTrack:
 
         flux = data.flux()
         freq = flux.sample_freq
+        if self.time_per_rev is not None:
+            # Adjust the raw flux to have the expected time per revolution.
+            freq *= flux.time_per_rev / self.time_per_rev
 
         clock = self.clock
         clock_min = self.clock * (1 - self.clock_max_adj)

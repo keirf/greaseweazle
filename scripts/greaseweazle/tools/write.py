@@ -101,7 +101,7 @@ def write_from_image(usb, args, image):
                 v_ticks = int(drive.ticks_per_rev * v_revs)
                 v_revs = 2
             v_flux = usb.read_track(revs = v_revs, ticks = v_ticks)
-            v_flux.scale(flux.time_per_rev / drive.time_per_rev)
+            v_flux._ticks_per_rev = drive.ticks_per_rev
             verified = track.verify.verify_track(v_flux)
             if verified:
                 verified_count += 1

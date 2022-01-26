@@ -70,7 +70,8 @@ class AmigaDOS:
 
 
     def decode_raw(self, track):
-        raw = RawTrack(clock = self.clock, data = track)
+        raw = RawTrack(time_per_rev = self.time_per_rev,
+                       clock = self.clock, data = track)
         bits, _ = raw.get_all_data()
 
         for offs in bits.itersearch(sync):

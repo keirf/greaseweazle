@@ -117,10 +117,14 @@ class Flux:
     @property
     def ticks_per_rev(self):
         """Mean time between index pulses, in sample ticks"""
-        index_list = self.index_list
-        if not self.index_cued:
-            index_list = index_list[1:]
-        return sum(index_list) / len(index_list)
+        try:
+            index_list = self.index_list
+            if not self.index_cued:
+                index_list = index_list[1:]
+            ticks_per_rev = sum(index_list) / len(index_list)
+        except:
+            ticks_per_rev = self._ticks_per_rev
+        return ticks_per_rev
 
 
     @property

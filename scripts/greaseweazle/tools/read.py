@@ -30,6 +30,7 @@ def open_image(args, image_class):
 
 def read_and_normalise(usb, args, revs, ticks=0):
     flux = usb.read_track(revs=revs, ticks=ticks)
+    flux._ticks_per_rev = args.drive_ticks_per_rev
     if args.rpm is not None:
         flux.scale((60/args.rpm) / flux.time_per_rev)
     return flux
@@ -114,11 +115,12 @@ def read_to_image(usb, args, image, decoder=None):
     """Reads a floppy disk and dumps it into a new image file.
     """
 
-    args.ticks = 0
+    args.ticks, args.drive_ticks_per_rev = 0, None
     if isinstance(args.revs, float):
         # Measure drive RPM.
         # We will adjust the flux intervals per track to allow for this.
-        args.ticks = int(usb.read_track(2).ticks_per_rev * args.revs)
+        args.drive_ticks_per_rev = usb.read_track(2).ticks_per_rev
+        args.ticks = int(args.drive_ticks_per_rev * args.revs)
         args.revs = 2
 
     summary = dict()

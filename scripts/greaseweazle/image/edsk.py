@@ -106,7 +106,9 @@ class EDSKTrack:
     
     def verify_track(self, flux):
         flux.cue_at_index()
-        raw = RawTrack(clock = self.clock, data = flux)
+        raw = RawTrack(time_per_rev = self.time_per_rev,
+                       clock = self.time_per_rev / len(self.bits),
+                       data = flux)
         bits, _ = raw.get_all_data()
         weak_iter = it.chain(self.weak, [(self.verify_len+1,1)])
         weak = next(weak_iter)
