@@ -29,7 +29,16 @@ def open_image(args, image_class):
 
 
 def read_and_normalise(usb, args, revs, ticks=0):
-    flux = usb.read_track(revs=revs, ticks=ticks)
+    if args.fake_index is not None:
+        drive_tpr = int(args.drive_ticks_per_rev)
+        pre_index = int(usb.sample_freq * 0.5e-3)
+        if ticks == 0:
+            ticks = revs*drive_tpr + 2*pre_index
+        flux = usb.read_track(revs=0, ticks=ticks)
+        flux.index_list = ([pre_index] +
+                           [drive_tpr] * ((ticks-pre_index)//drive_tpr))
+    else:
+        flux = usb.read_track(revs=revs, ticks=ticks)
     flux._ticks_per_rev = args.drive_ticks_per_rev
     if args.rpm is not None:
         flux.scale((60/args.rpm) / flux.time_per_rev)
@@ -116,10 +125,15 @@ def read_to_image(usb, args, image, decoder=None):
     """
 
     args.ticks, args.drive_ticks_per_rev = 0, None
+
+    if args.fake_index is not None:
+        args.drive_ticks_per_rev = (60 / args.fake_index) * usb.sample_freq
+
     if isinstance(args.revs, float):
         # Measure drive RPM.
         # We will adjust the flux intervals per track to allow for this.
-        args.drive_ticks_per_rev = usb.read_track(2).ticks_per_rev
+        if args.drive_ticks_per_rev is None:
+            args.drive_ticks_per_rev = usb.read_track(2).ticks_per_rev
         args.ticks = int(args.drive_ticks_per_rev * args.revs)
         args.revs = 2
 
@@ -151,8 +165,10 @@ def main(argv):
                         help="which tracks to read")
     parser.add_argument("--raw", action="store_true",
                         help="output raw stream (--format verifies only)")
+    parser.add_argument("--fake-index", type=int, metavar="N",
+                        help="fake index at N rpm")
     parser.add_argument("--rpm", type=int, metavar="N",
-                        help="convert drive speed to RPM")
+                        help="scale track data to N rpm")
     parser.add_argument("--retries", type=int, default=3, metavar="N",
                         help="number of retries per seek-retry")
     parser.add_argument("--seek-retries", type=int, default=3, metavar="N",

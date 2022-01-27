@@ -18,7 +18,10 @@ def erase(usb, args):
 
     # @drive_ticks is the time in Greaseweazle ticks between index pulses.
     # We will adjust the flux intervals per track to allow for this.
-    drive_ticks = usb.read_track(2).ticks_per_rev
+    if args.fake_index is not None:
+        drive_ticks = (60 / args.fake_index) * usb.sample_freq
+    else:
+        drive_ticks = usb.read_track(2).ticks_per_rev
 
     for t in args.tracks:
         cyl, head = t.cyl, t.head
@@ -42,6 +45,8 @@ def main(argv):
                         help="which tracks to erase")
     parser.add_argument("--hfreq", action="store_true",
                         help="erase by writing a high-frequency signal")
+    parser.add_argument("--fake-index", type=int, metavar="N",
+                        help="fake index at N rpm")
     parser.description = description
     parser.prog += ' ' + argv[1]
     args = parser.parse_args(argv[2:])

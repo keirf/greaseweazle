@@ -394,7 +394,7 @@ class Unit:
         # Request and read all flux timings for this track.
         dat = bytearray()
         self._send_cmd(struct.pack("<2BIH", Cmd.ReadFlux, 8,
-                                   ticks, revs+1))
+                                   ticks, 0 if revs==0 else revs+1))
         while True:
             dat += self.ser.read(1)
             dat += self.ser.read(self.ser.in_waiting)

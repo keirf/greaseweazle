@@ -32,8 +32,11 @@ def write_from_image(usb, args, image):
 
     # Measure drive RPM.
     # We will adjust the flux intervals per track to allow for this.
-    drive = usb.read_track(2)
-    del drive.list
+    no_index = args.fake_index is not None
+    if no_index:
+        drive_ticks_per_rev = (60 / args.fake_index) * usb.sample_freq
+    else:
+        drive_ticks_per_rev = usb.read_track(2).ticks_per_rev
 
     verified_count, not_verified_count = 0, 0
 
@@ -49,7 +52,7 @@ def write_from_image(usb, args, image):
 
         if track is None:
             print("T%u.%u: Erasing Track" % (cyl, head))
-            usb.erase_track(drive.ticks_per_rev * 1.1)
+            usb.erase_track(drive_ticks_per_rev * 1.1)
             continue
 
         if args.raw_image_class and args.fmt_cls is not None:
@@ -61,11 +64,11 @@ def write_from_image(usb, args, image):
 
         if args.precomp is not None:
             track.precomp = args.precomp.track_precomp(cyl)
-        flux = track.flux_for_writeout()
+        flux = track.flux_for_writeout(cue_at_index = not no_index)
 
         # @factor adjusts flux times for speed variations between the
         # read-in and write-out drives.
-        factor = drive.ticks_per_rev / flux.index_list[0]
+        factor = drive_ticks_per_rev / flux.index_list[0]
 
         # Convert the flux samples to Greaseweazle sample frequency.
         rem = 0.0
@@ -98,10 +101,20 @@ def write_from_image(usb, args, image):
                 break
             v_revs, v_ticks = track.verify_revs, 0
             if isinstance(v_revs, float):
-                v_ticks = int(drive.ticks_per_rev * v_revs)
+                v_ticks = int(drive_ticks_per_rev * v_revs)
                 v_revs = 2
-            v_flux = usb.read_track(revs = v_revs, ticks = v_ticks)
-            v_flux._ticks_per_rev = drive.ticks_per_rev
+            if no_index:
+                drive_tpr = int(drive_ticks_per_rev)
+                pre_index = int(usb.sample_freq * 0.5e-3)
+                if v_ticks == 0:
+                    v_ticks = v_revs*drive_tpr + 2*pre_index
+                v_flux = usb.read_track(revs = 0, ticks = v_ticks)
+                v_flux.index_list = (
+                    [pre_index]
+                    + [drive_tpr] * ((v_ticks-pre_index)//drive_tpr))
+            else:
+                v_flux = usb.read_track(revs = v_revs, ticks = v_ticks)
+            v_flux._ticks_per_rev = drive_ticks_per_rev
             verified = track.verify.verify_track(v_flux)
             if verified:
                 verified_count += 1
@@ -165,6 +178,8 @@ def main(argv):
                         help="which tracks to write")
     parser.add_argument("--erase-empty", action="store_true",
                         help="erase empty tracks (default: skip)")
+    parser.add_argument("--fake-index", type=int, metavar="N",
+                        help="fake index at N rpm")
     parser.add_argument("--no-verify", action="store_true",
                         help="disable verify")
     parser.add_argument("--retries", type=int, default=3, metavar="N",
