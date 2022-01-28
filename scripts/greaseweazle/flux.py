@@ -69,7 +69,7 @@ class Flux:
         self.index_cued = True
 
 
-    def flux_for_writeout(self):
+    def flux_for_writeout(self, cue_at_index=True):
 
         error.check(self.index_cued,
                     "Cannot write non-index-cued raw flux")
@@ -87,7 +87,19 @@ class Flux:
             flux_list.append(f)
             remain -= f
 
-        if splice_at_index:
+        if not cue_at_index:
+            # We will write more than one revolutionm and terminate the
+            # second revolution at the splice. Extend the start of the write
+            # with "safe" 4us sample values, in case the drive motor is a
+            # little fast.
+            if remain > 0:
+                flux_list.append(remain)
+            prepend = max(round(to_index/10 - self.splice), 0)
+            if prepend != 0:
+                four_us = max(self.sample_freq * 4e-6, 1)
+                flux_list = [four_us]*round(prepend/four_us) + flux_list
+            splice_at_index = False
+        elif splice_at_index:
             # Extend with "safe" 4us sample values, to avoid unformatted area
             # at end of track if drive motor is a little slow.
             four_us = max(self.sample_freq * 4e-6, 1)
@@ -100,8 +112,8 @@ class Flux:
             flux_list.append(remain)
 
         return WriteoutFlux(to_index, flux_list, self.sample_freq,
-                            index_cued = True,
-                            terminate_at_index = (self.splice == 0))
+                            index_cued = cue_at_index,
+                            terminate_at_index = splice_at_index)
 
 
 
@@ -160,8 +172,8 @@ class WriteoutFlux(Flux):
         return s
 
 
-    def flux_for_writeout(self):
-        return self
+    def flux_for_writeout(self, cue_at_index=True):
+        raise error.Fatal("WriteoutFlux: flux_for_writeout is unsupported")
  
 
     @property
