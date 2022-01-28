@@ -34,7 +34,7 @@ def write_from_image(usb, args, image):
     # We will adjust the flux intervals per track to allow for this.
     no_index = args.fake_index is not None
     if no_index:
-        drive_ticks_per_rev = (60 / args.fake_index) * usb.sample_freq
+        drive_ticks_per_rev = args.fake_index * usb.sample_freq
     else:
         drive_ticks_per_rev = usb.read_track(2).ticks_per_rev
 
@@ -167,7 +167,8 @@ class PrecompSpec:
 
 def main(argv):
 
-    epilog = "FORMAT options:\n" + formats.print_formats()
+    epilog = (util.speed_desc + "\n" + util.tspec_desc
+              + "\nFORMAT options:\n" + formats.print_formats())
     parser = util.ArgumentParser(usage='%(prog)s [options] file',
                                  epilog=epilog)
     parser.add_argument("--device", help="device name (COM/serial port)")
@@ -178,8 +179,8 @@ def main(argv):
                         help="which tracks to write")
     parser.add_argument("--erase-empty", action="store_true",
                         help="erase empty tracks (default: skip)")
-    parser.add_argument("--fake-index", type=int, metavar="N",
-                        help="fake index at N rpm")
+    parser.add_argument("--fake-index", type=util.period, metavar="SPEED",
+                        help="fake index pulses at SPEED")
     parser.add_argument("--no-verify", action="store_true",
                         help="disable verify")
     parser.add_argument("--retries", type=int, default=3, metavar="N",

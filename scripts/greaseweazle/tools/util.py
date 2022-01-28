@@ -36,6 +36,42 @@ class ArgumentParser(argparse.ArgumentParser):
         return super().__init__(formatter_class=formatter_class,
                                 *args, **kwargs)
 
+speed_desc = """\
+SPEED: Track rotation time specified as:
+  <N>rpm | <N>ms | <N>us | <N>ns | <N>scp | <N>
+"""
+
+tspec_desc = """\
+TSPEC: Colon-separated list of:
+  c=SET               :: Set of cylinders to access
+  h=SET               :: Set of heads (sides) to access
+  step=[0-9]          :: # physical head steps between cylinders
+  hswap               :: Swap physical drive heads
+  h[01].off=[+-][0-9] :: Physical cylkinder offsets per head
+  SET is a comma-separated list of integers and integer ranges
+  eg. 'c=0-7,9-12:h=0-1'
+"""
+
+# Returns time period in seconds (float)
+# Accepts rpm, ms, us, ns, scp. Naked value is assumed rpm.
+def period(arg):
+    m = re.match('(\d*\.\d+|\d+)rpm', arg)
+    if m is not None:
+        return 60 / float(m.group(1))
+    m = re.match('(\d*\.\d+|\d+)ms', arg)
+    if m is not None:
+        return float(m.group(1)) / 1e3
+    m = re.match('(\d*\.\d+|\d+)us', arg)
+    if m is not None:
+        return float(m.group(1)) / 1e6
+    m = re.match('(\d*\.\d+|\d+)ns', arg)
+    if m is not None:
+        return float(m.group(1)) / 1e9
+    m = re.match('(\d*\.\d+|\d+)scp', arg)
+    if m is not None:
+        return float(m.group(1)) / 40e6 # SCP @ 40MHz
+    return 60 / float(arg)
+    
 def drive_letter(letter):
     types = {
         'A': (USB.BusType.IBMPC, 0),

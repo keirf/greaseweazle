@@ -40,8 +40,8 @@ def read_and_normalise(usb, args, revs, ticks=0):
     else:
         flux = usb.read_track(revs=revs, ticks=ticks)
     flux._ticks_per_rev = args.drive_ticks_per_rev
-    if args.rpm is not None:
-        flux.scale((60/args.rpm) / flux.time_per_rev)
+    if args.adjust_speed is not None:
+        flux.scale(args.adjust_speed / flux.time_per_rev)
     return flux
 
 
@@ -127,7 +127,7 @@ def read_to_image(usb, args, image, decoder=None):
     args.ticks, args.drive_ticks_per_rev = 0, None
 
     if args.fake_index is not None:
-        args.drive_ticks_per_rev = (60 / args.fake_index) * usb.sample_freq
+        args.drive_ticks_per_rev = args.fake_index * usb.sample_freq
 
     if isinstance(args.revs, float):
         # Measure drive RPM.
@@ -152,7 +152,8 @@ def read_to_image(usb, args, image, decoder=None):
 
 def main(argv):
 
-    epilog = "FORMAT options:\n" + formats.print_formats()
+    epilog = (util.speed_desc + "\n" + util.tspec_desc
+              + "\nFORMAT options:\n" + formats.print_formats())
     parser = util.ArgumentParser(usage='%(prog)s [options] file',
                                  epilog=epilog)
     parser.add_argument("--device", help="device name (COM/serial port)")
@@ -165,10 +166,10 @@ def main(argv):
                         help="which tracks to read")
     parser.add_argument("--raw", action="store_true",
                         help="output raw stream (--format verifies only)")
-    parser.add_argument("--fake-index", type=int, metavar="N",
-                        help="fake index at N rpm")
-    parser.add_argument("--rpm", type=int, metavar="N",
-                        help="scale track data to N rpm")
+    parser.add_argument("--fake-index", type=util.period, metavar="SPEED",
+                        help="fake index pulses at SPEED")
+    parser.add_argument("--adjust-speed", type=util.period, metavar="SPEED",
+                        help="scale track data to effective drive SPEED")
     parser.add_argument("--retries", type=int, default=3, metavar="N",
                         help="number of retries per seek-retry")
     parser.add_argument("--seek-retries", type=int, default=3, metavar="N",

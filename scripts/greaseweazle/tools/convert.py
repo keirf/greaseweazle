@@ -47,8 +47,8 @@ def convert(args, in_image, out_image, decoder=None):
         if track is None:
             continue
 
-        if args.rpm is not None:
-            track.scale((60/args.rpm) / track.time_per_rev)
+        if args.adjust_speed is not None:
+            track.scale(args.adjust_speed / track.time_per_rev)
 
         if decoder is None:
             dat = track
@@ -72,7 +72,8 @@ def convert(args, in_image, out_image, decoder=None):
 
 def main(argv):
 
-    epilog = "FORMAT options:\n" + formats.print_formats()
+    epilog = (util.speed_desc + "\n" + util.tspec_desc
+              + "\nFORMAT options:\n" + formats.print_formats())
     parser = util.ArgumentParser(usage='%(prog)s [options] in_file out_file',
                                  epilog=epilog)
     parser.add_argument("--format", help="disk format")
@@ -82,8 +83,8 @@ def main(argv):
     parser.add_argument("--out-tracks", type=util.TrackSet,
                         help="which tracks to output (default: --tracks)",
                         metavar="TSPEC")
-    parser.add_argument("--rpm", type=int, help="convert drive speed to RPM",
-                        metavar="N")
+    parser.add_argument("--adjust-speed", type=util.period, metavar="SPEED",
+                        help="scale track data to effective drive SPEED")
     parser.add_argument("-n", "--no-clobber", action="store_true",
                         help="do not overwrite an existing file")
     parser.add_argument("in_file", help="input filename")
