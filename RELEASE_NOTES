@@ -3,6 +3,19 @@
 ** Keir Fraser <keir.xen@gmail.com>
 ************************************
 
+** v0.38 - 28 January 2022
+ - gw rpm: Print 3 decimal places, and print summary stats
+ - gw read,convert: Rename --rpm to --adjust-speed
+   - Accepts a SPEED value in units of rpm, ms, us, ns, or scp ticks
+ - gw read,write,erase: New option --fake-index
+   - Ignore real index pulses
+   - Generate fake index pulses at specified SPEED
+ - gw read,write,convert: Format decoders automatically adjust track speed
+   - Usually there is no need to specify --rpm (now --adjust-speed)
+ - gw read: Re-seek via cylinder 0 every N retries
+ - gw erase: New option --hfreq to write a high-frequency flux signal
+   - Usually reads back as a "No Flux Area"
+
 ** v0.37 - 10 January 2022
  - Require Python >= v3.7 (ignore this for Windows binary builds)
  - Logging output to stderr is now buffered no more than per-line
