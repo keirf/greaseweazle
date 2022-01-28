@@ -12,15 +12,30 @@ description = "Measure RPM of drive spindle."
 from greaseweazle.tools import util
 from greaseweazle import usb as USB
 
+def speed_str(tpr):
+    return "Rate: %.3f rpm ; Period: %.3f ms" % (60 / tpr, tpr * 1e3)
+
 def print_rpm(usb, args):
     """Prints spindle RPM.
     """
 
-    for _ in range(args.nr):
-        flux = usb.read_track(1)
-        time_per_rev = flux.index_list[-1] / flux.sample_freq
-        print("Rate: %.2f rpm ; Period: %.2f ms"
-              % (60 / time_per_rev, time_per_rev * 1e3))
+    time_per_rev = list()
+
+    try:
+        for _ in range(args.nr):
+            flux = usb.read_track(1)
+            tpr = flux.index_list[-1] / flux.sample_freq
+            time_per_rev.append(tpr)
+            print(speed_str(tpr))
+    finally:
+        if len(time_per_rev) > 1:
+            mean = sum(time_per_rev)/len(time_per_rev)
+            median = sorted(time_per_rev)[len(time_per_rev)//2]
+            print("***")
+            print("FASTEST:  " + speed_str(min(time_per_rev)))
+            print("Ar.Mean:  " + speed_str(mean))
+            print("Median:   " + speed_str(median))
+            print("SLOWEST:  " + speed_str(max(time_per_rev)))
 
 
 def main(argv):
