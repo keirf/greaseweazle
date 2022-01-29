@@ -17,7 +17,16 @@ import importlib
 sys.stderr.reconfigure(line_buffering=True)
 sys.stdout = sys.stderr
 
-from greaseweazle import version
+try:
+    from greaseweazle import version
+except ImportError:
+    print("""\
+** Missing file version.py
+If you cloned the repository from GitHub: Run 'make'.
+Or download the latest official release of the Host Tools:
+<https://github.com/keirf/Greaseweazle/wiki/Download-Host-Tools>""")
+    sys.exit(1)
+
 if hasattr(version, 'commit'):
     print("""*** TEST/PRE-RELEASE: commit %s
 *** Use these tools ONLY for test and development!!"""
