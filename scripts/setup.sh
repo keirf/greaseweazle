@@ -5,5 +5,5 @@ if [ ! -d ./scripts/c_ext ]; then
     echo "** eg: ./scripts/setup.sh";
     exit 1;
 fi ;
-$PYTHON -m pip install --user bitarray crcmod pyserial requests
+$PYTHON -m pip install --user bitarray crcmod pyserial requests wheel
 $PYTHON -m pip install ./scripts/c_ext --target=./scripts/greaseweazle/optimised --upgrade
