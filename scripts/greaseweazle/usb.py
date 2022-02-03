@@ -143,7 +143,7 @@ class CmdError(Exception):
         return Cmd.str.get(self.cmd[0], "UnknownCmd")
         
     def errcode_str(self):
-        if self.code == Ack.BadCylinder:
+        if self.code == Ack.BadCylinder and self.cmd[0] == Cmd.Seek:
             s = Ack.str[Ack.BadCylinder]
             return s + " %d" % struct.unpack('2Bb', self.cmd)[2]
         return Ack.str.get(self.code, "Unknown Error (%u)" % self.code)
