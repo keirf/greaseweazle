@@ -226,7 +226,12 @@ class Unit:
             # which may not assert the /TRK0 signal when stepping *inward*
             # from cylinder -1. We can check this by attempting a fake outward
             # step, which is exactly NoClickStep's purpose.
-            self._send_cmd(struct.pack("2B", Cmd.NoClickStep, 2))
+            try:
+                self._send_cmd(struct.pack("2B", Cmd.NoClickStep, 2))
+            except CmdError:
+                # NoClickStep is "best effort" and we're on a likely error
+                # path anyway. Let it fail silently.
+                pass
             trk0 = not self.get_pin(26) # now re-sample /TRK0
         error.check(cyl < 0 or (cyl == 0) == trk0,
                     "Track0 signal %s after seek to cylinder %d"
