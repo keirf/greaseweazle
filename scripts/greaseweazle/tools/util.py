@@ -47,9 +47,9 @@ TSPEC: Colon-separated list of:
   h=SET               :: Set of heads (sides) to access
   step=[0-9]          :: # physical head steps between cylinders
   hswap               :: Swap physical drive heads
-  h[01].off=[+-][0-9] :: Physical cylkinder offsets per head
+  h[01].off=[+-][0-9] :: Physical cylinder offsets per head
   SET is a comma-separated list of integers and integer ranges
-  eg. 'c=0-7,9-12:h=0-1'
+  e.g. 'c=0-7,9-12:h=0-1'
 """
 
 # Returns time period in seconds (float)
