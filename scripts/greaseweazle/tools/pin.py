@@ -50,7 +50,7 @@ def pin_get(argv):
     parser = util.ArgumentParser(usage='%(prog)s [options] pin')
     parser.add_argument("--device", help="device name (COM/serial port)")
     parser.add_argument("--drive", type=util.drive_letter, default='A',
-                        help="drive to read (A,B,0,1,2)")
+                        help="drive to read (A,B,0,1,2,APPLE2,APPLE2_QUARTERTRACK)")
     parser.add_argument("pin", type=int, help="pin number")
     parser.description = description
     parser.prog += ' pin get'

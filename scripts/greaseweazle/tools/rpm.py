@@ -43,7 +43,7 @@ def main(argv):
     parser = util.ArgumentParser(usage='%(prog)s [options]')
     parser.add_argument("--device", help="greaseweazle device name")
     parser.add_argument("--drive", type=util.drive_letter, default='A',
-                        help="drive to read (A,B,0,1,2)")
+                        help="drive to read (A,B,0,1,2,APPLE2,APPLE2_QUARTERTRACK)")
     parser.add_argument("--nr", type=int, default=1, metavar="N",
                         help="number of iterations")
     parser.description = description

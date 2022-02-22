@@ -120,9 +120,11 @@ class Params:
 
 ## Cmd.SetBusType values
 class BusType:
-    Invalid         = 0
-    IBMPC           = 1
-    Shugart         = 2
+    Invalid            = 0
+    IBMPC              = 1
+    Shugart            = 2
+    Apple2             = 3
+    Apple2QuarterTrack = 4
 
 
 ## Flux read stream opcodes, preceded by 0xFF byte
