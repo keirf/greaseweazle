@@ -151,6 +151,16 @@ class Format_IBM_1200(Format):
         self.default_revs = m.default_revs
         super().__init__()
 
+class Format_Atari_90(Format):
+    img_compatible = True
+    default_trackset = 'c=0-39:h=0:step=2'
+    max_trackset = 'c=0-41:h=0:step=2'
+    def __init__(self):
+        import greaseweazle.codec.ibm.fm as m
+        self.fmt = m.Atari_90
+        self.default_revs = m.default_revs
+        super().__init__()
+
 class Format_AtariST_360(Format):
     img_compatible = True
     default_trackset = 'c=0-79:h=0'
@@ -226,6 +236,7 @@ formats = OrderedDict({
     'acorn.adfs.1600': Format_Acorn_ADFS_1600,
     'amiga.amigados': Format_Amiga_AmigaDOS_DD,
     'amiga.amigados_hd': Format_Amiga_AmigaDOS_HD,
+    'atari.90': Format_Atari_90,
     'atarist.360': Format_AtariST_360,
     'atarist.400': Format_AtariST_400,
     'atarist.440': Format_AtariST_440,
