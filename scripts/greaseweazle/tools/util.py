@@ -246,7 +246,12 @@ Known suffixes: %s"""
 
 
 def with_drive_selected(fn, usb, args, *_args, **_kwargs):
-    usb.set_bus_type(args.drive[0])
+    try:
+        usb.set_bus_type(args.drive[0].value)
+    except USB.CmdError as err:
+        if err.code == USB.Ack.BadCommand:
+            raise error.Fatal("Device does not support " + str(args.drive[0]))
+        raise
     try:
         usb.drive_select(args.drive[1])
         usb.drive_motor(args.drive[1], _kwargs.pop('motor', True))

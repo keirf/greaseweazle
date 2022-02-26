@@ -7,6 +7,7 @@
 
 import struct
 import itertools as it
+from enum import Enum
 from greaseweazle import version
 from greaseweazle import error
 from greaseweazle.flux import Flux
@@ -120,7 +121,7 @@ class Params:
 
 
 ## Cmd.SetBusType values
-class BusType:
+class BusType(Enum):
     Invalid         = 0
     IBMPC           = 1
     Shugart         = 2
