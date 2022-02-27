@@ -10,13 +10,16 @@
 description = "Update the Greaseweazle device firmware to current version."
 
 import requests, zipfile, io, re
-import sys, serial, struct, os
+import sys, serial, struct, os, textwrap
 import crcmod.predefined
 
 from greaseweazle.tools import util
 from greaseweazle import error
 from greaseweazle import version
 from greaseweazle import usb as USB
+
+class SkipUpdate(Exception):
+    pass
 
 def update_firmware(usb, dat, args):
     '''Updates the device firmware using the specified Update File.'''
@@ -133,9 +136,10 @@ def main(argv):
             if usb.version >= dat_version:
                 if usb.update_mode and usb.can_mode_switch:
                     usb = util.usb_reopen(usb, is_update=False)
-                raise error.Fatal('Device is running v%d.%d (>= v%d.%d). '
-                                  'Use --force to update anyway.'
-                                  % (usb.version + dat_version))
+                raise SkipUpdate(
+                    '''\
+                    Device is already running v%d.%d.
+                    Use --force to update anyway.''' % usb.version)
         usb = util.usb_mode_check(usb, is_update=not args.bootloader)
         update_firmware(usb, dat, args)
         if usb.update_mode and usb.can_mode_switch:
@@ -151,6 +155,9 @@ def main(argv):
                   "(insufficient Flash memory)")
         else:
             print("Command Failed: %s" % err)
+    except SkipUpdate as exc:
+        print("** SKIPPING UPDATE:")
+        print(textwrap.dedent(str(exc)))
 
 
 if __name__ == "__main__":
