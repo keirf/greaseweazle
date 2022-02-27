@@ -3,6 +3,10 @@
 ** Keir Fraser <keir.xen@gmail.com>
 ************************************
 
+** v0.39 - 27 February 2022
+ - Fix crashes in the USB.seek error path
+ - Support Atari 90kB format (atari.90)
+
 ** v0.38 - 28 January 2022
  - gw rpm: Print 3 decimal places, and print summary stats
  - gw read,convert: Rename --rpm to --adjust-speed
