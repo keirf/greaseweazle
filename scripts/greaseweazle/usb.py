@@ -316,14 +316,14 @@ class Unit:
 
 
     ## switch_fw_mode:
-    ## Switch between update bootloader and main firmware.
+    ## Switch between bootloader and main firmware.
     def switch_fw_mode(self, mode):
         self._send_cmd(struct.pack("3B", Cmd.SwitchFwMode, 3, int(mode)))
 
 
-    ## update_firmware:
-    ## Update Greaseweazle to the given new firmware.
-    def update_firmware(self, dat):
+    ## update_main_firmware:
+    ## Update Greaseweazle with the given new main firmware.
+    def update_main_firmware(self, dat):
         self._send_cmd(struct.pack("<2BI", Cmd.Update, 6, len(dat)))
         self.ser.write(dat)
         (ack,) = struct.unpack("B", self.ser.read(1))

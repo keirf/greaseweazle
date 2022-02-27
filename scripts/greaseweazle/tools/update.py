@@ -30,7 +30,7 @@ def update_firmware(usb, dat, args):
             return
         print("Done.")
     else:
-        ack = usb.update_firmware(dat)
+        ack = usb.update_main_firmware(dat)
         if ack != 0:
             print("** UPDATE FAILED: Please retry!")
             return
