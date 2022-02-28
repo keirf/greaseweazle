@@ -130,12 +130,16 @@ def read_to_image(usb, args, image, decoder=None):
         args.drive_ticks_per_rev = args.fake_index * usb.sample_freq
 
     if isinstance(args.revs, float):
-        # Measure drive RPM.
-        # We will adjust the flux intervals per track to allow for this.
-        if args.drive_ticks_per_rev is None:
-            args.drive_ticks_per_rev = usb.read_track(2).ticks_per_rev
-        args.ticks = int(args.drive_ticks_per_rev * args.revs)
-        args.revs = 2
+        if args.raw:
+            # If dumping raw flux we want full index-to-index revolutions.
+            args.revs = 2
+        else:
+            # Measure drive RPM.
+            # We will adjust the flux intervals per track to allow for this.
+            if args.drive_ticks_per_rev is None:
+                args.drive_ticks_per_rev = usb.read_track(2).ticks_per_rev
+            args.ticks = int(args.drive_ticks_per_rev * args.revs)
+            args.revs = 2
 
     summary = dict()
 
