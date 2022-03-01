@@ -263,8 +263,8 @@ class SCP(Image):
         if not self.nr_revs:
             self.nr_revs = nr_revs
         else:
-            assert self.nr_revs == nr_revs
-        
+            self.nr_revs = min(self.nr_revs, nr_revs)
+
         factor = SCP.sample_freq / flux.sample_freq
 
         tdh, dat = bytearray(), bytearray()
