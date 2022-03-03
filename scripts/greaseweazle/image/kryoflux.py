@@ -33,11 +33,14 @@ class OOB:
 class KryoFlux(Image):
 
     def __init__(self, name):
-        if os.path.isdir(name):
-            self.basename = os.path.join(name, '')
-        else:
-            m = re.search("(\d{2}.[01])?.raw$", name)
-            self.basename = name[:m.start()]
+        m = re.search("\d{2}.[01].raw$", name, flags=re.IGNORECASE)
+        error.check(
+            m is not None,
+            '''\
+            Bad Kryoflux image name pattern '%s'
+            Name pattern must be path/to/nameNN.N.raw (N is a digit)'''
+            % name)
+        self.basename = name[:m.start()]
 
 
     @classmethod
@@ -48,6 +51,9 @@ class KryoFlux(Image):
 
     @classmethod
     def from_file(cls, name):
+        # Check that the specified raw file actually exists.
+        with open(name, 'rb') as _:
+            pass
         return cls(name)
 
 

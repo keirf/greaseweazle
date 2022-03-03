@@ -227,16 +227,13 @@ image_types = OrderedDict(
       '.st' : 'IMG' })
 
 def get_image_class(name):
-    if os.path.isdir(name):
-        typespec = 'KryoFlux'
-    else:
-        _, ext = os.path.splitext(name)
-        error.check(ext.lower() in image_types,
-                    """\
-%s: Unrecognised file suffix '%s'
-Known suffixes: %s"""
-                    % (name, ext, ', '.join(image_types)))
-        typespec = image_types[ext.lower()]
+    _, ext = os.path.splitext(name)
+    error.check(ext.lower() in image_types,
+                """\
+                %s: Unrecognised file suffix '%s'
+                Known suffixes: %s"""
+                % (name, ext, ', '.join(image_types)))
+    typespec = image_types[ext.lower()]
     if isinstance(typespec, tuple):
         typename, classname = typespec
     else:
