@@ -361,11 +361,12 @@ class SCP(Image):
         flags = 2 # 96TPI
         if self.index_cued:
             flags |= 1 # Index-Cued
+        nr_revs = self.nr_revs if self.nr_revs is not None else 0
         header = struct.pack("<3s9BI",
                              b"SCP",    # Signature
                              0,         # Version
                              self.opts.disktype,
-                             self.nr_revs, 0, ntracks-1,
+                             nr_revs, 0, ntracks-1,
                              flags,
                              0,         # 16-bit cell width
                              single_sided,
