@@ -132,7 +132,9 @@ class SCP(Image):
         # b'EXTS', length, <length bytes: Extension Area>
         # Extension Area contains consecutive chunks of the form:
         # ID, length, <length bytes: ID-specific data>
-        ext_sig, ext_len = struct.unpack('<4sI', dat[0x2b0:0x2b8])
+        ext_sig, ext_len = None, 0
+        if len(dat) >= 0x2b8:
+            ext_sig, ext_len = struct.unpack('<4sI', dat[0x2b0:0x2b8])
         min_tdh = min(filter(lambda x: x != 0, trk_offs), default=0)
         if ext_sig == b'EXTS' and 0x2b8 + ext_len <= min_tdh:
             pos, end = 0x2b8, 0x2b8 + ext_len
