@@ -84,7 +84,7 @@ def main(argv):
 
     fwver = 'v%d.%d' % (usb.major, usb.minor)
     if usb.update_mode:
-        fwver += ' (Update Bootloader)'
+        fwver += ' (Bootloader)'
     print_info_line('Firmware', fwver, tab=2)
 
     print_info_line('Serial', port.serial_number if port.serial_number

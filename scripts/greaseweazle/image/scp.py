@@ -132,7 +132,9 @@ class SCP(Image):
         # b'EXTS', length, <length bytes: Extension Area>
         # Extension Area contains consecutive chunks of the form:
         # ID, length, <length bytes: ID-specific data>
-        ext_sig, ext_len = struct.unpack('<4sI', dat[0x2b0:0x2b8])
+        ext_sig, ext_len = None, 0
+        if len(dat) >= 0x2b8:
+            ext_sig, ext_len = struct.unpack('<4sI', dat[0x2b0:0x2b8])
         min_tdh = min(filter(lambda x: x != 0, trk_offs), default=0)
         if ext_sig == b'EXTS' and 0x2b8 + ext_len <= min_tdh:
             pos, end = 0x2b8, 0x2b8 + ext_len
@@ -263,8 +265,8 @@ class SCP(Image):
         if not self.nr_revs:
             self.nr_revs = nr_revs
         else:
-            assert self.nr_revs == nr_revs
-        
+            self.nr_revs = min(self.nr_revs, nr_revs)
+
         factor = SCP.sample_freq / flux.sample_freq
 
         tdh, dat = bytearray(), bytearray()
@@ -361,11 +363,12 @@ class SCP(Image):
         flags = 2 # 96TPI
         if self.index_cued:
             flags |= 1 # Index-Cued
+        nr_revs = self.nr_revs if self.nr_revs is not None else 0
         header = struct.pack("<3s9BI",
                              b"SCP",    # Signature
                              0,         # Version
                              self.opts.disktype,
-                             self.nr_revs, 0, ntracks-1,
+                             nr_revs, 0, ntracks-1,
                              flags,
                              0,         # 16-bit cell width
                              single_sided,

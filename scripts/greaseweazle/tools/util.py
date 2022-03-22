@@ -47,9 +47,9 @@ TSPEC: Colon-separated list of:
   h=SET               :: Set of heads (sides) to access
   step=[0-9]          :: # physical head steps between cylinders
   hswap               :: Swap physical drive heads
-  h[01].off=[+-][0-9] :: Physical cylkinder offsets per head
+  h[01].off=[+-][0-9] :: Physical cylinder offsets per head
   SET is a comma-separated list of integers and integer ranges
-  eg. 'c=0-7,9-12:h=0-1'
+  e.g. 'c=0-7,9-12:h=0-1'
 """
 
 # Returns time period in seconds (float)
@@ -229,16 +229,13 @@ image_types = OrderedDict(
       '.st' : 'IMG' })
 
 def get_image_class(name):
-    if os.path.isdir(name):
-        typespec = 'KryoFlux'
-    else:
-        _, ext = os.path.splitext(name)
-        error.check(ext.lower() in image_types,
-                    """\
-%s: Unrecognised file suffix '%s'
-Known suffixes: %s"""
-                    % (name, ext, ', '.join(image_types)))
-        typespec = image_types[ext.lower()]
+    _, ext = os.path.splitext(name)
+    error.check(ext.lower() in image_types,
+                """\
+                %s: Unrecognised file suffix '%s'
+                Known suffixes: %s"""
+                % (name, ext, ', '.join(image_types)))
+    typespec = image_types[ext.lower()]
     if isinstance(typespec, tuple):
         typename, classname = typespec
     else:
@@ -248,7 +245,12 @@ Known suffixes: %s"""
 
 
 def with_drive_selected(fn, usb, args, *_args, **_kwargs):
-    usb.set_bus_type(args.drive[0])
+    try:
+        usb.set_bus_type(args.drive[0].value)
+    except USB.CmdError as err:
+        if err.code == USB.Ack.BadCommand:
+            raise error.Fatal("Device does not support " + str(args.drive[0]))
+        raise
     try:
         usb.drive_select(args.drive[1])
         usb.drive_motor(args.drive[1], _kwargs.pop('motor', True))

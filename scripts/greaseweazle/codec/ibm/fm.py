@@ -320,6 +320,16 @@ class Acorn_DFS(IBM_FM_Predefined):
     sz     = 1
     cskew  = 3
 
+class Atari_90(IBM_FM_Predefined):
+    time_per_rev = 0.2
+    clock = 4e-6
+
+    gap_1 = 6
+    gap_3 = 17
+    nsec  = 18
+    id0   = 0
+    sz    = 0
+    cskew = 3
 
 encode_list = []
 for x in range(256):

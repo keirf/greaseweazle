@@ -9,7 +9,7 @@
 # This is free and unencumbered software released into the public domain.
 # See the file COPYING for more details, or visit <http://unlicense.org>.
 
-import sys, time, struct
+import sys, time, struct, textwrap
 import importlib
 
 # Put all logging/printing on stderr. This keeps stdout clean for future use.
@@ -116,7 +116,7 @@ except KeyboardInterrupt:
 except Exception as err:
     if backtrace: raise
     print("** FATAL ERROR:")
-    print(err)
+    print(textwrap.dedent(str(err)))
     res = 1
 
 if start_time is not None:

@@ -1,6 +1,6 @@
 
 export MAJOR := 0
-export MINOR := 38
+export MINOR := 39
 
 include Rules.mk
 

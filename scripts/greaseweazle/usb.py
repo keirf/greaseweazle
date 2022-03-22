@@ -7,6 +7,7 @@
 
 import struct
 import itertools as it
+from enum import Enum
 from greaseweazle import version
 from greaseweazle import error
 from greaseweazle.flux import Flux
@@ -111,6 +112,7 @@ class Ack:
 class GetInfo:
     Firmware        = 0
     BandwidthStats  = 1
+    CurrentDrive    = 7
 
 
 ## Cmd.{Get,Set}Params indexes
@@ -119,7 +121,7 @@ class Params:
 
 
 ## Cmd.SetBusType values
-class BusType:
+class BusType(Enum):
     Invalid            = 0
     IBMPC              = 1
     Shugart            = 2
@@ -132,6 +134,28 @@ class FluxOp:
     Index           = 1
     Space           = 2
     Astable         = 3
+
+
+## Cmd.GetInfo DriveInfo result
+class DriveInfo:
+
+    FLAG_CYL_VALID = 1
+    FLAG_MOTOR_ON  = 2
+    FLAG_IS_FLIPPY = 4
+
+    def __init__(self, rsp):
+        flags, cyl = struct.unpack("<Ii24x", rsp)
+        self.cyl = cyl if (flags & self.FLAG_CYL_VALID) != 0 else None
+        self.motor_on = (flags & self.FLAG_MOTOR_ON) != 0
+        self.is_flippy = (flags & self.FLAG_IS_FLIPPY) != 0
+
+    def __str__(self):
+        s = "Cyl: " + ("Unknown" if self.cyl is None else str(self.cyl))
+        if self.motor_on:
+            s += "; Motor-On"
+        if self.is_flippy:
+            s += "; Is-Flippy"
+        return s
 
 
 ## CmdError: Encapsulates a command acknowledgement.
@@ -218,6 +242,11 @@ class Unit:
             raise CmdError(cmd, r)
 
 
+    def get_current_drive_info(self):
+        self._send_cmd(struct.pack("3B", Cmd.GetInfo, 3, GetInfo.CurrentDrive))
+        return DriveInfo(self.ser.read(32))
+
+
     ## seek:
     ## Seek the selected drive's heads to the specified track (cyl, head).
     def seek(self, cyl, head):
@@ -229,10 +258,13 @@ class Unit:
             # from cylinder -1. We can check this by attempting a fake outward
             # step, which is exactly NoClickStep's purpose.
             try:
-                self._send_cmd(struct.pack("2B", Cmd.NoClickStep, 2))
+                info = self.get_current_drive_info()
+                if info.is_flippy:
+                    self._send_cmd(struct.pack("2B", Cmd.NoClickStep, 2))
             except CmdError:
-                # NoClickStep is "best effort" and we're on a likely error
-                # path anyway. Let it fail silently.
+                # GetInfo.CurrentDrive is unsupported by older firmwares.
+                # NoClickStep is "best effort". We're on a likely error
+                # path anyway, so let them fail silently.
                 pass
             trk0 = not self.get_pin(26) # now re-sample /TRK0
         error.check(cyl < 0 or (cyl == 0) == trk0,
@@ -286,14 +318,14 @@ class Unit:
 
 
     ## switch_fw_mode:
-    ## Switch between update bootloader and main firmware.
+    ## Switch between bootloader and main firmware.
     def switch_fw_mode(self, mode):
         self._send_cmd(struct.pack("3B", Cmd.SwitchFwMode, 3, int(mode)))
 
 
-    ## update_firmware:
-    ## Update Greaseweazle to the given new firmware.
-    def update_firmware(self, dat):
+    ## update_main_firmware:
+    ## Update Greaseweazle with the given new main firmware.
+    def update_main_firmware(self, dat):
         self._send_cmd(struct.pack("<2BI", Cmd.Update, 6, len(dat)))
         self.ser.write(dat)
         (ack,) = struct.unpack("B", self.ser.read(1))
