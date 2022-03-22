@@ -47,10 +47,12 @@ def _pin_get(usb, args, **_kwargs):
 
 def pin_get(argv):
 
-    parser = util.ArgumentParser(usage='%(prog)s [options] pin')
+    epilog = (util.drive_desc)
+    parser = util.ArgumentParser(usage='%(prog)s [options] pin',
+                                 epilog=epilog)
     parser.add_argument("--device", help="device name (COM/serial port)")
     parser.add_argument("--drive", type=util.drive_letter, default='A',
-                        help="drive to read (A,B,0,1,2,APPLE2,APPLE2_QUARTERTRACK)")
+                        help="drive to read")
     parser.add_argument("pin", type=int, help="pin number")
     parser.description = description
     parser.prog += ' pin get'

@@ -125,8 +125,7 @@ class BusType(Enum):
     Invalid            = 0
     IBMPC              = 1
     Shugart            = 2
-    Apple2             = 3
-    Apple2QuarterTrack = 4
+    Apple2             = 4
 
 
 ## Flux read stream opcodes, preceded by 0xFF byte

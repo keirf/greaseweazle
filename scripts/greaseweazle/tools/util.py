@@ -36,6 +36,13 @@ class ArgumentParser(argparse.ArgumentParser):
         return super().__init__(formatter_class=formatter_class,
                                 *args, **kwargs)
 
+drive_desc = """\
+DRIVE: Drive (and bus) identifier:
+  0 | 1 | 2           :: Shugart bus unit
+  A | B               :: IBM/PC bus unit
+  apple2              :: Apple II unit (AdaFruit boards only)
+"""
+
 speed_desc = """\
 SPEED: Track rotation time specified as:
   <N>rpm | <N>ms | <N>us | <N>ns | <N>scp | <N>
@@ -80,7 +87,6 @@ def drive_letter(letter):
         '1': (USB.BusType.Shugart, 1),
         '2': (USB.BusType.Shugart, 2),
         'APPLE2': (USB.BusType.Apple2, 0),
-        'APPLE2_QUARTERTRACK': (USB.BusType.Apple2QuarterTrack, 0),
     }
     if not letter.upper() in types:
         raise argparse.ArgumentTypeError("invalid drive letter: '%s'" % letter)
