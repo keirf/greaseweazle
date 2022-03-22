@@ -28,7 +28,7 @@ def main(argv):
     parser = util.ArgumentParser(usage='%(prog)s [options] cylinder')
     parser.add_argument("--device", help="device name (COM/serial port)")
     parser.add_argument("--drive", type=util.drive_letter, default='A',
-                        help="drive to read (A,B,0,1,2)")
+                        help="drive to read (A,B,0,1,2,APPLE2,APPLE2_QUARTERTRACK)")
     parser.add_argument("--force", action="store_true",
                         help="allow extreme cylinders with no prompt")
     parser.add_argument("--motor-on", action="store_true",

@@ -162,7 +162,7 @@ def main(argv):
                                  epilog=epilog)
     parser.add_argument("--device", help="device name (COM/serial port)")
     parser.add_argument("--drive", type=util.drive_letter, default='A',
-                        help="drive to read (A,B,0,1,2)")
+                        help="drive to read (A,B,0,1,2,APPLE2,APPLE2_QUARTERTRACK)")
     parser.add_argument("--format", help="disk format (output is converted unless --raw)")
     parser.add_argument("--revs", type=int, metavar="N",
                         help="number of revolutions to read per track")

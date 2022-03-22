@@ -78,7 +78,9 @@ def drive_letter(letter):
         'B': (USB.BusType.IBMPC, 1),
         '0': (USB.BusType.Shugart, 0),
         '1': (USB.BusType.Shugart, 1),
-        '2': (USB.BusType.Shugart, 2)
+        '2': (USB.BusType.Shugart, 2),
+        'APPLE2': (USB.BusType.Apple2, 0),
+        'APPLE2_QUARTERTRACK': (USB.BusType.Apple2QuarterTrack, 0),
     }
     if not letter.upper() in types:
         raise argparse.ArgumentTypeError("invalid drive letter: '%s'" % letter)
