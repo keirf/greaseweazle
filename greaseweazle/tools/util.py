@@ -12,7 +12,6 @@ import importlib
 import serial.tools.list_ports
 from collections import OrderedDict
 
-from greaseweazle import version
 from greaseweazle import error
 from greaseweazle import usb as USB
 

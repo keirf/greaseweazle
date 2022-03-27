@@ -15,7 +15,6 @@ import crcmod.predefined
 
 from greaseweazle.tools import util
 from greaseweazle import error
-from greaseweazle import version
 from greaseweazle import usb as USB
 
 class SkipUpdate(Exception):

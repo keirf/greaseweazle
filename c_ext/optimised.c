@@ -246,10 +246,10 @@ static PyMethodDef modulefuncs[] = {
 };
 
 static PyModuleDef moduledef = {
-    PyModuleDef_HEAD_INIT, "optimised", 0, -1, modulefuncs,
+    PyModuleDef_HEAD_INIT, "gwoptimised", 0, -1, modulefuncs,
 };
 
-PyMODINIT_FUNC PyInit_optimised(void)
+PyMODINIT_FUNC PyInit_gwoptimised(void)
 {
     append_s = Py_BuildValue("s", "append");
     return PyModule_Create(&moduledef);

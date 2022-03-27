@@ -55,7 +55,7 @@ def main(argv):
     parser.prog += ' ' + argv[1]
     args = parser.parse_args(argv[2:])
 
-    print_info_line('Host Tools', 'v%d.%d' % (version.major, version.minor))
+    print_info_line('Host Tools', 'v' % version.version)
 
     print('Device:')
 

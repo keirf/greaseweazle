@@ -11,7 +11,7 @@ gw_opt = os.environ.get('GW_OPT')
 enabled = gw_opt is None or gw_opt.lower().startswith('y')
 if enabled:
     try:
-        from .optimised import *
+        from gwoptimised import *
     except ModuleNotFoundError:
         enabled = False
         print('*** WARNING: Optimised data routines not found: '
