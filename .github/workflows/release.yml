@@ -21,19 +21,19 @@ jobs:
     - name: Dependency packages (apt)
       run: |
         sudo apt update
-        sudo apt -y install git python3-pip zip
+        sudo apt -y install python3-all
 
-    - name: Dependency packages (pip)
-      run: python3 -m pip install --user bitarray crcmod pyserial requests
+    - name: Build source dist
+      run: python3 setup.py sdist
 
-    - name: Build dist
-      run: make dist
+    - name: Build egg
+      run: python3 setup.py bdist_egg
 
     - name: Upload artifacts
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
-        name: greaseweazle-tools.ci.${{ steps.vars.outputs.ref }}
-        path: greaseweazle-tools-${{ steps.vars.outputs.ref }}.zip
+        name: greaseweazle.release.${{ steps.vars.outputs.ref }}
+        path: dist/greaseweazle-*
 
   build-windows:
     runs-on: windows-2019
@@ -54,11 +54,15 @@ jobs:
 
     - name: Dependency packages (pip)
       run: |
-        python -m pip install --upgrade pip setuptools==60.1.0 wheel
-        python -m pip install --user bitarray crcmod pyserial requests cx_Freeze
+        python -m pip install --upgrade pip setuptools==60.1.0
+        python -m pip install --user cx_Freeze
 
-    - name: Build dist
-      run: make windist
+    - name: Build binary dist
+      run: python3 setup.py bdist_egg
+
+    - name: Build Windows release
+      run: |
+        make -f Makefile.windows windist
 
     - name: Upload artifacts
       uses: actions/upload-artifact@v2
