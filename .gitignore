@@ -21,3 +21,5 @@ greaseweazle-tools-*
 /*.egg-info
 /build
 /*.so
+/.eggs
+/dist
