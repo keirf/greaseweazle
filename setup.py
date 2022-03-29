@@ -1,7 +1,11 @@
 from setuptools import setup, find_packages, Extension
 
+def v(filename='VERSION'):
+    with open(filename, 'r') as fd:
+        return fd.read()
+
 setup(name='greaseweazle',
-      version = '0.39',
+      version = v(),
       description = '',
       install_requires=[
           'crcmod',
