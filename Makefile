@@ -17,7 +17,7 @@ clean:
 	rm -rf build dist
 	rm -rf src/*.egg-info
 
-dist: all
+dist:
 	rm -rf $(PROJ)-*
 	mkdir -p $(PROJ)-$(VER)/scripts/misc
 	$(PYTHON) setup.py sdist -d $(PROJ)-$(VER)
