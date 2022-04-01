@@ -12,11 +12,8 @@ jobs:
     steps:
 
     - uses: actions/checkout@v2
-
-    - name: Set environment variables
-      id: vars
-      run: |
-        echo "::set-output name=ref::$(echo ${{ github.ref }} | sed -e's#.*/##')"
+      with:
+        fetch-depth: 0
 
     - name: Dependency packages (apt)
       run: |
@@ -26,25 +23,27 @@ jobs:
     - name: Dependency packages (pip)
       run: python3 -m pip install --user setuptools_scm
 
+    - name: Set environment variables
+      id: vars
+      run: |
+        echo "::set-output name=ver::$(make version)"
+
     - name: Build dist
       run: make dist
 
     - name: Upload artifacts
       uses: actions/upload-artifact@v2
       with:
-        name: greaseweazle-tools.ci.${{ steps.vars.outputs.ref }}
-        path: greaseweazle-tools-${{ steps.vars.outputs.ref }}.zip
+        name: greaseweazle-tools.ci.${{ steps.vars.outputs.ver }}
+        path: greaseweazle-tools-${{ steps.vars.outputs.ver }}.zip
 
   build-windows:
     runs-on: windows-2019
     steps:
 
     - uses: actions/checkout@v2
-
-    - name: Set environment variables
-      id: vars
-      run: |
-        echo "::set-output name=ref::$(echo ${{ github.ref }} | sed -e's#.*/##')"
+      with:
+        fetch-depth: 0
 
     - name: Set up Python
       uses: actions/setup-python@v2
@@ -57,14 +56,19 @@ jobs:
         python -m pip install --upgrade pip setuptools==60.1.0 wheel
         python -m pip install --user cx_Freeze setuptools_scm
 
+    - name: Set environment variables
+      id: vars
+      run: |
+        echo "::set-output name=ver::$(make version)"
+
     - name: Build dist
       run: make windist
 
     - name: Upload artifacts
       uses: actions/upload-artifact@v2
       with:
-        name: greaseweazle-tools.ci.${{ steps.vars.outputs.ref }}
-        path: greaseweazle-tools-${{ steps.vars.outputs.ref }}-win.zip
+        name: greaseweazle-tools.ci.${{ steps.vars.outputs.ver }}
+        path: greaseweazle-tools-${{ steps.vars.outputs.ver }}-win.zip
 
   finalise:
     needs: [build-ubuntu, build-windows]
@@ -72,21 +76,31 @@ jobs:
     steps:
 
     - uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+
+    - name: Dependency packages (apt)
+      run: |
+        sudo apt update
+        sudo apt -y install git python3-pip zip
+
+    - name: Dependency packages (pip)
+      run: python3 -m pip install --user setuptools_scm
 
     - name: Set environment variables
       id: vars
       run: |
-        echo "::set-output name=ref::$(echo ${{ github.ref }} | sed -e's#.*/##')"
+        echo "::set-output name=ver::$(make version)"
 
     - name: Download artifacts
       uses: actions/download-artifact@v2
       with:
-        name: greaseweazle-tools.ci.${{ steps.vars.outputs.ref }}
+        name: greaseweazle-tools.ci.${{ steps.vars.outputs.ver }}
 
     - name: Remove 64-bit DLLS
       run: |
         P=greaseweazle-tools
-        V=${{ steps.vars.outputs.ref }}
+        V=${{ steps.vars.outputs.ver }}
         unzip $P-$V-win.zip
         find $P-$V -name 'api-ms-*' | xargs rm -f
         find $P-$V/lib -name 'python*.dll' | xargs rm -f
@@ -101,7 +115,7 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         tag_name: ${{ github.ref }}
-        release_name: Greaseweazle Tools ${{ steps.vars.outputs.ref }}
+        release_name: Greaseweazle Tools ${{ steps.vars.outputs.ver }}
         body: "[**Release Notes:**](https://github.com/keirf/greaseweazle/blob/master/RELEASE_NOTES)"
         draft: false
         prerelease: false
@@ -112,8 +126,8 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: greaseweazle-tools-${{ steps.vars.outputs.ref }}-win.zip
-        asset_name: greaseweazle-tools-${{ steps.vars.outputs.ref }}-win.zip
+        asset_path: greaseweazle-tools-${{ steps.vars.outputs.ver }}-win.zip
+        asset_name: greaseweazle-tools-${{ steps.vars.outputs.ver }}-win.zip
         asset_content_type: application/zip
 
     - name: Upload Release Asset (Other)
@@ -122,6 +136,6 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: greaseweazle-tools-${{ steps.vars.outputs.ref }}.zip
-        asset_name: greaseweazle-tools-${{ steps.vars.outputs.ref }}.zip
+        asset_path: greaseweazle-tools-${{ steps.vars.outputs.ver }}.zip
+        asset_name: greaseweazle-tools-${{ steps.vars.outputs.ver }}.zip
         asset_content_type: application/zip

@@ -1,14 +1,15 @@
 
 include Rules.mk
 
-TARGETS := all install clean dist _windist windist mrproper
+TARGETS := version install clean dist _windist windist mrproper
 .PHONY: $(TARGETS)
 
 PROJ = greaseweazle-tools
 VER := $(shell $(PYTHON) -c \
 "from setuptools_scm import get_version ; print('v'+get_version())")
 
-all:
+version:
+	@echo $(VER)
 
 install:
 	$(PYTHON) -m pip install .

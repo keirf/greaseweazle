@@ -9,11 +9,13 @@ jobs:
     steps:
 
     - uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
 
     - name: Dependency packages (apt)
       run: |
         sudo apt update
-        sudo apt -y install python3-pip zip
+        sudo apt -y install python3-pip
 
     - name: Dependency packages (pip)
       run: python3 -m pip install --user setuptools_scm
@@ -21,13 +23,13 @@ jobs:
     - name: Set environment variables
       id: vars
       run: |
-        echo "::set-output name=ver::$(git rev-parse --short HEAD)"
+        echo "::set-output name=ver::$(make version)"
 
     - name: Build dist
       run: |
         P=greaseweazle-tools
         V=${{ steps.vars.outputs.ver }}
-        make dist VER=$V
+        make dist
         rm $P-$V.zip
         rm $P-$V/RELEASE_NOTES
         zip -r $P-$V.zip $P-$V
@@ -43,11 +45,8 @@ jobs:
     steps:
 
     - uses: actions/checkout@v2
-
-    - name: Set environment variables
-      id: vars
-      run: |
-        echo "::set-output name=ver::$(git rev-parse --short HEAD)"
+      with:
+        fetch-depth: 0
 
     - name: Set up Python
       uses: actions/setup-python@v2
@@ -60,14 +59,19 @@ jobs:
         python -m pip install --upgrade pip setuptools==60.1.0 wheel
         python -m pip install --user cx_Freeze setuptools_scm
 
+    - name: Set environment variables
+      id: vars
+      run: |
+        echo "::set-output name=ver::$(make version)"
+
     - name: Build dist
       run: |
         $P="greaseweazle-tools"
         $V="${{ steps.vars.outputs.ver }}"
-        make dist VER=$V
+        make dist
         rm $P-$V.zip
         rm $P-$V/RELEASE_NOTES
-        make _windist VER=$V
+        make _windist
 
     - name: Upload artifacts
       uses: actions/upload-artifact@v2
@@ -81,11 +85,21 @@ jobs:
     steps:
 
     - uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+
+    - name: Dependency packages (apt)
+      run: |
+        sudo apt update
+        sudo apt -y install python3-pip
+
+    - name: Dependency packages (pip)
+      run: python3 -m pip install --user setuptools_scm
 
     - name: Set environment variables
       id: vars
       run: |
-        echo "::set-output name=ver::$(git rev-parse --short HEAD)"
+        echo "::set-output name=ver::$(make version)"
 
     - name: Download artifacts
       uses: actions/download-artifact@v2
