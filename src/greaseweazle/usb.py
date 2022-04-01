@@ -8,7 +8,6 @@
 import struct
 import itertools as it
 from enum import Enum
-from greaseweazle import version
 from greaseweazle import error
 from greaseweazle.flux import Flux
 from greaseweazle import optimised

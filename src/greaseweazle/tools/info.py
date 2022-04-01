@@ -14,7 +14,7 @@ import sys, serial
 
 from greaseweazle.tools import util
 from greaseweazle import usb as USB
-from greaseweazle import version
+from greaseweazle import __version__
 
 model_id = { 1: { 0: 'F1',
                   1: 'F1 Plus',
@@ -55,7 +55,7 @@ def main(argv):
     parser.prog += ' ' + argv[1]
     args = parser.parse_args(argv[2:])
 
-    print_info_line('Host Tools', 'v%d.%d' % (version.major, version.minor))
+    print_info_line('Host Tools', 'v%s' % __version__)
 
     print('Device:')
 

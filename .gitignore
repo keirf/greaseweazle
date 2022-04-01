@@ -13,8 +13,9 @@
 *.ipf
 *.scp
 *.pyc
-scripts/greaseweazle/version.py
-scripts/greaseweazle/optimised/optimised*
-scripts/c_ext/build/
-scripts/c_ext/*.egg-info/
-greaseweazle-tools-*
+/greaseweazle-tools-*
+/.python-version
+/src/*.egg-info
+/build/
+/dist/
+/src/greaseweazle/__init__.py

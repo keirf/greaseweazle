@@ -10,37 +10,33 @@ jobs:
 
     - uses: actions/checkout@v2
 
-    - name: Set environment variables
-      id: vars
-      run: |
-        echo "::set-output name=sha_short::$(git rev-parse --short HEAD)"
-        echo "::set-output name=sha_long::$(git rev-parse HEAD)"
-
     - name: Dependency packages (apt)
       run: |
         sudo apt update
-        sudo apt -y install git python3-pip zip
+        sudo apt -y install python3-pip zip
 
     - name: Dependency packages (pip)
-      run: python3 -m pip install --user bitarray crcmod pyserial requests
+      run: python3 -m pip install --user setuptools_scm
+
+    - name: Set environment variables
+      id: vars
+      run: |
+        echo "::set-output name=ver::$(git rev-parse --short HEAD)"
 
     - name: Build dist
       run: |
         P=greaseweazle-tools
-        V=${{ steps.vars.outputs.sha_short }}
-        VL=${{ steps.vars.outputs.sha_long }}
+        V=${{ steps.vars.outputs.ver }}
         make dist VER=$V
         rm $P-$V.zip
         rm $P-$V/RELEASE_NOTES
-        echo "$VL" >$P-$V/COMMIT
-        echo "commit = '$VL'" >>$P-$V/scripts/greaseweazle/version.py 
         zip -r $P-$V.zip $P-$V
 
     - name: Upload artifacts
       uses: actions/upload-artifact@v2
       with:
-        name: greaseweazle-tools.ci.${{ steps.vars.outputs.sha_short }}
-        path: greaseweazle-tools-${{ steps.vars.outputs.sha_short }}.zip
+        name: greaseweazle-tools.ci.${{ steps.vars.outputs.ver }}
+        path: greaseweazle-tools-${{ steps.vars.outputs.ver }}.zip
 
   build-windows:
     runs-on: windows-2019
@@ -51,8 +47,7 @@ jobs:
     - name: Set environment variables
       id: vars
       run: |
-        echo "::set-output name=sha_short::$(git rev-parse --short HEAD)"
-        echo "::set-output name=sha_long::$(git rev-parse HEAD)"
+        echo "::set-output name=ver::$(git rev-parse --short HEAD)"
 
     - name: Set up Python
       uses: actions/setup-python@v2
@@ -63,25 +58,22 @@ jobs:
     - name: Dependency packages (pip)
       run: |
         python -m pip install --upgrade pip setuptools==60.1.0 wheel
-        python -m pip install --user bitarray crcmod pyserial requests cx_Freeze
+        python -m pip install --user cx_Freeze setuptools_scm
 
     - name: Build dist
       run: |
         $P="greaseweazle-tools"
-        $V="${{ steps.vars.outputs.sha_short }}"
-        $VL="${{ steps.vars.outputs.sha_long }}"
+        $V="${{ steps.vars.outputs.ver }}"
         make dist VER=$V
         rm $P-$V.zip
         rm $P-$V/RELEASE_NOTES
-        echo "$VL" >$P-$V/COMMIT
-        echo "commit = '$VL'" >>$P-$V/scripts/greaseweazle/version.py 
         make _windist VER=$V
 
     - name: Upload artifacts
       uses: actions/upload-artifact@v2
       with:
-        name: greaseweazle-tools.ci.${{ steps.vars.outputs.sha_short }}
-        path: greaseweazle-tools-${{ steps.vars.outputs.sha_short }}-win.zip
+        name: greaseweazle-tools.ci.${{ steps.vars.outputs.ver }}
+        path: greaseweazle-tools-${{ steps.vars.outputs.ver }}-win.zip
 
   finalise:
     needs: [build-ubuntu, build-windows]
@@ -93,17 +85,17 @@ jobs:
     - name: Set environment variables
       id: vars
       run: |
-        echo "::set-output name=sha_short::$(git rev-parse --short HEAD)"
+        echo "::set-output name=ver::$(git rev-parse --short HEAD)"
 
     - name: Download artifacts
       uses: actions/download-artifact@v2
       with:
-        name: greaseweazle-tools.ci.${{ steps.vars.outputs.sha_short }}
+        name: greaseweazle-tools.ci.${{ steps.vars.outputs.ver }}
 
     - name: Fix up Windows distribution
       run: |
         P=greaseweazle-tools
-        V=${{ steps.vars.outputs.sha_short }}
+        V=${{ steps.vars.outputs.ver }}
         unzip $P-$V-win.zip
         find $P-$V -name 'api-ms-*' | xargs rm -f
         find $P-$V/lib -name 'python*.dll' | xargs rm -f
@@ -114,5 +106,5 @@ jobs:
     - name: Upload finalised artifacts
       uses: actions/upload-artifact@v2
       with:
-        name: greaseweazle-tools.ci.${{ steps.vars.outputs.sha_short }}
-        path: greaseweazle-tools-${{ steps.vars.outputs.sha_short }}-win.zip
+        name: greaseweazle-tools.ci.${{ steps.vars.outputs.ver }}
+        path: greaseweazle-tools-${{ steps.vars.outputs.ver }}-win.zip

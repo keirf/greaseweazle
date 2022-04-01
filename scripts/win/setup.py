@@ -1,5 +1,4 @@
 from cx_Freeze import setup, Executable
-from greaseweazle import version
 
 buildOptions = dict(
     packages = ['greaseweazle'],
@@ -13,7 +12,5 @@ executables = [
 ]
 
 setup(name='Greaseweazle',
-      version = f'{version.major}.{version.minor}',
-      description = '',
       options = dict(build_exe = buildOptions),
       executables = executables)

@@ -1,49 +1,38 @@
 
-export MAJOR := 0
-export MINOR := 39
-
 include Rules.mk
 
-TARGETS := all clean dist _windist windist mrproper pysetup
+TARGETS := all install clean dist _windist windist mrproper
 .PHONY: $(TARGETS)
 
 PROJ = greaseweazle-tools
-VER := v$(MAJOR).$(MINOR)
+VER := $(shell $(PYTHON) -c \
+"from setuptools_scm import get_version ; print('v'+get_version())")
 
-all: scripts/greaseweazle/version.py
+all:
 
-clean::
-	rm -rf scripts/greaseweazle/optimised/optimised*
-	rm -rf scripts/c_ext/*.egg-info scripts/c_ext/build
-	rm -f scripts/greaseweazle/*.pyc
-	rm -f scripts/greaseweazle/version.py
-	find . -name __pycache__ | xargs rm -rf
+install:
+	$(PYTHON) -m pip install .
+
+clean:
+	rm -rf build dist
+	rm -rf src/*.egg-info
 
 dist: all
 	rm -rf $(PROJ)-*
-	mkdir -p $(PROJ)-$(VER)/scripts/greaseweazle/image
-	mkdir -p $(PROJ)-$(VER)/scripts/greaseweazle/tools
 	mkdir -p $(PROJ)-$(VER)/scripts/misc
+	$(PYTHON) setup.py sdist -d $(PROJ)-$(VER)
 	cp -a COPYING $(PROJ)-$(VER)/
 	cp -a README $(PROJ)-$(VER)/
-	cp -a gw $(PROJ)-$(VER)/
 	cp -a scripts/49-greaseweazle.rules $(PROJ)-$(VER)/scripts/
-	cp -a scripts/setup.sh $(PROJ)-$(VER)/scripts/
-	cp -a scripts/gw.py $(PROJ)-$(VER)/scripts/
-	cp -a scripts/greaseweazle $(PROJ)-$(VER)/scripts
-	cp -a scripts/c_ext $(PROJ)-$(VER)/scripts
 	cp -a scripts/misc/*.py $(PROJ)-$(VER)/scripts/misc/
 	cp -a RELEASE_NOTES $(PROJ)-$(VER)/
 	$(ZIP) $(PROJ)-$(VER).zip $(PROJ)-$(VER)
 
-_windist:
+_windist: install
 	rm -rf ipf ipf.zip
-	PYTHON=$(PYTHON) . ./scripts/setup.sh
-	cp -a scripts/setup.py $(PROJ)-$(VER)/scripts
-	cp -a scripts/greaseweazle/optimised/optimised* $(PROJ)-$(VER)/scripts/greaseweazle/optimised
-	cd $(PROJ)-$(VER)/scripts && $(PYTHON) setup.py build
-	cp -a $(PROJ)-$(VER)/scripts/build/exe.win*/* $(PROJ)-$(VER)/
-	rm -rf $(PROJ)-$(VER)/scripts $(PROJ)-$(VER)/*.py $(PROJ)-$(VER)/gw
+	cd scripts/win && $(PYTHON) setup.py build
+	cp -a scripts/win/build/exe.win*/* $(PROJ)-$(VER)/
+	rm -rf $(PROJ)-$(VER)/scripts $(PROJ)-$(VER)/*.tar.gz
 	curl -L http://softpres.org/_media/files:spsdeclib_5.1_windows.zip --output ipf.zip
 	$(UNZIP) -oipf ipf.zip
 	cp -a ipf/capsimg_binary/CAPSImg.dll $(PROJ)-$(VER)/
@@ -56,7 +45,3 @@ windist:
 
 mrproper: clean
 	rm -rf $(PROJ)-* ipf ipf.zip
-
-scripts/greaseweazle/version.py: Makefile
-	echo "major = $(MAJOR)" >$@
-	echo "minor = $(MINOR)" >>$@
