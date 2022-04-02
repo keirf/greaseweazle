@@ -26,13 +26,7 @@ jobs:
         echo "::set-output name=ver::$(make version)"
 
     - name: Build dist
-      run: |
-        P=greaseweazle-tools
-        V=${{ steps.vars.outputs.ver }}
-        make dist
-        rm $P-$V.zip
-        rm $P-$V/RELEASE_NOTES
-        zip -r $P-$V.zip $P-$V
+      run: make dist
 
     - name: Upload artifacts
       uses: actions/upload-artifact@v2
@@ -65,13 +59,7 @@ jobs:
         echo "::set-output name=ver::$(make version)"
 
     - name: Build dist
-      run: |
-        $P="greaseweazle-tools"
-        $V="${{ steps.vars.outputs.ver }}"
-        make dist
-        rm $P-$V.zip
-        rm $P-$V/RELEASE_NOTES
-        make _windist
+      run: make windist
 
     - name: Upload artifacts
       uses: actions/upload-artifact@v2
