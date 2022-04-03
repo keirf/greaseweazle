@@ -7,7 +7,8 @@
 # This is free and unencumbered software released into the public domain.
 # See the file COPYING for more details, or visit <http://unlicense.org>.
 
-description = "Update the Greaseweazle device firmware to current version."
+description = ("Update the Greaseweazle device firmware to latest "
+               "(or specified) version.")
 
 import requests, zipfile, io, re
 import sys, serial, struct, os, textwrap
@@ -84,27 +85,52 @@ def extract_update(usb, dat, args):
     return (major, minor), dat
 
 
+def download(json):
+    # Look for a matching asset (greaseweazle-firmware-<ver>.zip)
+    for asset in json['assets']:
+        url = asset['browser_download_url']
+        m = re.match(r'.*/(greaseweazle-firmware-.+)\.zip$', url)
+        if m is not None:
+            basename = m.group(1)
+            break
+    # Download and unzip the asset
+    name = basename+'.upd'
+    print('Downloading latest firmware: '+name)
+    rsp = requests.get(url, timeout=10)
+    z = zipfile.ZipFile(io.BytesIO(rsp._content))
+    return name, z.read(basename+'/'+name)
+
+
+def download_by_tag(tag_name):
+    '''Download the latest Update File from GitHub.'''
+    rsp = requests.get('https://api.github.com/repos/keirf/'
+                       'greaseweazle-firmware/releases', timeout=5)
+    for release in rsp.json():
+        if release['tag_name'] == tag_name:
+            return download(release)
+    raise error.Fatal("Unknown tag name '%s'" % tag_name)
+
+
 def download_latest():
     '''Download the latest Update File from GitHub.'''
     rsp = requests.get('https://api.github.com/repos/keirf/'
                        'greaseweazle-firmware/releases/latest', timeout=5)
-    tag = rsp.json()['tag_name']
-    r = re.match(r'v(\d+)\.(\d+)', tag)
-    major, minor = r.group(1), r.group(2)
-    name = 'greaseweazle-firmware-'+tag+'.upd'
-    print('Downloading latest firmware: '+name)
-    rsp = requests.get('https://github.com/keirf/greaseweazle-firmware'
-                       '/releases/download/'+tag+
-                       '/greaseweazle-firmware-'+tag+'.zip',
-                       timeout=10)
-    z = zipfile.ZipFile(io.BytesIO(rsp._content))
-    return name, z.read('greaseweazle-firmware-'+tag+'/'+name)
+    return download(rsp.json())
 
 
 def main(argv):
 
-    parser = util.ArgumentParser(allow_abbrev=False, usage='%(prog)s [options] [file]')
-    parser.add_argument("file", nargs="?", help="update filename")
+    epilog = """\
+Examples:
+  gw update
+  gw update --force v1.0
+  gw update greaseweazle-firmware-v1.0.upd"""
+
+    parser = util.ArgumentParser(allow_abbrev=False,
+                                 usage='%(prog)s [options]',
+                                 epilog=epilog)
+    parser.add_argument("--file", help="use specified update file")
+    parser.add_argument("--tag", help="use specified GitHub release tag")
     parser.add_argument("--device", help="device name (COM/serial port)")
     parser.add_argument("--force", action="store_true",
                         help="force update even if firmware is older")
@@ -114,7 +140,12 @@ def main(argv):
     parser.prog += ' ' + argv[1]
     args = parser.parse_args(argv[2:])
 
-    if args.file is None:
+    error.check(args.tag is None or args.file is None,
+                "File and tag both specified. Only one is allowed.")
+
+    if args.tag is not None:
+        args.file, dat = download_by_tag(args.tag)
+    elif args.file is None:
         args.file, dat = download_latest()
     else:
         with open(args.file, "rb") as f:
