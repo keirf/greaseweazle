@@ -123,7 +123,7 @@ def main(argv):
     try:
         usb = util.usb_open(args.device, mode_check=False)
         dat_version, dat = extract_update(usb, dat, args)
-        print("Updating %s to v%u.%u..."
+        print("Updating %s to version %u.%u..."
               % ("Bootloader" if args.bootloader else "Main Firmware",
                  *dat_version))
         if not args.force and (usb.can_mode_switch
@@ -137,7 +137,7 @@ def main(argv):
                     usb = util.usb_reopen(usb, is_update=False)
                 raise SkipUpdate(
                     '''\
-                    Device is already running v%d.%d.
+                    Device is already running version %d.%d.
                     Use --force to update anyway.''' % usb.version)
         usb = util.usb_mode_check(usb, is_update=not args.bootloader)
         update_firmware(usb, dat, args)

@@ -47,7 +47,7 @@ def main():
     sys.stdout = sys.stderr
 
     if '+' in __version__:
-        print("""*** TEST/PRE-RELEASE: v%s
+        print("""*** TEST/PRE-RELEASE: %s
 *** Use these tools ONLY for test and development!!"""
               % __version__)
 

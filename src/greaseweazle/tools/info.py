@@ -55,7 +55,7 @@ def main(argv):
     parser.prog += ' ' + argv[1]
     args = parser.parse_args(argv[2:])
 
-    print_info_line('Host Tools', 'v%s' % __version__)
+    print_info_line('Host Tools', '%s' % __version__)
 
     print('Device:')
 
@@ -82,7 +82,7 @@ def main(argv):
         model = 'Unknown (0x%02X%02X)' % (usb.hw_model, usb.hw_submodel)
     print_info_line('Model', model, tab=2)
 
-    fwver = 'v%d.%d' % (usb.major, usb.minor)
+    fwver = '%d.%d' % usb.version
     if usb.update_mode:
         fwver += ' (Bootloader)'
     print_info_line('Firmware', fwver, tab=2)
@@ -104,7 +104,8 @@ def main(argv):
     if not usb_update_mode:
         latest_version = latest_firmware()
         if latest_version > usb_version:
-            print('\n*** New firmware v%d.%d is available' % latest_version)
+            print('\n*** New firmware version %d.%d is available'
+                  % latest_version)
             util.print_update_instructions(usb)
 
 

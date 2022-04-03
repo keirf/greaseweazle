@@ -381,7 +381,7 @@ If the problem persists, install the Update Jumper at pins RXI-TXO.""")
         sys.exit(1)
 
     if not usb.update_mode and usb.update_needed:
-        print("ERROR: Device firmware v%u.%u is unsupported"
+        print("ERROR: Device firmware version %u.%u is unsupported"
               % (usb.major, usb.minor))
         print_update_instructions(usb)
         sys.exit(1)

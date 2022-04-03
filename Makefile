@@ -6,7 +6,7 @@ TARGETS := version install clean _dist dist windist mrproper
 
 PROJ = greaseweazle-tools
 VER := $(shell $(PYTHON) -c \
-"from setuptools_scm import get_version ; print('v'+get_version())")
+"from setuptools_scm import get_version ; print(get_version())")
 
 version:
 	@echo $(VER)
