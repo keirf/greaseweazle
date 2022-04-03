@@ -3,6 +3,11 @@
 ** Keir Fraser <keir.xen@gmail.com>
 ************************************
 
+** v0.40 - 3 April 2022
+ - gw update: Allow update from a specified GitHub release tag
+ - Python: Proper setuptools-based installation
+ - Various minor fixes
+
 ** v0.39 - 27 February 2022
  - Fix crashes in the USB.seek error path
  - Support Atari 90kB format (atari.90)
