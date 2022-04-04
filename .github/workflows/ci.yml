@@ -1,6 +1,9 @@
-name: CI
+on:
+  push:
+    branches: '*'
+  pull_request:
 
-on: [push, pull_request]
+name: CI
 
 jobs:
 
