@@ -3,6 +3,9 @@
 ** Keir Fraser <keir.xen@gmail.com>
 ************************************
 
+** v0.41 - 5 April 2022
+ - Mac/Linux: Fix build dependencies for Python source installation 
+
 ** v0.40 - 3 April 2022
  - gw update: Allow update from a specified GitHub release tag
  - Python: Proper setuptools-based installation
