@@ -34,8 +34,8 @@ jobs:
     - name: Upload artifacts
       uses: actions/upload-artifact@v2
       with:
-        name: greaseweazle-tools.ci.${{ steps.vars.outputs.ver }}
-        path: greaseweazle-tools-${{ steps.vars.outputs.ver }}.zip
+        name: greaseweazle.ci.${{ steps.vars.outputs.ver }}
+        path: greaseweazle-${{ steps.vars.outputs.ver }}.zip
 
   build-windows:
     runs-on: windows-2019
@@ -67,8 +67,8 @@ jobs:
     - name: Upload artifacts
       uses: actions/upload-artifact@v2
       with:
-        name: greaseweazle-tools.ci.${{ steps.vars.outputs.ver }}
-        path: greaseweazle-tools-${{ steps.vars.outputs.ver }}-win.zip
+        name: greaseweazle.ci.${{ steps.vars.outputs.ver }}
+        path: greaseweazle-${{ steps.vars.outputs.ver }}-win.zip
 
   finalise:
     needs: [build-ubuntu, build-windows]
@@ -95,11 +95,11 @@ jobs:
     - name: Download artifacts
       uses: actions/download-artifact@v2
       with:
-        name: greaseweazle-tools.ci.${{ steps.vars.outputs.ver }}
+        name: greaseweazle.ci.${{ steps.vars.outputs.ver }}
 
     - name: Remove 64-bit DLLS
       run: |
-        P=greaseweazle-tools
+        P=greaseweazle
         V=${{ steps.vars.outputs.ver }}
         unzip $P-$V-win.zip
         find $P-$V -name 'api-ms-*' | xargs rm -f
@@ -126,8 +126,8 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: greaseweazle-tools-${{ steps.vars.outputs.ver }}-win.zip
-        asset_name: greaseweazle-tools-${{ steps.vars.outputs.ver }}-win.zip
+        asset_path: greaseweazle-${{ steps.vars.outputs.ver }}-win.zip
+        asset_name: greaseweazle-${{ steps.vars.outputs.ver }}-win.zip
         asset_content_type: application/zip
 
     - name: Upload Release Asset (Other)
@@ -136,6 +136,6 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: greaseweazle-tools-${{ steps.vars.outputs.ver }}.zip
-        asset_name: greaseweazle-tools-${{ steps.vars.outputs.ver }}.zip
+        asset_path: greaseweazle-${{ steps.vars.outputs.ver }}.zip
+        asset_name: greaseweazle-${{ steps.vars.outputs.ver }}.zip
         asset_content_type: application/zip

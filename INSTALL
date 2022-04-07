@@ -1,0 +1,23 @@
+
+INSTALLATION ONE-LINER:
+***********************
+Installing into your existing Python 3 environment is as simple as
+ $ python3 -m pip install .
+
+
+DEPENDENCIES:
+*************
+You may need to install some dependencies before installing Greaseweazle.
+ - Python 3.7 or later, including Pip (Python package manager)
+ - Your system's standard C compiler
+
+macOS:
+------
+1. Install Homebrew <https://brew.sh>
+2. In Terminal:
+ $ brew install python@3.10
+ $ xcode-select --install
+
+Ubuntu (or other Debian derivative):
+------------------------------------
+ $ sudo apt install gcc python3-pip

@@ -13,9 +13,11 @@
 *.ipf
 *.scp
 *.pyc
-/greaseweazle-tools-*
+*.so
+/greaseweazle-*
 /.python-version
 /src/*.egg-info
 /build/
 /dist/
 /src/greaseweazle/__init__.py
+

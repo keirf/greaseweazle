@@ -1,0 +1,14 @@
+include COPYING
+include INSTALL
+include README
+include RELEASE_NOTES
+
+prune .github
+exclude .gitignore
+exclude README.md
+exclude MANIFEST.in
+exclude Makefile
+exclude Rules.mk
+
+graft scripts
+prune scripts/win
