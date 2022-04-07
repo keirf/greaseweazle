@@ -3,6 +3,9 @@
 ** Keir Fraser <keir.xen@gmail.com>
 ************************************
 
+** v0.42 - 7 April 2022
+ - Mac/Linux: Further improve Python source installation 
+
 ** v0.41 - 5 April 2022
  - Mac/Linux: Fix build dependencies for Python source installation 
 
