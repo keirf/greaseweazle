@@ -27,8 +27,9 @@ actions = [ 'info',
             'rpm' ]
 
 def usage(argv):
-    print("Usage: %s [--time] [action] [-h] ..." % (argv[0]))
+    print("Usage: %s [--time] [--stdout] [action] [-h] ..." % (argv[0]))
     print("  --time      Print elapsed time after action is executed")
+    print("  --stdout    Log progress to stdout instead of stderr")
     print("  -h, --help  Show help message for specified action")
     print("Actions:")
     for a in actions:
@@ -40,28 +41,33 @@ def main():
     argv = sys.argv
     backtrace = False
     start_time = None
-
-    # All logging/printing on stderr. This keeps stdout clean for future use.
-    # Configure line buffering, even if the logging output is not to a console.
-    sys.stderr.reconfigure(line_buffering=True)
-    sys.stdout = sys.stderr
-
-    if '+' in __version__:
-        print("""*** TEST/PRE-RELEASE: %s
-*** Use these tools ONLY for test and development!!"""
-              % __version__)
+    use_stdout = False
 
     while len(argv) > 1 and argv[1].startswith('--'):
         if argv[1] == '--bt':
             backtrace = True
         elif argv[1] == '--time':
             start_time = time.time()
+        elif argv[1] == '--stdout':
+            use_stdout = True
         else:
             return usage(argv)
         argv = [argv[0]] + argv[2:]
 
     if len(argv) < 2 or argv[1] not in actions:
         return usage(argv)
+
+    # All logging/printing on stderr. This keeps stdout clean for future use.
+    # User can specify `--stdout' if he/she needs progress logged to stdout anyway.
+    # Configure line buffering, even if the logging output is not to a console.
+    if use_stdout == False:
+        sys.stderr.reconfigure(line_buffering=True)
+        sys.stdout = sys.stderr
+
+    if '+' in __version__:
+        print("""*** TEST/PRE-RELEASE: %s
+*** Use these tools ONLY for test and development!!"""
+              % __version__)
 
     mod = importlib.import_module('greaseweazle.tools.' + argv[1])
     main = mod.__dict__['main']
