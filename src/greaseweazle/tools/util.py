@@ -39,7 +39,6 @@ drive_desc = """\
 DRIVE: Drive (and bus) identifier:
   0 | 1 | 2           :: Shugart bus unit
   A | B               :: IBM/PC bus unit
-  apple2              :: Apple II unit (AdaFruit boards only)
 """
 
 speed_desc = """\
@@ -85,7 +84,6 @@ def drive_letter(letter):
         '0': (USB.BusType.Shugart, 0),
         '1': (USB.BusType.Shugart, 1),
         '2': (USB.BusType.Shugart, 2),
-        'APPLE2': (USB.BusType.Apple2, 0),
     }
     if not letter.upper() in types:
         raise argparse.ArgumentTypeError("invalid drive letter: '%s'" % letter)
