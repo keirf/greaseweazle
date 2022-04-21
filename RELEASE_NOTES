@@ -228,7 +228,7 @@ All versions below include firmware and host tools in a combined release.
    - Weak data not yet supported (RNC "Protect Process" protection, & others)
    - Write splice is always rotated to the index (affects Speedlock & others)
    - Also TODO: Verified writes
- - USB: Use the VID:PID pair assigned to Greaseweazle (1201:4d69)
+ - USB: Use the VID:PID pair assigned to Greaseweazle (1209:4d69)
  - New prerequisite: 'bitarray' module. See the wiki.
 
 ** v0.12 - 10 March 2020
