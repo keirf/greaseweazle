@@ -67,7 +67,7 @@ Compatible formats:\n%s"""
         tdat = bytearray()
 
         n_side = 2
-        n_cyl = max(self.to_track.keys(), default=(0), key=lambda x:x[0])[0]
+        n_cyl = max(self.to_track.keys(), default=(0,), key=lambda x:x[0])[0]
         n_cyl += 1
 
         for cyl in range(n_cyl):

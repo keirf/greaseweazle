@@ -107,7 +107,7 @@ class HFE(Image):
     def get_image(self):
 
         n_side = 1
-        n_cyl = max(self.to_track.keys(), default=(0), key=lambda x:x[0])[0]
+        n_cyl = max(self.to_track.keys(), default=(0,), key=lambda x:x[0])[0]
         n_cyl += 1
 
         # We dynamically build the Track-LUT and -Data arrays.
