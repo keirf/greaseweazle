@@ -391,7 +391,15 @@ class IBM_MFM_1200(IBM_MFM_720):
 class IBM_MFM_1440(IBM_MFM_720):
 
     clock = 1e-6
-    nsec   = 18
+    nsec  = 18
+
+class IBM_MFM_1680(IBM_MFM_720):
+
+    clock = 1e-6
+    nsec  = 21
+    gap_3 = 12
+    cskew = 3
+    interleave = 2
 
 class AtariST_SS_9SPT(IBM_MFM_720):
 
