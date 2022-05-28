@@ -274,18 +274,26 @@ class IBM_MFM_Formatted(IBM_MFM):
         self.iams, self.sectors = self.raw_iams, self.raw_sectors
         super().decode_raw(track)
         self.iams, self.sectors = iams, sectors
+        mismatches = set()
         for r in self.raw_sectors:
             if r.idam.crc != 0:
                 continue
+            matched = False
             for s in self.sectors:
                 if (s.idam.c == r.idam.c and
                     s.idam.h == r.idam.h and
                     s.idam.r == r.idam.r and
                     s.idam.n == r.idam.n):
                     s.idam.crc = 0
+                    matched = True
                     if r.dam.crc == 0 and s.dam.crc != 0:
                         s.dam.crc = s.crc = 0
                         s.dam.data = r.dam.data
+            if not matched:
+                mismatches.add((r.idam.c, r.idam.h, r.idam.r, r.idam.n))
+        for m in mismatches:
+            print('T%d.%d: Ignoring unexpected sector C:%d H:%d R:%d N:%d'
+                  % (self.cyl, self.head, *m))
 
     def set_img_track(self, tdat):
         pos = 0
