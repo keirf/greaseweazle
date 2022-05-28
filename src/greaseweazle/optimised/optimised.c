@@ -54,7 +54,8 @@ flux_to_bitcells(PyObject *self, PyObject *args)
     clock = clock_centre;
 
     /* to_index = next(index_iter) */
-    item = PyIter_Next(index_iter);
+    if ((item = PyIter_Next(index_iter)) == NULL)
+        return NULL;
     to_index = PyFloat_AsDouble(item);
     Py_DECREF(item);
     if (PyErr_Occurred())
@@ -83,7 +84,8 @@ flux_to_bitcells(PyObject *self, PyObject *args)
                 if (PyList_Append_SR(revolutions, PyLong_FromLong(nbits)) < 0)
                     return NULL;
                 nbits = 0;
-                item = PyIter_Next(index_iter);
+                if ((item = PyIter_Next(index_iter)) == NULL)
+                    return NULL;
                 to_index += PyFloat_AsDouble(item);
                 Py_DECREF(item);
                 if (PyErr_Occurred())
