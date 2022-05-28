@@ -25,6 +25,7 @@ def open_image(args, image_class):
         error.check(hasattr(image, 'opts') and hasattr(image.opts, opt),
                     "%s: Invalid file option: %s" % (args.file, opt))
         setattr(image.opts, opt, val)
+    image.write_on_ctrl_c = True
     return image
 
 

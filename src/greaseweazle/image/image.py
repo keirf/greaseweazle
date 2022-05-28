@@ -12,6 +12,7 @@ from greaseweazle import error
 class Image:
 
     read_only = False
+    write_on_ctrl_c = False
 
     ## Context manager for image objects created using .to_file()
 
@@ -20,7 +21,8 @@ class Image:
         return self
 
     def __exit__(self, type, value, tb):
-        save = type is None or type is KeyboardInterrupt
+        save = (type is None or
+                (type is KeyboardInterrupt and self.write_on_ctrl_c))
         try:
             if save:
                 # No error: Normal writeout.
