@@ -223,6 +223,22 @@ class Format_AtariST_880(Format):
         self.default_revs = m.default_revs
         super().__init__()
     
+class Format_Ensoniq_800(Format):
+    img_compatible = True
+    def __init__(self):
+        import greaseweazle.codec.ibm.mfm as m
+        self.fmt = m.Ensoniq_800
+        self.default_revs = m.default_revs
+        super().__init__()
+
+class Format_Ensoniq_1600(Format):
+    img_compatible = True
+    def __init__(self):
+        import greaseweazle.codec.ibm.mfm as m
+        self.fmt = m.Ensoniq_1600
+        self.default_revs = m.default_revs
+        super().__init__()
+
 class Format_Sega_SF7000(Format):
     img_compatible = True
     default_trackset = 'c=0-39:h=0'
@@ -252,6 +268,8 @@ formats = OrderedDict({
     'atarist.800': Format_AtariST_800,
     'atarist.880': Format_AtariST_880,
     'commodore.1581': Format_Commodore_1581,
+    'ensoniq.800': Format_Ensoniq_800,
+    'ensoniq.1600': Format_Ensoniq_1600,
     'ibm.180': Format_IBM_180,
     'ibm.360': Format_IBM_360,
     'ibm.720': Format_IBM_720,

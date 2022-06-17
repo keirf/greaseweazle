@@ -469,6 +469,19 @@ class Commodore_1581(IBM_MFM_720):
     nsec  = 10
     hswap = True
 
+class Ensoniq_800(IBM_MFM_720):
+
+    gap_3 = 30
+    nsec  = 10
+    id0   = 0
+
+class Ensoniq_1600(IBM_MFM_720):
+
+    clock = 1e-6
+    gap_3 = 40
+    nsec  = 20
+    id0   = 0
+
 class Sega_SF7000(IBM_MFM_Predefined):
 
     time_per_rev = 0.2
