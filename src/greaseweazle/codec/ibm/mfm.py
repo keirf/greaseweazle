@@ -469,6 +469,20 @@ class Commodore_1581(IBM_MFM_720):
     nsec  = 10
     hswap = True
 
+class Akai_800(IBM_MFM_720):
+
+    gap_3 = 116
+    nsec  = 5
+    id0   = 1
+    sz    = 3
+    cskew = 2
+
+class Akai_1600(Akai_800):
+
+    clock = 1e-6
+    nsec  = 10
+    cskew = 5
+
 class Ensoniq_800(IBM_MFM_720):
 
     gap_3 = 30

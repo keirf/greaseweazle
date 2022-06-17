@@ -223,6 +223,22 @@ class Format_AtariST_880(Format):
         self.default_revs = m.default_revs
         super().__init__()
     
+class Format_Akai_800(Format):
+    img_compatible = True
+    def __init__(self):
+        import greaseweazle.codec.ibm.mfm as m
+        self.fmt = m.Akai_800
+        self.default_revs = m.default_revs
+        super().__init__()
+
+class Format_Akai_1600(Format):
+    img_compatible = True
+    def __init__(self):
+        import greaseweazle.codec.ibm.mfm as m
+        self.fmt = m.Akai_1600
+        self.default_revs = m.default_revs
+        super().__init__()
+
 class Format_Ensoniq_800(Format):
     img_compatible = True
     def __init__(self):
@@ -268,6 +284,8 @@ formats = OrderedDict({
     'atarist.800': Format_AtariST_800,
     'atarist.880': Format_AtariST_880,
     'commodore.1581': Format_Commodore_1581,
+    'akai.800': Format_Akai_800,
+    'akai.1600': Format_Akai_1600,
     'ensoniq.800': Format_Ensoniq_800,
     'ensoniq.1600': Format_Ensoniq_1600,
     'ibm.180': Format_IBM_180,
