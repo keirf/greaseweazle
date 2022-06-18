@@ -3,6 +3,15 @@
 ** Keir Fraser <keir.xen@gmail.com>
 ************************************
 
+** v1.0 - 18 June 2022
+ - New IMG formats:
+   - ibm.1680, ibm.dmf
+   - akai.800, akai.1600
+   - ensoniq.800, ensoniq.1600
+ - FM/MFM: Report unexpected sectors when reading
+   - Gives a hint that the format specifier is incorrect
+ - Minor bugfixes
+
 ** v0.42 - 7 April 2022
  - Mac/Linux: Further improve Python source installation 
 
