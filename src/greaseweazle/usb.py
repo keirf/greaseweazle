@@ -464,6 +464,8 @@ class Unit:
 
         try:
             # Decode the flux list and read the index-times list.
+            with open('foo.dat', 'wb') as f:
+                f.write(dat)
             flux_list, index_list = optimised.decode_flux(dat)
         except AttributeError:
             flux_list, index_list = self._decode_flux(dat)
