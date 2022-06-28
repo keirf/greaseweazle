@@ -5,6 +5,9 @@
 #include <err.h>
 #include <math.h>
 
+#define likely(x) __builtin_expect(!!(x),1)
+#define unlikely(x) __builtin_expect(!!(x),0)
+
 static int verbose = 0;
 static double tot_entropy = 0.0;
 
@@ -65,11 +68,11 @@ static void heap_percolate_down(heap_t heap, unsigned int i)
         unsigned int l = 2*i, r = 2*i+1, smallest = i;
         uint32_t s = x;
         /* Find the smallest of three nodes. */
-        if ((l <= nr) && (hent_count(heap[l]) < hent_count(s))) {
+        if (likely(l <= nr) && (hent_count(heap[l]) < hent_count(s))) {
             smallest = l;
             s = heap[l];
         }
-        if ((r <= nr) && (hent_count(heap[r]) < hent_count(s))) {
+        if (likely(r <= nr) && (hent_count(heap[r]) < hent_count(s))) {
             smallest = r;
             s = heap[r];
         }
@@ -78,7 +81,7 @@ static void heap_percolate_down(heap_t heap, unsigned int i)
         /* Swap with smallest subtree root. */
         heap[i] = s;
         heap[smallest] = x;
-        /* Tail recursion (iteration) into the subtree we swapped with. */
+        /* Iterate into the subtree we swapped with. */
         i = smallest;
     }
 }
@@ -105,7 +108,7 @@ static uint16_t build_huffman_tree(heap_t heap, node_t *nodes)
         /* heap_get_min #1 */
         x = heap[1];
         heap[1] = heap[nr];
-        if ((heap[0] = --nr) == 0)
+        if (unlikely((heap[0] = --nr) == 0))
             break;
         heap_percolate_down(heap, 1);
         /* heap_get_min #2 */
@@ -295,7 +298,7 @@ static int huffman_compress(
     p = out_p + 2;
     for (i = 0; i < msg_nr; i++) {
         unsigned int symbol = msg_p[i];
-        if ((dent = dict[symbol]) == 0) {
+        if (unlikely((dent = dict[symbol]) == 0)) {
             dent = dict[SYM_ESC];
             x <<= dent_codelen(dent) + 8;
             x |= ((uint32_t)dent_code(dent) << 8) | symbol;
@@ -378,22 +381,27 @@ static int huffman_decompress(
         codelen = lent_codelen(entry);
         x <<= codelen; bits -= codelen;
 
-        while (node_is_internal(node)) {
+        if (likely(node < 256))
+            goto fast_path;
+
+        while (likely(node_is_internal(node))) {
             entry = nodes[node_idx(node)];
             node = (int32_t)x < 0 ? node_right(entry) : node_left(entry);
             x <<= 1; bits--;
         }
 
+        if (likely(node < 256)) {
+        fast_path:
+            *q++ = node;
+            continue;
+        }
+
         switch (node) {
         case SYM_EOS:
             goto out;
-        case SYM_ESC: {
-            node = x >> 24;
+        case SYM_ESC:
+            *q++ = x >> 24;
             x <<= 8; bits -= 8;
-            /* fallthrough */
-        }
-        default:
-            *q++ = node;
             break;
         }
 
@@ -405,15 +413,15 @@ out:
 
 int main(int argc, char **argv)
 {
-#define NR 1024
     FILE *f;
+    unsigned int blocksz;
     unsigned char *p, *prev_p = NULL;
     unsigned int off, size, nr, prev_nr = 0, out_nr = 0;
     unsigned char *in, *out;
     struct huffman_state huffman_state;
 
-    if (argc != 3)
-        errx(1, "Usage: %s <in> <out>", argv[0]);
+    if (argc != 4)
+        errx(1, "Usage: %s <in> <out> <blocksz>", argv[0]);
 
     /* Read whole file to { p, size }. */
     if (!(f = fopen(argv[1], "rb")))
@@ -426,6 +434,8 @@ int main(int argc, char **argv)
     if (fread(p, 1, size, f) != size)
         err(1, NULL);
     fclose(f);
+
+    blocksz = atoi(argv[3]);
 
     if (strstr(argv[1], ".huf")) {
 
@@ -453,7 +463,7 @@ int main(int argc, char **argv)
 
         /* COMPRESS */
         for (off = 0; off < size; off += nr) {
-            nr = (NR > (size-off)) ? size-off : NR;
+            nr = (blocksz > (size-off)) ? size-off : blocksz;
             out_nr += huffman_compress(&huffman_state,
                                        prev_p, prev_nr, &p[off], nr,
                                        &out[out_nr]);
@@ -462,11 +472,11 @@ int main(int argc, char **argv)
         }
 
         printf("*** Entropy: %d bytes (%.2f%%); Encoded: %d bytes (%.2f%%); "
-               "Original = %d bytes\n",
+               "Original = %d bytes; Blocksz = %d bytes\n",
                (int)ceil(tot_entropy/8),
                100.0*(tot_entropy/8)/(float)size,
                out_nr,
-               100.0*out_nr/(float)size, size);
+               100.0*out_nr/(float)size, size, blocksz);
 
     }
 
