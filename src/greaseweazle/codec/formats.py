@@ -255,6 +255,26 @@ class Format_Ensoniq_1600(Format):
         self.default_revs = m.default_revs
         super().__init__()
 
+class Format_PC98_DD(Format):
+    img_compatible = True
+    default_trackset = 'c=0-76:h=0'
+    max_trackset = 'c=0-81:h=0'
+    def __init__(self):
+        import greaseweazle.codec.ibm.mfm as m
+        self.fmt = m.PC98_DD
+        self.default_revs = m.default_revs
+        super().__init__()
+
+class Format_PC98_HD(Format):
+    img_compatible = True
+    default_trackset = 'c=0-76:h=0'
+    max_trackset = 'c=0-81:h=0'
+    def __init__(self):
+        import greaseweazle.codec.ibm.mfm as m
+        self.fmt = m.PC98_HD
+        self.default_revs = m.default_revs
+        super().__init__()
+
 class Format_Sega_SF7000(Format):
     img_compatible = True
     default_trackset = 'c=0-39:h=0'
@@ -295,6 +315,8 @@ formats = OrderedDict({
     'ibm.1440': Format_IBM_1440,
     'ibm.1680': Format_IBM_1680,
     'ibm.dmf': Format_IBM_1680,
+    'pc98.dd': Format_PC98_DD,
+    'pc98.hd': Format_PC98_HD,
     'sega.sf7000': Format_Sega_SF7000,
 })
 

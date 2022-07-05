@@ -494,6 +494,19 @@ class Ensoniq_1600(IBM_MFM_720):
     nsec  = 20
     id0   = 0
 
+class PC98_DD(IBM_MFM_1200):
+
+    clock = 2e-6
+    gap_3 = 57
+    nsec  = 8
+    sz    = 2
+
+class PC98_HD(IBM_MFM_1200):
+
+    gap_3 = 116
+    nsec  = 8
+    sz    = 3
+
 class Sega_SF7000(IBM_MFM_Predefined):
 
     time_per_rev = 0.2
