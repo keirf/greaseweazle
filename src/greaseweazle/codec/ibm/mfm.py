@@ -191,7 +191,7 @@ class IBM_MFM:
             if a.start >= n:
                 p = n
                 try:
-                    n = next(index)
+                    n += next(index)
                 except StopIteration:
                     n = float('inf')
             a.delta(p)
@@ -199,21 +199,19 @@ class IBM_MFM:
 
         # Add to the deduped lists
         for a in areas:
-            match = False
             if isinstance(a, IAM):
                 list = self.iams
             elif isinstance(a, Sector):
                 list = self.sectors
             else:
                 continue
-            for s in list:
+            for i, s in enumerate(list):
                 if abs(s.start - a.start) < 1000:
-                    match = True
+                    if isinstance(a, Sector) and s.crc != 0 and a.crc == 0:
+                        self.sectors[i] = a
+                    a = None
                     break
-            if match and isinstance(a, Sector) and s.crc != 0 and a.crc == 0:
-                self.sectors = [x for x in self.sectors if x != a]
-                match = False
-            if not match:
+            if a is not None:
                 list.append(a)
 
 
