@@ -3,6 +3,11 @@
 ** Keir Fraser <keir.xen@gmail.com>
 ************************************
 
+** v1.1 - 18 JuLy 2022
+ - New IMG formats: pc98.dd, pc98.hd
+ - IBM FM, MFM: Fix bugs in raw track decoder
+ - gw info: Report MCU information (type, speed, SRAM)
+
 ** v1.0 - 18 June 2022
  - New IMG formats:
    - ibm.1680, ibm.dmf
