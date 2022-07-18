@@ -90,7 +90,8 @@ def main(argv):
     try:
         mcu_strs.append(mcu_id[usb.mcu_id])
     except KeyError:
-        pass
+        if usb.mcu_id != 0:
+            mcu_strs.append('Unknown (0x%02X)' % usb.mcu_id)
     if usb.mcu_mhz:
         mcu_strs.append('%uMHz' % usb.mcu_mhz)
     if usb.mcu_sram_kb:
