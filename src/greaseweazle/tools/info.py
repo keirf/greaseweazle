@@ -34,6 +34,10 @@ model_id = { 1: { 0: 'F1',
 speed_id = { 0: 'Full Speed (12 Mbit/s)',
              1: 'High Speed (480 Mbit/s)' }
 
+mcu_id = { 2: 'AT32F403',
+           7: 'AT32F403A',
+           5: 'AT32F415' }
+
 def print_info_line(name, value, tab=0):
     print(''.ljust(tab) + (name + ':').ljust(12-tab) + value)
 
@@ -81,6 +85,18 @@ def main(argv):
     except KeyError:
         model = 'Unknown (0x%02X%02X)' % (usb.hw_model, usb.hw_submodel)
     print_info_line('Model', model, tab=2)
+
+    mcu_strs = list()
+    try:
+        mcu_strs.append(mcu_id[usb.mcu_id])
+    except KeyError:
+        pass
+    if usb.mcu_mhz:
+        mcu_strs.append('%uMHz' % usb.mcu_mhz)
+    if usb.mcu_sram_kb:
+        mcu_strs.append('%ukB SRAM' % usb.mcu_sram_kb)
+    if mcu_strs:
+        print_info_line('MCU', ', '.join(mcu_strs), tab=2)
 
     fwver = '%d.%d' % usb.version
     if usb.update_mode:

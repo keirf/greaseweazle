@@ -190,10 +190,11 @@ class Unit:
         self.reset()
         # Copy firmware info to instance variables (see above for definitions).
         self._send_cmd(struct.pack("3B", Cmd.GetInfo, 3, GetInfo.Firmware))
-        x = struct.unpack("<4BI3B21x", self.ser.read(32))
+        x = struct.unpack("<4BI4B2H16x", self.ser.read(32))
         (self.major, self.minor, is_main_firmware,
          self.max_cmd, self.sample_freq, self.hw_model,
-         self.hw_submodel, self.usb_speed) = x
+         self.hw_submodel, self.usb_speed,
+         self.mcu_id, self.mcu_mhz, self.mcu_sram_kb) = x
         self.version = (self.major, self.minor)
         # Old firmware doesn't report HW type but runs on STM32F1 only.
         if self.hw_model == 0:
