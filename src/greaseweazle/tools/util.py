@@ -221,6 +221,7 @@ image_types = OrderedDict(
       '.d81': 'D81',
       '.dsd': ('DSD','acorn'),
       '.dsk': 'EDSK',
+      '.h8d': ('H8D','heathkit'),
       '.hfe': 'HFE',
       '.ima': 'IMG',
       '.img': 'IMG',

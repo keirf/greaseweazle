@@ -285,6 +285,15 @@ class Format_Sega_SF7000(Format):
         self.default_revs = m.default_revs
         super().__init__()
 
+class Format_Heathkit_H17(Format):
+    img_compatible = True
+    default_trackset = 'c=0-39:h=0'
+    def __init__(self):
+        import greaseweazle.codec.heathkit.h17 as m
+        self.fmt = m.Heathkit_H17
+        self.default_revs = m.default_revs
+        super().__init__()
+
     
 formats = OrderedDict({
     'acorn.dfs.ss': Format_Acorn_DFS_SS,
@@ -318,6 +327,7 @@ formats = OrderedDict({
     'pc98.dd': Format_PC98_DD,
     'pc98.hd': Format_PC98_HD,
     'sega.sf7000': Format_Sega_SF7000,
+    'heathkit.h17': Format_Heathkit_H17
 })
 
 def print_formats(f = None):
