@@ -69,9 +69,9 @@ class AmigaDOS:
         return self.raw_track().flux(*args, **kwargs)
 
 
-    def decode_raw(self, track):
+    def decode_raw(self, track, pll=None):
         raw = RawTrack(time_per_rev = self.time_per_rev,
-                       clock = self.clock, data = track)
+                       clock = self.clock, data = track, pll = pll)
         bits, _ = raw.get_all_data()
 
         for offs in bits.itersearch(sync):

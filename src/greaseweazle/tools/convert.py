@@ -14,8 +14,9 @@ from greaseweazle.tools import util
 from greaseweazle import error
 from greaseweazle.flux import Flux
 from greaseweazle.codec import formats
-from greaseweazle import track
 
+from greaseweazle import track
+plls = track.plls
 
 def open_input_image(args, image_class):
     try:
@@ -56,6 +57,10 @@ def convert(args, in_image, out_image, decoder=None):
             print("T%u.%u: %s" % (cyl, head, track.summary_string()))
         else:
             dat = decoder(cyl, head, track)
+            for pll in plls[1:]:
+                if dat.nr_missing() == 0:
+                    break
+                dat.decode_raw(track, pll)
             print("T%u.%u: %s from %s" % (cyl, head, dat.summary_string(),
                                           track.summary_string()))
         summary[cyl,head] = dat
@@ -74,6 +79,7 @@ def convert(args, in_image, out_image, decoder=None):
 def main(argv):
 
     epilog = (util.speed_desc + "\n" + util.tspec_desc
+              + "\n" + util.pllspec_desc
               + "\nFORMAT options:\n" + formats.print_formats())
     parser = util.ArgumentParser(usage='%(prog)s [options] in_file out_file',
                                  epilog=epilog)
@@ -88,10 +94,8 @@ def main(argv):
                         help="scale track data to effective drive SPEED")
     parser.add_argument("-n", "--no-clobber", action="store_true",
                         help="do not overwrite an existing file")
-    parser.add_argument("--pll-period-adj", type=int, metavar="PCT",
-                        help="PLL period adjustment")
-    parser.add_argument("--pll-phase-adj", type=int, metavar="PCT",
-                        help="PLL phase adjustment")
+    parser.add_argument("--pll", type=track.PLL, metavar="PLLSPEC",
+                        help="manual PLL parameter override")
     parser.add_argument("in_file", help="input filename")
     parser.add_argument("out_file", help="output filename")
     parser.description = description
@@ -100,10 +104,8 @@ def main(argv):
 
     args.out_file, args.out_file_opts = util.split_opts(args.out_file)
 
-    if args.pll_period_adj is not None:
-        track.pll_period_adj_pct = args.pll_period_adj
-    if args.pll_phase_adj is not None:
-        track.pll_phase_adj_pct = args.pll_phase_adj
+    if args.pll is not None:
+        plls.insert(0, args.pll)
 
     in_image_class = util.get_image_class(args.in_file)
     if not args.format and hasattr(in_image_class, 'default_format'):

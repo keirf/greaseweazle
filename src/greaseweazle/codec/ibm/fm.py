@@ -72,11 +72,11 @@ class IBM_FM:
         return self.raw_track().flux(*args, **kwargs)
 
 
-    def decode_raw(self, track):
+    def decode_raw(self, track, pll=None):
         flux = track.flux()
         flux.cue_at_index()
         raw = RawTrack(time_per_rev = self.time_per_rev,
-                       clock = self.clock, data = flux)
+                       clock = self.clock, data = flux, pll = pll)
         bits, _ = raw.get_all_data()
 
         areas = []
@@ -207,10 +207,10 @@ class IBM_FM_Formatted(IBM_FM):
         super().__init__(cyl, head)
         self.raw_iams, self.raw_sectors = [], []
 
-    def decode_raw(self, track):
+    def decode_raw(self, track, pll=None):
         iams, sectors = self.iams, self.sectors
         self.iams, self.sectors = self.raw_iams, self.raw_sectors
-        super().decode_raw(track)
+        super().decode_raw(track, pll)
         self.iams, self.sectors = iams, sectors
         mismatches = set()
         for r in self.raw_sectors:

@@ -11,8 +11,31 @@ from bitarray import bitarray
 from greaseweazle.flux import Flux, WriteoutFlux
 from greaseweazle import optimised
 
-pll_period_adj_pct = 2
-pll_phase_adj_pct = 20
+class PLL:
+    def __init__(self, pllspec):
+        self.period_adj_pct = 5
+        self.phase_adj_pct = 60
+        for x in pllspec.split(':'):
+            k,v = x.split('=')
+            if k == 'period':
+                self.period_adj_pct = int(v)
+            elif k == 'phase':
+                self.phase_adj_pct = int(v)
+            else:
+                raise ValueError()
+    def __str__(self):
+        return ("PLL: period_adj=%d%% phase_adj=%d%%"
+                % (self.period_adj_pct, self.phase_adj_pct))
+
+plls = [
+    # Default: An aggressive PLL which will quickly sync to extreme
+    # bit timings. For example: long tracks and variable-rate tracks.
+    PLL('period=5:phase=60'),
+    # Fallback: A conservative PLL which is good at ignoring noise in
+    # otherwise fairly well-behaved tracks. For example: high-frequency
+    # noise caused by dirt and mould on an old disk.
+    PLL('period=1:phase=10')
+]
 
 # Precompensation to apply to a MasterTrack for writeout.
 class Precomp:
@@ -230,12 +253,13 @@ class RawTrack:
     # clock: Expected time per raw bitcell, in seconds (float)
     # data: Flux object, or a form convertible to a Flux object
     # time_per_rev: Expected time per revolution, in seconds (optional, float)
-    def __init__(self, clock, data, time_per_rev=None):
+    def __init__(self, clock, data, time_per_rev=None, pll=None):
         self.clock = clock
         self.time_per_rev = time_per_rev
         self.clock_max_adj = 0.10
-        self.pll_period_adj = pll_period_adj_pct / 100
-        self.pll_phase_adj = pll_phase_adj_pct / 100
+        if pll is None: pll = plls[0]
+        self.pll_period_adj = pll.period_adj_pct / 100
+        self.pll_phase_adj = pll.phase_adj_pct / 100
         self.bitarray = bitarray(endian='big')
         self.timearray = []
         self.revolutions = []

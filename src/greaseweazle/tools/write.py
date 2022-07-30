@@ -15,7 +15,6 @@ from greaseweazle.tools import util
 from greaseweazle import error, track
 from greaseweazle import usb as USB
 from greaseweazle.codec import formats
-from greaseweazle import track
 
 # Read and parse the image file.
 def open_image(args, image_class):
@@ -189,19 +188,10 @@ def main(argv):
                         help="number of retries on verify failure")
     parser.add_argument("--precomp", type=PrecompSpec,
                         help="write precompensation")
-    parser.add_argument("--pll-period-adj", type=int, metavar="PCT",
-                        help="PLL period adjustment")
-    parser.add_argument("--pll-phase-adj", type=int, metavar="PCT",
-                        help="PLL phase adjustment")
     parser.add_argument("file", help="input filename")
     parser.description = description
     parser.prog += ' ' + argv[1]
     args = parser.parse_args(argv[2:])
-
-    if args.pll_period_adj is not None:
-        track.pll_period_adj_pct = args.pll_period_adj
-    if args.pll_phase_adj is not None:
-        track.pll_phase_adj_pct = args.pll_phase_adj
 
     try:
         image_class = util.get_image_class(args.file)

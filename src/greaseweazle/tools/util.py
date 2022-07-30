@@ -57,6 +57,13 @@ TSPEC: Colon-separated list of:
   e.g. 'c=0-7,9-12:h=0-1'
 """
 
+pllspec_desc = """\
+PLLSPEC: Colon-separated list of:
+  period=PCT          :: Period adjustment as percentage of phase error
+  phase=PCT           :: Phase adjustment as percentage of phase error
+  Defaults: period=5:phase=60
+"""
+
 # Returns time period in seconds (float)
 # Accepts rpm, ms, us, ns, scp. Naked value is assumed rpm.
 def period(arg):
@@ -179,7 +186,6 @@ class TrackSet:
                 m = re.match('1/(\d)$', v)
                 self.step = -int(m.group(1)) if m is not None else int(v)
             else:
-                print(k,v)
                 raise ValueError()
         
     def __str__(self):

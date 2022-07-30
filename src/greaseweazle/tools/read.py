@@ -16,8 +16,9 @@ from greaseweazle import error
 from greaseweazle import usb as USB
 from greaseweazle.flux import Flux
 from greaseweazle.codec import formats
-from greaseweazle import track
 
+from greaseweazle import track
+plls = track.plls
 
 def open_image(args, image_class):
     image = image_class.to_file(
@@ -59,6 +60,10 @@ def read_with_retry(usb, args, t, decoder):
         return flux, flux
 
     dat = decoder(cyl, head, flux)
+    for pll in plls[1:]:
+        if dat.nr_missing() == 0:
+            break
+        dat.decode_raw(flux, pll)
 
     seek_retry, retry = 0, 0
     while True:
@@ -81,7 +86,10 @@ def read_with_retry(usb, args, t, decoder):
             retry = 0
         retry += 1
         _flux = read_and_normalise(usb, args, max(args.revs, 3))
-        dat.decode_raw(_flux)
+        for pll in plls:
+            if dat.nr_missing() == 0:
+                break
+            dat.decode_raw(_flux, pll)
         flux.append(_flux)
 
     return flux, dat
@@ -160,6 +168,7 @@ def main(argv):
 
     epilog = (util.drive_desc + "\n"
               + util.speed_desc + "\n" + util.tspec_desc
+              + "\n" + util.pllspec_desc
               + "\nFORMAT options:\n" + formats.print_formats())
     parser = util.ArgumentParser(usage='%(prog)s [options] file',
                                  epilog=epilog)
@@ -183,10 +192,8 @@ def main(argv):
                         help="number of seek retries")
     parser.add_argument("-n", "--no-clobber", action="store_true",
                         help="do not overwrite an existing file")
-    parser.add_argument("--pll-period-adj", type=int, metavar="PCT",
-                        help="PLL period adjustment")
-    parser.add_argument("--pll-phase-adj", type=int, metavar="PCT",
-                        help="PLL phase adjustment")
+    parser.add_argument("--pll", type=track.PLL, metavar="PLLSPEC",
+                        help="manual PLL parameter override")
     parser.add_argument("file", help="output filename")
     parser.description = description
     parser.prog += ' ' + argv[1]
@@ -194,10 +201,8 @@ def main(argv):
 
     args.file, args.file_opts = util.split_opts(args.file)
 
-    if args.pll_period_adj is not None:
-        track.pll_period_adj_pct = args.pll_period_adj
-    if args.pll_phase_adj is not None:
-        track.pll_phase_adj_pct = args.pll_phase_adj
+    if args.pll is not None:
+        plls.insert(0, args.pll)
 
     try:
         usb = util.usb_open(args.device)
