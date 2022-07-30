@@ -11,8 +11,8 @@ from bitarray import bitarray
 from greaseweazle.flux import Flux, WriteoutFlux
 from greaseweazle import optimised
 
-pll_period_adj_pct = 5
-pll_phase_adj_pct = 60
+pll_period_adj_pct = 2
+pll_phase_adj_pct = 20
 
 # Precompensation to apply to a MasterTrack for writeout.
 class Precomp:
