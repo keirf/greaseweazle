@@ -11,6 +11,9 @@ from bitarray import bitarray
 from greaseweazle.flux import Flux, WriteoutFlux
 from greaseweazle import optimised
 
+pll_period_adj_pct = 5
+pll_phase_adj_pct = 60
+
 # Precompensation to apply to a MasterTrack for writeout.
 class Precomp:
     MFM = 0
@@ -231,8 +234,8 @@ class RawTrack:
         self.clock = clock
         self.time_per_rev = time_per_rev
         self.clock_max_adj = 0.10
-        self.pll_period_adj = 0.05
-        self.pll_phase_adj = 0.60
+        self.pll_period_adj = pll_period_adj_pct / 100
+        self.pll_phase_adj = pll_phase_adj_pct / 100
         self.bitarray = bitarray(endian='big')
         self.timearray = []
         self.revolutions = []

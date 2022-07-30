@@ -16,6 +16,7 @@ from greaseweazle import error
 from greaseweazle import usb as USB
 from greaseweazle.flux import Flux
 from greaseweazle.codec import formats
+from greaseweazle import track
 
 
 def open_image(args, image_class):
@@ -182,12 +183,21 @@ def main(argv):
                         help="number of seek retries")
     parser.add_argument("-n", "--no-clobber", action="store_true",
                         help="do not overwrite an existing file")
+    parser.add_argument("--pll-period-adj", type=int, metavar="PCT",
+                        help="PLL period adjustment")
+    parser.add_argument("--pll-phase-adj", type=int, metavar="PCT",
+                        help="PLL phase adjustment")
     parser.add_argument("file", help="output filename")
     parser.description = description
     parser.prog += ' ' + argv[1]
     args = parser.parse_args(argv[2:])
 
     args.file, args.file_opts = util.split_opts(args.file)
+
+    if args.pll_period_adj is not None:
+        track.pll_period_adj_pct = args.pll_period_adj
+    if args.pll_phase_adj is not None:
+        track.pll_phase_adj_pct = args.pll_phase_adj
 
     try:
         usb = util.usb_open(args.device)

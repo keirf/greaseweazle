@@ -14,6 +14,7 @@ from greaseweazle.tools import util
 from greaseweazle import error
 from greaseweazle.flux import Flux
 from greaseweazle.codec import formats
+from greaseweazle import track
 
 
 def open_input_image(args, image_class):
@@ -87,6 +88,10 @@ def main(argv):
                         help="scale track data to effective drive SPEED")
     parser.add_argument("-n", "--no-clobber", action="store_true",
                         help="do not overwrite an existing file")
+    parser.add_argument("--pll-period-adj", type=int, metavar="PCT",
+                        help="PLL period adjustment")
+    parser.add_argument("--pll-phase-adj", type=int, metavar="PCT",
+                        help="PLL phase adjustment")
     parser.add_argument("in_file", help="input filename")
     parser.add_argument("out_file", help="output filename")
     parser.description = description
@@ -94,6 +99,11 @@ def main(argv):
     args = parser.parse_args(argv[2:])
 
     args.out_file, args.out_file_opts = util.split_opts(args.out_file)
+
+    if args.pll_period_adj is not None:
+        track.pll_period_adj_pct = args.pll_period_adj
+    if args.pll_phase_adj is not None:
+        track.pll_phase_adj_pct = args.pll_phase_adj
 
     in_image_class = util.get_image_class(args.in_file)
     if not args.format and hasattr(in_image_class, 'default_format'):
