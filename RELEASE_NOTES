@@ -3,6 +3,11 @@
 ** Keir Fraser <keir.xen@gmail.com>
 ************************************
 
+** v1.2 - 1 August 2022
+ - gw read, gw convert: Allow PLL parameters to be specified
+ - Try fallback conservative PLL on difficult tracks
+ - Kryoflux: Emit info block with Greaseweazle and frequency details
+
 ** v1.1 - 18 July 2022
  - New IMG formats: pc98.dd, pc98.hd
  - IBM FM, MFM: Fix bugs in raw track decoder
