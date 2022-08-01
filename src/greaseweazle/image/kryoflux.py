@@ -5,15 +5,16 @@
 # This is free and unencumbered software released into the public domain.
 # See the file COPYING for more details, or visit <http://unlicense.org>.
 
-import struct, re, math, os
+import struct, re, math, os, datetime
 import itertools as it
 
+from greaseweazle import __version__
 from greaseweazle import error
 from greaseweazle.flux import Flux
 from .image import Image
 
-mck = 18432000 * 73 / 14 / 2
-sck = mck / 2
+def_mck = 18432000 * 73 / 14 / 2
+def_sck = def_mck / 2
 
 class Op:
     Nop1  =  8
@@ -66,9 +67,9 @@ class KryoFlux(Image):
         except FileNotFoundError:
             return None
 
-        # Parse the index-pulse stream positions.
-        index = []
-        idx = 0
+        # Parse the index-pulse stream positions and KFInfo blocks.
+        index, idx = [], 0
+        sck, ick = def_sck, def_sck/8
         while idx < len(dat):
             op = dat[idx]
             if op == Op.OOB:
@@ -79,6 +80,14 @@ class KryoFlux(Image):
                     index.append(pos)
                 elif oob_op == OOB.EOF:
                     break
+                elif oob_op == OOB.KFInfo:
+                    info = dat[idx:idx+oob_sz-1].decode('utf-8', 'ignore')
+                    m = re.search(r'sck=([^,]+)', info)
+                    if m is not None:
+                        sck = float(m.group(1))
+                    m = re.search(r'ick=([^,]+)', info)
+                    if m is not None:
+                        ick = float(m.group(1))
                 idx += oob_sz
             elif op == Op.Nop3 or op == Op.Flux3:
                 idx += 3
@@ -191,6 +200,7 @@ class KryoFlux(Image):
             check_index(f)
 
         flux = track.flux()
+        sck = def_sck
 
         # HxC crashes or fails to load non-index-cued stream files.
         # So let's give it what it wants.
@@ -198,6 +208,15 @@ class KryoFlux(Image):
 
         factor = sck / flux.sample_freq
         dat = bytearray()
+
+        now = datetime.datetime.now()
+        host_date = now.strftime('%Y.%m.%d')
+        host_time = now.strftime('%H:%M:%S')
+        info = (f'name=Greaseweazle, version={__version__}, '
+                f'host_date={host_date}, host_time={host_time}, '
+                f'sck={sck:.7f}, ick={sck/8:.7f}')
+        dat += struct.pack('<2BH', Op.OOB, OOB.KFInfo, len(info)+1)
+        dat += info.encode('utf-8') + bytes(1)
 
         # Start the data stream with a dummy index if our Flux is index cued.
         if flux.index_cued:
