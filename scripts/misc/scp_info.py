@@ -46,7 +46,7 @@ def dump_track(dat, trk_offs, trknr, show_dat):
     fluxl = decode_flux(dat[trk_off+s_off:trk_off+e_off+e_nr*2])
     tot = 0.0
     i = 0
-    px, py = [0], [0]
+    px, py = [], []
     for x in fluxl:
         if show_dat == PRINT_DAT:
             bad = ""
@@ -68,6 +68,7 @@ def dump_track(dat, trk_offs, trknr, show_dat):
         for t in p_idx:
             plt.axvline(x=t/1000, ymin=0.95, color='r')
         plt.scatter(px, py, s=1)
+        plt.ylim((0, None))
         plt.show()
 
 argv = sys.argv
