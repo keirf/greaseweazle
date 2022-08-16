@@ -159,6 +159,14 @@ class Format_IBM_1680(Format):
         self.default_revs = m.default_revs
         super().__init__()
 
+class Format_IBM_2880(Format):
+    img_compatible = True
+    def __init__(self):
+        import greaseweazle.codec.ibm.mfm as m
+        self.fmt = m.IBM_MFM_2880
+        self.default_revs = m.default_revs
+        super().__init__()
+
 class Format_Atari_90(Format):
     img_compatible = True
     default_trackset = 'c=0-39:h=0:step=2'
@@ -315,6 +323,7 @@ formats = OrderedDict({
     'ibm.1440': Format_IBM_1440,
     'ibm.1680': Format_IBM_1680,
     'ibm.dmf': Format_IBM_1680,
+    'ibm.2880': Format_IBM_2880,
     'pc98.dd': Format_PC98_DD,
     'pc98.hd': Format_PC98_HD,
     'sega.sf7000': Format_Sega_SF7000,

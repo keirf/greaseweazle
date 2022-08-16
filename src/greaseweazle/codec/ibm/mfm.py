@@ -407,6 +407,12 @@ class IBM_MFM_1680(IBM_MFM_720):
     cskew = 3
     interleave = 2
 
+class IBM_MFM_2880(IBM_MFM_720):
+
+    clock = 5e-7
+    gap_2 = 41
+    nsec  = 36
+
 class AtariST_SS_9SPT(IBM_MFM_720):
 
     gap_1 = None
