@@ -388,6 +388,11 @@ class IBM_MFM_720(IBM_MFM_Predefined):
     id0    = 1
     sz     = 2
 
+class IBM_MFM_800(IBM_MFM_720):
+
+    gap_3  = 30
+    nsec   = 10
+
 class IBM_MFM_1200(IBM_MFM_720):
 
     time_per_rev = 60/360
