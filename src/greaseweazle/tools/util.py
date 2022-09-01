@@ -231,6 +231,7 @@ image_types = OrderedDict(
       '.ima': 'IMG',
       '.img': 'IMG',
       '.ipf': 'IPF',
+      '.mgt': 'MGT',
       '.raw': 'KryoFlux',
       '.sf7': 'SF7',
       '.scp': 'SCP',
