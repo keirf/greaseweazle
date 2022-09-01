@@ -3,6 +3,10 @@
 ** Keir Fraser <keir.xen@gmail.com>
 ************************************
 
+** v1.3 - 1 September 2022
+ - gw: New formats ibm.800 and ibm.2880
+ - gw: New image format *.MGT
+
 ** v1.2 - 1 August 2022
  - gw read, gw convert: Allow PLL parameters to be specified
  - Try fallback conservative PLL on difficult tracks
