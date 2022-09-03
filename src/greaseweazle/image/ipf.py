@@ -289,7 +289,8 @@ def open_libcaps():
                    "libcapsimage.so.4", "libcapsimage.so.4.2",
                    "libcapsimage.so" ]
     elif platform.system() == "Darwin":
-        _names = [ "CAPSImage.framework/CAPSImage" ]
+        _names = [ "CAPSImage.framework/CAPSImage",
+                   "CAPSImg.framework/CAPSImg" ]
     elif platform.system() == "Windows":
         _names = [ "CAPSImg_x64.dll", "CAPSImg.dll" ]
 
