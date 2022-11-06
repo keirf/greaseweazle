@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
 
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
       with:
         fetch-depth: 0
 
@@ -26,13 +26,13 @@ jobs:
     - name: Set environment variables
       id: vars
       run: |
-        echo "::set-output name=ver::$(make version)"
+        echo "ver=$(make version)" >> $GITHUB_OUTPUT
 
     - name: Build dist
       run: make dist
 
     - name: Upload artifacts
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: greaseweazle.ci.${{ steps.vars.outputs.ver }}
         path: greaseweazle-${{ steps.vars.outputs.ver }}.zip
@@ -41,12 +41,12 @@ jobs:
     runs-on: windows-2019
     steps:
 
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
       with:
         fetch-depth: 0
 
     - name: Set up Python
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v4
       with:
         python-version: 3.8
         architecture: x86
@@ -58,14 +58,15 @@ jobs:
 
     - name: Set environment variables
       id: vars
+      shell: bash
       run: |
-        echo "::set-output name=ver::$(make version)"
+        echo "ver=$(make version)" >> $GITHUB_OUTPUT
 
     - name: Build dist
       run: make windist
 
     - name: Upload artifacts
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: greaseweazle.ci.${{ steps.vars.outputs.ver }}
         path: greaseweazle-${{ steps.vars.outputs.ver }}-win.zip
@@ -75,7 +76,7 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
 
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
       with:
         fetch-depth: 0
 
@@ -90,10 +91,10 @@ jobs:
     - name: Set environment variables
       id: vars
       run: |
-        echo "::set-output name=ver::$(make version)"
+        echo "ver=$(make version)" >> $GITHUB_OUTPUT
 
     - name: Download artifacts
-      uses: actions/download-artifact@v2
+      uses: actions/download-artifact@v3
       with:
         name: greaseweazle.ci.${{ steps.vars.outputs.ver }}
 
