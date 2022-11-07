@@ -111,32 +111,13 @@ jobs:
 
     - name: Create Release
       id: create_release
-      uses: actions/create-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      uses: ncipollo/release-action@v1
       with:
-        tag_name: ${{ github.ref }}
-        release_name: Greaseweazle Tools ${{ steps.vars.outputs.ver }}
+        tag: ${{ github.ref }}
+        token: ${{ secrets.GITHUB_TOKEN }}
+        name: Greaseweazle Tools ${{ steps.vars.outputs.ver }}
         body: "[**Release Notes:**](https://github.com/keirf/greaseweazle/blob/master/RELEASE_NOTES)"
         draft: false
         prerelease: false
-
-    - name: Upload Release Asset (Windows)
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: greaseweazle-${{ steps.vars.outputs.ver }}-win.zip
-        asset_name: greaseweazle-${{ steps.vars.outputs.ver }}-win.zip
-        asset_content_type: application/zip
-
-    - name: Upload Release Asset (Other)
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: greaseweazle-${{ steps.vars.outputs.ver }}.zip
-        asset_name: greaseweazle-${{ steps.vars.outputs.ver }}.zip
-        asset_content_type: application/zip
+        artifacts: "greaseweazle-${{ steps.vars.outputs.ver }}-win.zip,greaseweazle-${{ steps.vars.outputs.ver }}.zip"
+        artifactContentType: application/zip
