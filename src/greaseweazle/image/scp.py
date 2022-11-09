@@ -11,6 +11,8 @@ from greaseweazle import error
 from greaseweazle.flux import Flux
 from .image import Image
 
+#  SCP image specification can be found at Jim Drew's site:
+#  https://www.cbmstuff.com/downloads/scp/scp_image_specs.txt
 
 # Names for disktype byte in SCP file header
 DiskType = {
