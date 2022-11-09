@@ -50,6 +50,16 @@ DiskType = {
 }
 
 
+class SCPHeaderFlags(IntFlag):
+    INDEXED = 1 << 0        # if set, image used the index mark to queue tracks
+    TPI_96 = 1 << 1         # if set, drive is 96 TPI otherwise 48 TPI
+    RPM_360 = 1 << 2        # if set, drive is 360RPM otherwise 300RPM
+    NORMALISED = 1 << 3     # if set, flux has been normalized, otherwise is raw
+    READWRITE = 1 << 4      # if set, image is read only, otherwise read/write capable
+    FOOTER = 1 << 5         # if set, image contains an extension footer
+    EXTENDED_MODE = 1 << 6  # if set, image is the extended type for other media, otherwise floppy drives only
+    FLUX_CREATOR = 1 << 7   # if set, image was created by a non SuperCard Pro Device
+
 class SCPOpts:
     """legacy_ss: Set to True to generate (incorrect) legacy single-sided
     SCP image.
@@ -361,9 +371,9 @@ class SCP(Image):
             csum += x
 
         # Generate the image header.
-        flags = 2 # 96TPI
+        flags = SCPHeaderFlags.TPI_96
         if self.index_cued:
-            flags |= 1 # Index-Cued
+            flags |= SCPHeaderFlags.INDEXED
         nr_revs = self.nr_revs if self.nr_revs is not None else 0
         header = struct.pack("<3s9BI",
                              b"SCP",    # Signature
