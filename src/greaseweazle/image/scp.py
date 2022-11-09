@@ -14,8 +14,9 @@ from .image import Image
 
 # Names for disktype byte in SCP file header
 DiskType = {
-    'amiga':       0x04,
     'c64':         0x00,
+    'amiga':       0x04,
+    'amigahd':     0x08,
     'atari800-sd': 0x10,
     'atari800-dd': 0x11,
     'atari800-ed': 0x12,
