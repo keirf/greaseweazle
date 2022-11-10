@@ -54,14 +54,15 @@ DiskType = {
 
 
 class SCPHeaderFlags(IntFlag):
-    INDEXED = 1 << 0        # if set, image used the index mark to queue tracks
-    TPI_96 = 1 << 1         # if set, drive is 96 TPI otherwise 48 TPI
-    RPM_360 = 1 << 2        # if set, drive is 360RPM otherwise 300RPM
-    NORMALISED = 1 << 3     # if set, flux has been normalized, otherwise is raw
-    READWRITE = 1 << 4      # if set, image is read only, otherwise read/write capable
-    FOOTER = 1 << 5         # if set, image contains an extension footer
-    EXTENDED_MODE = 1 << 6  # if set, image is the extended type for other media, otherwise floppy drives only
-    FLUX_CREATOR = 1 << 7   # if set, image was created by a non SuperCard Pro Device
+    INDEXED       = 1<<0  # image used the index mark to cue tracks
+    TPI_96        = 1<<1  # drive is 96 TPI, otherwise 48 TPI
+    RPM_360       = 1<<2  # drive is 360RPM, otherwise 300RPM
+    NORMALISED    = 1<<3  # flux has been normalized, otherwise is raw
+    READWRITE     = 1<<4  # image is read/write capable, otherwise read-only
+    FOOTER        = 1<<5  # image contains an extension footer
+    EXTENDED_MODE = 1<<6  # image is the extended type for other media
+    FLUX_CREATOR  = 1<<7  # image was created by a non SuperCard Pro Device
+
 
 class SCPOpts:
     """legacy_ss: Set to True to generate (incorrect) legacy single-sided
