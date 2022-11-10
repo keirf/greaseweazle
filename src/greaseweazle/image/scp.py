@@ -5,24 +5,28 @@
 # This is free and unencumbered software released into the public domain.
 # See the file COPYING for more details, or visit <http://unlicense.org>.
 
-import struct, functools
+import struct
+from enum import IntFlag
 
 from greaseweazle import error
 from greaseweazle.flux import Flux
 from .image import Image
 
+#  SCP image specification can be found at Jim Drew's site:
+#  https://www.cbmstuff.com/downloads/scp/scp_image_specs.txt
 
 # Names for disktype byte in SCP file header
 DiskType = {
-    'amiga':       0x04,
     'c64':         0x00,
+    'amiga':       0x04,
+    'amigahd':     0x08,
     'atari800-sd': 0x10,
     'atari800-dd': 0x11,
     'atari800-ed': 0x12,
     'atarist-ss':  0x14,
     'atarist-ds':  0x15,
-    'appleII':     0x20,
-    'appleIIpro':  0x21,
+    'appleii':     0x20,
+    'appleiipro':  0x21,
     'apple-400k':  0x24,
     'apple-800k':  0x25,
     'apple-1m44':  0x26,
@@ -48,6 +52,16 @@ DiskType = {
     'hdd-rll':     0xf1
 }
 
+
+class SCPHeaderFlags(IntFlag):
+    INDEXED = 1 << 0        # if set, image used the index mark to queue tracks
+    TPI_96 = 1 << 1         # if set, drive is 96 TPI otherwise 48 TPI
+    RPM_360 = 1 << 2        # if set, drive is 360RPM otherwise 300RPM
+    NORMALISED = 1 << 3     # if set, flux has been normalized, otherwise is raw
+    READWRITE = 1 << 4      # if set, image is read only, otherwise read/write capable
+    FOOTER = 1 << 5         # if set, image contains an extension footer
+    EXTENDED_MODE = 1 << 6  # if set, image is the extended type for other media, otherwise floppy drives only
+    FLUX_CREATOR = 1 << 7   # if set, image was created by a non SuperCard Pro Device
 
 class SCPOpts:
     """legacy_ss: Set to True to generate (incorrect) legacy single-sided
@@ -360,15 +374,17 @@ class SCP(Image):
             csum += x
 
         # Generate the image header.
-        flags = 2 # 96TPI
+        flags = SCPHeaderFlags.TPI_96
         if self.index_cued:
-            flags |= 1 # Index-Cued
+            flags |= SCPHeaderFlags.INDEXED
         nr_revs = self.nr_revs if self.nr_revs is not None else 0
         header = struct.pack("<3s9BI",
                              b"SCP",    # Signature
-                             0,         # Version
+                             0x24,      # Version 2.4
                              self.opts.disktype,
-                             nr_revs, 0, ntracks-1,
+                             nr_revs,
+                             0,         # start track
+                             ntracks-1, # end track
                              flags,
                              0,         # 16-bit cell width
                              single_sided,
