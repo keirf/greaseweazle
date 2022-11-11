@@ -273,8 +273,8 @@ class Format_Ensoniq_1600(Format):
 
 class Format_PC98_DD(Format):
     img_compatible = True
-    default_trackset = 'c=0-76:h=0'
-    max_trackset = 'c=0-81:h=0'
+    default_trackset = 'c=0-76:h=0-1'
+    max_trackset = 'c=0-81:h=0-1'
     def __init__(self):
         import greaseweazle.codec.ibm.mfm as m
         self.fmt = m.PC98_DD
@@ -283,8 +283,8 @@ class Format_PC98_DD(Format):
 
 class Format_PC98_HD(Format):
     img_compatible = True
-    default_trackset = 'c=0-76:h=0'
-    max_trackset = 'c=0-81:h=0'
+    default_trackset = 'c=0-76:h=0-1'
+    max_trackset = 'c=0-81:h=0-1'
     def __init__(self):
         import greaseweazle.codec.ibm.mfm as m
         self.fmt = m.PC98_HD
