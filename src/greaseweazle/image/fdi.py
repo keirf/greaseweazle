@@ -1,4 +1,4 @@
-# greaseweazle/image/img.py
+# greaseweazle/image/fdi.py
 #
 # Written & released by Keir Fraser <keir.xen@gmail.com>
 #
@@ -15,8 +15,7 @@ from greaseweazle.codec import formats
 
 class FDI(IMG):
     default_format = 'pc98.hd'
-
-    sides_swapped = False
+    read_only = True
 
     @classmethod
     def from_file(cls, name, fmt):
@@ -46,11 +45,6 @@ class FDI(IMG):
             img.to_track[cyl,head] = track
 
         return img
-
-
-    @classmethod
-    def to_file(cls, name, fmt, noclobber):
-        raise error.Fatal("FDI: Writing not supported.")
 
 # Local variables:
 # python-indent: 4

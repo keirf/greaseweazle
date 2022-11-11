@@ -1,4 +1,4 @@
-# greaseweazle/image/img.py
+# greaseweazle/image/dim.py
 #
 # Written & released by Keir Fraser <keir.xen@gmail.com>
 #
@@ -15,15 +15,15 @@ from greaseweazle.codec import formats
 
 class DIM(IMG):
     default_format = 'pc98.hd'
-
-    sides_swapped = False
+    read_only = True
 
     @classmethod
     def from_file(cls, name, fmt):
 
         with open(name, "rb") as f:
             header = f.read(256)
-            error.check(header[0xAB:0xB8] == b"DIFC HEADER  ", "DIM: Not a DIM file.")
+            error.check(header[0xAB:0xB8] == b"DIFC HEADER  ",
+                        "DIM: Not a DIM file.")
             (media_byte,) = struct.unpack('B255x', header)
             error.check(media_byte == 0, "DIM: Unsupported format.")
             dat = f.read()
@@ -40,11 +40,6 @@ class DIM(IMG):
             img.to_track[cyl,head] = track
 
         return img
-
-
-    @classmethod
-    def to_file(cls, name, fmt, noclobber):
-        raise error.Fatal("DIM: Writing not supported.")
 
 # Local variables:
 # python-indent: 4

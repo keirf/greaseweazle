@@ -1,4 +1,4 @@
-# greaseweazle/image/acorn.py
+# greaseweazle/image/hdm.py
 #
 # Written & released by Keir Fraser <keir.xen@gmail.com>
 #
