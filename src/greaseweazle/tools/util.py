@@ -228,6 +228,7 @@ image_types = OrderedDict(
       '.dsd': ('DSD','acorn'),
       '.dsk': 'EDSK',
       '.fdi': 'FDI',
+      '.hdm': 'HDM',
       '.hfe': 'HFE',
       '.ima': 'IMG',
       '.img': 'IMG',
@@ -237,7 +238,8 @@ image_types = OrderedDict(
       '.sf7': 'SF7',
       '.scp': 'SCP',
       '.ssd': ('SSD','acorn'),
-      '.st' : 'IMG' })
+      '.st' : 'IMG',
+      '.xdf': 'XDF' })
 
 def get_image_class(name):
     _, ext = os.path.splitext(name)
