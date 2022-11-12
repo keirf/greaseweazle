@@ -15,7 +15,7 @@ from .image import Image
 from greaseweazle.codec import formats
 
 class DIM(IMG):
-    default_format = 'pc98.hd'
+    default_format = None
     read_only = True
 
     @classmethod

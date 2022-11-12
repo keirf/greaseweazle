@@ -217,10 +217,11 @@ Known formats:\n%s"""
         print("Writing " + str(args.tracks))
         if args.precomp is not None:
             print(args.precomp)
-        if image.format_str:
-            print("Using image provided format " + image.format_str)
-            args.format = image.format_str
-        elif args.format:
+        if hasattr(image, 'format_str'):
+            print("Image format " + image.format_str)
+            error.check(args.format is None,
+                        'Cannot override image format with --format')
+        if args.format:
             print("Format " + args.format)
         util.with_drive_selected(write_from_image, usb, args, image)
     except USB.CmdError as err:
