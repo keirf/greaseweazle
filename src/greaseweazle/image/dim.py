@@ -9,6 +9,7 @@ import struct
 
 from greaseweazle import error
 from greaseweazle.image.img import IMG
+from greaseweazle.codec.formats import *
 from .image import Image
 
 from greaseweazle.codec import formats
@@ -25,7 +26,13 @@ class DIM(IMG):
             error.check(header[0xAB:0xB8] == b"DIFC HEADER  ",
                         "DIM: Not a DIM file.")
             (media_byte,) = struct.unpack('B255x', header)
-            error.check(media_byte == 0, "DIM: Unsupported format.")
+            if media_byte == 0:
+                format_str = 'pc98.hd'
+            elif media_byte == 1:
+                format_str = 'pc98.2hs'
+            else:
+                raise error.Fatal("DIM: Unsupported format.")
+            fmt = formats.formats[format_str]()
             dat = f.read()
 
         img = cls(name, fmt)
@@ -38,6 +45,7 @@ class DIM(IMG):
             track = fmt.fmt(cyl, head)
             pos += track.set_img_track(dat[pos:])
             img.to_track[cyl,head] = track
+        img.format_str = format_str
 
         return img
 

@@ -518,6 +518,12 @@ class PC98_HD(IBM_MFM_1200):
     nsec  = 8
     sz    = 3
 
+class PC98_2HS(IBM_MFM_1440):
+
+    gap_3 = 116
+    nsec  = 9
+    sz    = 3
+
 class Sega_SF7000(IBM_MFM_Predefined):
 
     time_per_rev = 0.2
