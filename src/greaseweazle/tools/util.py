@@ -225,6 +225,7 @@ image_types = OrderedDict(
       '.adm': ('ADM','acorn'),
       '.adl': ('ADL','acorn'),
       '.d81': 'D81',
+      '.d88': 'D88',
       '.dim': 'DIM',
       '.dsd': ('DSD','acorn'),
       '.dsk': 'EDSK',
