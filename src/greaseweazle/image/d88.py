@@ -11,7 +11,7 @@ import os
 from greaseweazle import error
 from greaseweazle.image.img import IMG
 from greaseweazle.codec.formats import *
-from greaseweazle.codec.ibm import mfm
+from greaseweazle.codec.ibm import mfm, fm
 from .image import Image
 
 from greaseweazle.codec import formats
@@ -50,38 +50,58 @@ class D88(IMG):
                     track_end = disk_size
                 else:
                     track_end = track_table[track_index + 1]
+                if f.tell() >= track_end:
+                    continue
                 f.seek(track_offset)
                 physical_cyl = track_index // 2
                 physical_head = track_index % 2
-                track = mfm.IBM_MFM_Formatted(physical_cyl, physical_head)
-                track.time_per_rev = 60/360
-                track.clock = 1e-6
-                track.gap_3 = 116
-                pos = track.gap_4a
+                track = None
+                track_mfm_flag = None
+                pos = None
                 while f.tell() < track_end:
-                    (c, h, r, n, num_sectors, fm, deleted, status, data_size) = \
+                    (c, h, r, n, num_sectors, mfm_flag, deleted, status, data_size) = \
                         struct.unpack('<BBBBHBBB5xH', f.read(16))
-                    if fm == 0x40:
-                        raise error.Fatal('D88: FM encoded sectors are unsupported.')
                     if status != 0x00:
                         raise error.Fatal('D88: FDC error codes are unsupported.')
                     if deleted != 0x00:
                         raise error.Fatal('D88: Deleted data is unsupported.')
+                    if track is None:
+                        if mfm_flag == 0x40:
+                            track = fm.IBM_FM_Formatted(physical_cyl, physical_head)
+                            track.clock = 2e-6
+                            track.gap_3 = 0x1b
+                        else:
+                            track = mfm.IBM_MFM_Formatted(physical_cyl, physical_head)
+                            track.clock = 1e-6
+                            track.gap_3 = 116
+                        track.time_per_rev = 60/360
+                        pos = track.gap_4a
+                        track_mfm_flag = mfm_flag
+                    if mfm_flag != track_mfm_flag:
+                        raise error.Fatal('D88: Mixed FM and MFM sectors in one track are unsupported.')
                     data = f.read(data_size)
-                    pos += track.gap_presync
-                    idam = mfm.IDAM(pos*16, (pos+10)*16, 0, c, h, r, n)
-                    pos += 10 + track.gap_2 + track.gap_presync
                     size = 128 << n
-                    if size <= 128:
-                        track.gap_3 = 0x1b
-                    elif size <= 256:
-                        track.gap_3 = 0x36
                     if size != data_size:
                         raise error.Fatal('D88: Extra sector data is unsupported.')
-                    dam = mfm.DAM(pos*16, (pos+4+size+2)*16, 0, track.DAM, data)
-                    sector = mfm.Sector(idam, dam)
-                    track.sectors.append(sector)
-                    pos += 4 + size + 2 + track.gap_3
+                    pos += track.gap_presync
+                    if mfm_flag == 0x40:
+                        idam = fm.IDAM(pos*16, (pos+7)*16, 0, c, h, r, n)
+                        pos += 7 + track.gap_2 + track.gap_presync
+                        dam = fm.DAM(pos*16, (pos+1+size+2)*16, 0, track.DAM, data)
+                        sector = fm.Sector(idam, dam)
+                        track.sectors.append(sector)
+                        pos += 1 + size + 2 + track.gap_3
+                    else:
+                        idam = mfm.IDAM(pos*16, (pos+10)*16, 0, c, h, r, n)
+                        pos += 10 + track.gap_2 + track.gap_presync
+                        if size <= 128:
+                            track.gap_3 = 0x1b
+                        elif size <= 256:
+                            track.gap_3 = 0x36
+                        dam = mfm.DAM(pos*16, (pos+4+size+2)*16, 0, track.DAM, data)
+                        sector = mfm.Sector(idam, dam)
+                        track.sectors.append(sector)
+                        pos += 4 + size + 2 + track.gap_3
 
                 img.to_track[physical_cyl, physical_head] = track
 
