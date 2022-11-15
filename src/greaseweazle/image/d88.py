@@ -72,6 +72,10 @@ class D88(IMG):
                     idam = mfm.IDAM(pos*16, (pos+10)*16, 0, c, h, r, n)
                     pos += 10 + track.gap_2 + track.gap_presync
                     size = 128 << n
+                    if size <= 128:
+                        track.gap_3 = 0x1b
+                    elif size <= 256:
+                        track.gap_3 = 0x36
                     if size != data_size:
                         raise error.Fatal('D88: Extra sector data is unsupported.')
                     dam = mfm.DAM(pos*16, (pos+4+size+2)*16, 0, track.DAM, data)
