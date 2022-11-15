@@ -28,6 +28,8 @@ class D88(IMG):
             (disk_name, terminator, write_protect, media_flag, disk_size) = struct.unpack('<16sB9xBBL', header)
             if media_flag == 0x20:
                 format_str = 'pc98.hd'
+            elif media_flag == 0x00:
+                format_str = 'pc98.2d'
             else:
                 raise error.Fatal("D88: Unsupported media format.")
             fmt = formats.formats[format_str]()
@@ -52,8 +54,10 @@ class D88(IMG):
                     track_end = track_table[track_index + 1]
                 if f.tell() >= track_end:
                     continue
-                f.seek(track_offset)
-                physical_cyl = track_index // 2
+                if media_flag == 0x00:
+                    physical_cyl = track_index // 2 * 2
+                else:
+                    physical_cyl = track_index // 2
                 physical_head = track_index % 2
                 track = None
                 track_mfm_flag = None
@@ -66,15 +70,27 @@ class D88(IMG):
                     if deleted != 0x00:
                         raise error.Fatal('D88: Deleted data is unsupported.')
                     if track is None:
-                        if mfm_flag == 0x40:
-                            track = fm.IBM_FM_Formatted(physical_cyl, physical_head)
-                            track.clock = 2e-6
-                            track.gap_3 = 0x1b
+                        if media_flag == 0x00:
+
+                            if mfm_flag == 0x40:
+                                track = fm.IBM_FM_Formatted(physical_cyl, physical_head)
+                                track.clock = 4e-6
+                                track.gap_3 = 0x1b
+                            else:
+                                track = mfm.IBM_MFM_Formatted(physical_cyl, physical_head)
+                                track.clock = 2e-6
+                                track.gap_3 = 0x1b
+                            track.time_per_rev = 0.2
                         else:
-                            track = mfm.IBM_MFM_Formatted(physical_cyl, physical_head)
-                            track.clock = 1e-6
-                            track.gap_3 = 116
-                        track.time_per_rev = 60/360
+                            if mfm_flag == 0x40:
+                                track = fm.IBM_FM_Formatted(physical_cyl, physical_head)
+                                track.clock = 2e-6
+                                track.gap_3 = 0x1b
+                            else:
+                                track = mfm.IBM_MFM_Formatted(physical_cyl, physical_head)
+                                track.clock = 1e-6
+                                track.gap_3 = 116
+                            track.time_per_rev = 60/360
                         pos = track.gap_4a
                         track_mfm_flag = mfm_flag
                     if mfm_flag != track_mfm_flag:

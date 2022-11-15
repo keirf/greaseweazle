@@ -271,6 +271,16 @@ class Format_Ensoniq_1600(Format):
         self.default_revs = m.default_revs
         super().__init__()
 
+class Format_PC98_2D(Format):
+    img_compatible = True
+    default_trackset = 'c=0-39:h=0-1:step=2'
+    max_trackset = 'c=0-41:h=0-1:step=2'
+    def __init__(self):
+        import greaseweazle.codec.ibm.mfm as m
+        self.fmt = m.PC98_2D
+        self.default_revs = m.default_revs
+        super().__init__()
+
 class Format_PC98_DD(Format):
     img_compatible = True
     default_trackset = 'c=0-76:h=0-1'
@@ -343,6 +353,7 @@ formats = OrderedDict({
     'ibm.1680': Format_IBM_1680,
     'ibm.dmf': Format_IBM_1680,
     'ibm.2880': Format_IBM_2880,
+    'pc98.2d': Format_PC98_2D,
     'pc98.dd': Format_PC98_DD,
     'pc98.hd': Format_PC98_HD,
     'pc98.2hs': Format_PC98_2HS,
