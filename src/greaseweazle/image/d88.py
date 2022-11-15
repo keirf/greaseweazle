@@ -46,11 +46,7 @@ class D88(IMG):
                 if track_offset == 0:
                     continue
                 f.seek(track_offset)
-                if track_index == len(track_table) - 1:
-                    track_end = disk_size
-                else:
-                    track_end = track_table[track_index + 1]
-                if f.tell() >= track_end:
+                if f.tell() >= disk_size:
                     continue
                 f.seek(track_offset)
                 physical_cyl = track_index // 2
@@ -58,7 +54,9 @@ class D88(IMG):
                 track = None
                 track_mfm_flag = None
                 pos = None
-                while f.tell() < track_end:
+                num_sectors_track = 255
+                sector_idx = 0
+                while sector_idx < num_sectors_track:
                     (c, h, r, n, num_sectors, mfm_flag, deleted, status, data_size) = \
                         struct.unpack('<BBBBHBBB5xH', f.read(16))
                     if status != 0x00:
@@ -77,8 +75,11 @@ class D88(IMG):
                         track.time_per_rev = 60/360
                         pos = track.gap_4a
                         track_mfm_flag = mfm_flag
+                        num_sectors_track = num_sectors
                     if mfm_flag != track_mfm_flag:
                         raise error.Fatal('D88: Mixed FM and MFM sectors in one track are unsupported.')
+                    if num_sectors_track != num_sectors:
+                        raise error.Fatal('D88: Corrupt number of sectors per track in sector header.')
                     data = f.read(data_size)
                     size = 128 << n
                     if size != data_size:
@@ -102,6 +103,7 @@ class D88(IMG):
                         sector = mfm.Sector(idam, dam)
                         track.sectors.append(sector)
                         pos += 4 + size + 2 + track.gap_3
+                    sector_idx += 1
 
                 img.to_track[physical_cyl, physical_head] = track
 
