@@ -27,7 +27,7 @@ class D88(IMG):
             header = f.read(32)
             (disk_name, terminator, write_protect, media_flag, disk_size) = struct.unpack('<16sB9xBBL', header)
             if media_flag == 0x20:
-                format_str = 'pc98.hd'
+                format_str = 'pc98.2hd'
             elif media_flag == 0x00:
                 format_str = 'pc98.2d'
             else:

@@ -281,23 +281,23 @@ class Format_PC98_2D(Format):
         self.default_revs = m.default_revs
         super().__init__()
 
-class Format_PC98_DD(Format):
+class Format_PC98_2DD(Format):
     img_compatible = True
     default_trackset = 'c=0-76:h=0-1'
     max_trackset = 'c=0-81:h=0-1'
     def __init__(self):
         import greaseweazle.codec.ibm.mfm as m
-        self.fmt = m.PC98_DD
+        self.fmt = m.PC98_2DD
         self.default_revs = m.default_revs
         super().__init__()
 
-class Format_PC98_HD(Format):
+class Format_PC98_2HD(Format):
     img_compatible = True
     default_trackset = 'c=0-76:h=0-1'
     max_trackset = 'c=0-81:h=0-1'
     def __init__(self):
         import greaseweazle.codec.ibm.mfm as m
-        self.fmt = m.PC98_HD
+        self.fmt = m.PC98_2HD
         self.default_revs = m.default_revs
         super().__init__()
 
@@ -354,8 +354,8 @@ formats = OrderedDict({
     'ibm.dmf': Format_IBM_1680,
     'ibm.2880': Format_IBM_2880,
     'pc98.2d': Format_PC98_2D,
-    'pc98.dd': Format_PC98_DD,
-    'pc98.hd': Format_PC98_HD,
+    'pc98.2dd': Format_PC98_2DD,
+    'pc98.2hd': Format_PC98_2HD,
     'pc98.2hs': Format_PC98_2HS,
     'sega.sf7000': Format_Sega_SF7000,
 })
