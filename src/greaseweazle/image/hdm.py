@@ -8,7 +8,7 @@
 from greaseweazle.image.img import IMG
 
 class HDM(IMG):
-    default_format = 'pc98.hd'
+    default_format = 'pc98.2hd'
 
 # Local variables:
 # python-indent: 4

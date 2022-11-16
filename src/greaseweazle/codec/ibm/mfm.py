@@ -512,14 +512,14 @@ class PC98_2D(IBM_MFM_720):
     nsec  = 8
     sz    = 2
 
-class PC98_DD(IBM_MFM_1200):
+class PC98_2DD(IBM_MFM_1200):
 
     clock = 2e-6
     gap_3 = 57
     nsec  = 8
     sz    = 2
 
-class PC98_HD(IBM_MFM_1200):
+class PC98_2HD(IBM_MFM_1200):
 
     gap_3 = 116
     nsec  = 8

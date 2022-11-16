@@ -14,7 +14,7 @@ from .image import Image
 from greaseweazle.codec import formats
 
 class FDI(IMG):
-    default_format = 'pc98.hd'
+    default_format = 'pc98.2hd'
     read_only = True
 
     @classmethod

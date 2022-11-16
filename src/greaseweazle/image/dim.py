@@ -27,7 +27,7 @@ class DIM(IMG):
                         "DIM: Not a DIM file.")
             (media_byte,) = struct.unpack('B255x', header)
             if media_byte == 0:
-                format_str = 'pc98.hd'
+                format_str = 'pc98.2hd'
             elif media_byte == 1:
                 format_str = 'pc98.2hs'
             else:
