@@ -3,6 +3,14 @@
 ** Keir Fraser <keir.xen@gmail.com>
 ************************************
 
+** v1.4 - 4 December 2022
+ - Read support for DIM, FDI, HDM, XDF, and D88 image formats
+   - Primarily used with Japanese computers
+ - Renamed pc98.hd and pc98.dd formats to pc98.2hd and pc98.2dd
+ - Fixed head count on pc98.2hd and pc98.2dd formats
+ - Support pc98.2d format (used e.g. by PC-88 and X1)
+ - Support pc98.2hs format (used primarily by late PC-98)
+
 ** v1.3 - 1 September 2022
  - gw: New formats ibm.800 and ibm.2880
  - gw: New image format *.MGT
