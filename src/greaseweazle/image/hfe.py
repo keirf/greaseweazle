@@ -88,19 +88,24 @@ class HFE(Image):
 
 
     def emit_track(self, cyl, side, track):
+        t = track.raw_track() if hasattr(track, 'raw_track') else track
         if self.opts.bitrate is None:
-            t = track.raw_track() if hasattr(track, 'raw_track') else track
-            b = getattr(t, 'bitrate', None)
             error.check(hasattr(t, 'bitrate'),
                         'HFE: Requires bitrate to be specified'
                         ' (eg. filename.hfe::bitrate=500)')
             self.opts.bitrate = round(t.bitrate / 2e3)
             print('HFE: Data bitrate detected: %d kbit/s' % self.opts.bitrate)
-        flux = track.flux()
-        flux.cue_at_index()
-        raw = RawTrack(clock = 5e-4 / self.opts.bitrate, data = flux)
-        bits, _ = raw.get_revolution(0)
-        bits.bytereverse()
+        if issubclass(type(t), MasterTrack):
+            # Rotate data to start at the index.
+            index = -t.splice % len(t.bits)
+            bits = t.bits[index:] + t.bits[:index]
+            bits.bytereverse()
+        else:
+            flux = t.flux()
+            flux.cue_at_index()
+            raw = RawTrack(clock = 5e-4 / self.opts.bitrate, data = flux)
+            bits, _ = raw.get_revolution(0)
+            bits.bytereverse()
         self.to_track[cyl,side] = (len(bits), bits.tobytes())
 
 
