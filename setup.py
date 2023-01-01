@@ -18,6 +18,7 @@ setup(name = 'greaseweazle',
       ],
       packages = find_packages('src'),
       package_dir = { '': 'src' },
+      package_data = { 'greaseweazle.data': ['*.cfg'] },
       ext_modules = [
           Extension('greaseweazle.optimised.optimised',
                     sources = ['src/greaseweazle/optimised/optimised.c'])

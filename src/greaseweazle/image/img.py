@@ -9,8 +9,6 @@ from greaseweazle import error
 from greaseweazle.codec.ibm import mfm
 from .image import Image
 
-from greaseweazle.codec import formats
-
 class IMG(Image):
 
     sides_swapped = False
@@ -18,10 +16,7 @@ class IMG(Image):
     def __init__(self, name, fmt):
         self.to_track = dict()
         error.check(fmt is not None and fmt.img_compatible, """\
-Sector image requires compatible format conversion
-Compatible formats:\n%s"""
-                    % formats.print_formats(
-                        lambda k, v: v.img_compatible))
+Sector image requires compatible format conversion""")
         self.filename = name
         self.fmt = fmt
 

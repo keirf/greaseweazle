@@ -32,7 +32,7 @@ class D88(IMG):
                 format_str = 'pc98.2d'
             else:
                 raise error.Fatal("D88: Unsupported media format.")
-            fmt = formats.formats[format_str]()
+            fmt = formats.get_format(format_str)
             track_table = [x[0] for x in struct.iter_unpack('<L', f.read(640))]
             if track_table[0] == 688:
                 track_table.extend([x[0] for x in struct.iter_unpack('<L', f.read(16))])

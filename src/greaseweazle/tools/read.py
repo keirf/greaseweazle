@@ -175,6 +175,7 @@ def main(argv):
     parser.add_argument("--device", help="device name (COM/serial port)")
     parser.add_argument("--drive", type=util.drive_letter, default='A',
                         help="drive to read")
+    parser.add_argument("--diskdefs", help="disk definitions file")
     parser.add_argument("--format", help="disk format (output is converted unless --raw)")
     parser.add_argument("--revs", type=int, metavar="N",
                         help="number of revolutions to read per track")
@@ -211,9 +212,8 @@ def main(argv):
             args.format = image_class.default_format
         decoder, def_tracks, args.fmt_cls = None, None, None
         if args.format:
-            try:
-                args.fmt_cls = formats.formats[args.format]()
-            except KeyError as ex:
+            args.fmt_cls = formats.get_format(args.format, args.diskdefs)
+            if args.fmt_cls is None:
                 raise error.Fatal("""\
 Unknown format '%s'
 Known formats:\n%s"""

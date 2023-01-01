@@ -83,6 +83,7 @@ def main(argv):
               + "\nFORMAT options:\n" + formats.print_formats())
     parser = util.ArgumentParser(usage='%(prog)s [options] in_file out_file',
                                  epilog=epilog)
+    parser.add_argument("--diskdefs", help="disk definitions file")
     parser.add_argument("--format", help="disk format")
     parser.add_argument("--tracks", type=util.TrackSet,
                         help="which tracks to read & convert from input",
@@ -117,9 +118,8 @@ def main(argv):
 
     decoder, def_tracks, args.fmt_cls = None, None, None
     if args.format:
-        try:
-            args.fmt_cls = formats.formats[args.format]()
-        except KeyError as ex:
+        args.fmt_cls = formats.get_format(args.format, args.diskdefs)
+        if args.fmt_cls is None:
             raise error.Fatal("""\
 Unknown format '%s'
 Known formats:\n%s"""

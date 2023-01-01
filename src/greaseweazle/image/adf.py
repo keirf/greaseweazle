@@ -19,9 +19,7 @@ class ADF(Image):
     def __init__(self, name, fmt):
         self.to_track = dict()
         error.check(fmt is not None and fmt.adf_compatible, """\
-ADF image requires compatible format conversion
-Compatible formats:\n%s"""
-                    % formats.print_formats(lambda k, v: v.adf_compatible))
+ADF image requires compatible format conversion""")
         self.filename = name
         self.fmt = fmt
 

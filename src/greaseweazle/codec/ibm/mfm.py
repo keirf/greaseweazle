@@ -337,18 +337,17 @@ class IBM_MFM_Predefined(IBM_MFM_Formatted):
     cskew = 0
     hskew = 0
     interleave = 1
-    hswap = False
 
-    def __init__(self, cyl, head):
+    def __init__(self, cyl, head, h=None):
 
         super().__init__(cyl, head)
 
-        if self.hswap:
-            head = 1-head
+        if h is None:
+            h = head
 
         # Create logical sector map in rotational order
         sec_map = [-1] * self.nsec
-        pos = (cyl*self.cskew + head*self.hskew) % self.nsec
+        pos = (cyl*self.cskew + head*self.hskew) % self.nsec if self.nsec else 0
         for i in range(self.nsec):
             while sec_map[pos] != -1:
                 pos = (pos + 1) % self.nsec
@@ -357,13 +356,14 @@ class IBM_MFM_Predefined(IBM_MFM_Formatted):
 
         pos = self.gap_4a
         if self.gap_1 is not None:
+            pos += self.gap_presync
             self.iams = [IAM(pos*16,(pos+4)*16)]
             pos += 4 + self.gap_1
 
         for i in range(self.nsec):
             pos += self.gap_presync
             idam = IDAM(pos*16, (pos+10)*16, 0xffff,
-                        c=cyl, h=head, r=self.id0+sec_map[i], n = self.sz)
+                        c=cyl, h=h, r=self.id0+sec_map[i], n = self.sz)
             pos += 10 + self.gap_2 + self.gap_presync
             size = 128 << self.sz
             dam = DAM(pos*16, (pos+4+size+2)*16, 0xffff,
@@ -378,168 +378,71 @@ class IBM_MFM_Predefined(IBM_MFM_Formatted):
         return mfm
 
 
-class IBM_MFM_720(IBM_MFM_Predefined):
+class IBM_MFM_Config(IBM_MFM_Predefined):
 
-    time_per_rev = 0.2
-    clock = 2e-6
+    GAP_3 = [ 32, 54, 84, 116, 255, 255, 255, 255 ]
     
-    gap_3  = 84 # Post-DAM
-    nsec   = 9
-    id0    = 1
-    sz     = 2
+    def __init__(self, config, cyl, head):
+        self.nsec = config.secs
+        self.id0 = config.id
+        self.sz = config.sz[0]
+        self.interleave = config.interleave
+        self.cskew = config.cskew
+        self.hskew = config.hskew
 
-class IBM_MFM_800(IBM_MFM_720):
+        self.gap_1 = None if not config.iam else 50
+        if config.gap1 is not None:
+            self.gap_1 = config.gap1
+        if config.gap2 is not None:
+            self.gap_2 = config.gap2
+        self.gap_3 = 0
+        if config.gap3 is not None:
+            self.gap_3 = config.gap3
+        if config.gap4a is not None:
+            self.gap_4a = config.gap4a
 
-    gap_3  = 30
-    nsec   = 10
+        idx_sz = self.gap_4a
+        if self.gap_1 is not None:
+            idx_sz += self.gap_presync + 4 + self.gap_1
+        idam_sz = self.gap_presync + 8 + 2 + self.gap_2
+        dam_sz_pre = self.gap_presync + 4
+        dam_sz_post = 2 + self.gap_3
 
-class IBM_MFM_1200(IBM_MFM_720):
+        tracklen = idx_sz
+        for _ in range(self.nsec):
+            tracklen += idam_sz + dam_sz_pre + (128<<self.sz) + dam_sz_post
+        tracklen *= 16
 
-    time_per_rev = 60/360
-    clock = 1e-6
-    nsec   = 15
+        rate, rpm = config.rate, config.rpm
+        if rate == 0:
+            for i in range(1, 4): # DD=1, HD=2, ED=3
+                maxlen = ((50000*300//rpm) << i) + 5000
+                if tracklen < maxlen:
+                    break
+            rate = 125 << i # DD=250, HD=500, ED=1000
 
-class IBM_MFM_1440(IBM_MFM_720):
+        if config.gap2 is None and rate >= 1000:
+            # At ED rate the default GAP2 is 41 bytes.
+            old_gap_2 = self.gap_2
+            self.gap_2 = 41
+            idam_sz += self.gap_2 - old_gap_2
+            tracklen += 16 * self.nsec * (self.gap_2 - old_gap_2)
+            
+        tracklen_bc = rate * 400 * 300 // rpm
 
-    clock = 1e-6
-    nsec  = 18
+        if self.nsec != 0 and config.gap3 is None:
+            space = max(0, tracklen_bc - tracklen)
+            no = self.sz
+            self.gap_3 = min(space // (16*self.nsec), self.GAP_3[no])
+            dam_sz_post += self.gap_3
+            tracklen += 16 * self.nsec * self.gap_3
 
-class IBM_MFM_1680(IBM_MFM_720):
+        tracklen_bc = max(tracklen_bc, tracklen)
 
-    clock = 1e-6
-    nsec  = 21
-    gap_3 = 12
-    cskew = 3
-    interleave = 2
-
-class IBM_MFM_2880(IBM_MFM_720):
-
-    clock = 5e-7
-    gap_2 = 41
-    nsec  = 36
-
-class AtariST_SS_9SPT(IBM_MFM_720):
-
-    gap_1 = None
-    cskew = 2
-
-class AtariST_DS_9SPT(IBM_MFM_720):
-
-    gap_1 = None
-    cskew = 4
-    hskew = 2
-
-class AtariST_10SPT(IBM_MFM_720):
-
-    gap_1 = None
-    gap_3 = 30
-    nsec  = 10
-
-class AtariST_11SPT(IBM_MFM_720):
-
-    clock = 2e-6 * 0.96 # long track
-    gap_1 = None
-    gap_3 = 3
-    nsec  = 11
-
-class Acorn_ADFS_640(IBM_MFM_Predefined):
-
-    time_per_rev = 0.2
-    clock = 2e-6
-
-    gap_3 = 57
-    nsec  = 16
-    id0   = 0
-    sz    = 1
-
-class Acorn_ADFS_800(IBM_MFM_Predefined):
-
-    time_per_rev = 0.2
-    clock = 2e-6
-
-    gap_3 = 116
-    nsec  = 5
-    id0   = 0
-    sz    = 3
-
-class Acorn_ADFS_1600(IBM_MFM_Predefined):
-
-    time_per_rev = 0.2
-    clock = 1e-6
-
-    gap_3 = 116
-    nsec  = 10
-    id0   = 0
-    sz    = 3
-
-class Commodore_1581(IBM_MFM_720):
-
-    gap_3 = 30
-    nsec  = 10
-    hswap = True
-
-class Akai_800(IBM_MFM_720):
-
-    gap_3 = 116
-    nsec  = 5
-    id0   = 1
-    sz    = 3
-    cskew = 2
-
-class Akai_1600(Akai_800):
-
-    clock = 1e-6
-    nsec  = 10
-    cskew = 5
-
-class Ensoniq_800(IBM_MFM_720):
-
-    gap_3 = 30
-    nsec  = 10
-    id0   = 0
-
-class Ensoniq_1600(IBM_MFM_720):
-
-    clock = 1e-6
-    gap_3 = 40
-    nsec  = 20
-    id0   = 0
-
-class PC98_2D(IBM_MFM_720):
-
-    clock = 2e-6
-    gap_3 = 57
-    nsec  = 8
-    sz    = 2
-
-class PC98_2DD(IBM_MFM_1200):
-
-    clock = 2e-6
-    gap_3 = 57
-    nsec  = 8
-    sz    = 2
-
-class PC98_2HD(IBM_MFM_1200):
-
-    gap_3 = 116
-    nsec  = 8
-    sz    = 3
-
-class PC98_2HS(IBM_MFM_1440):
-
-    gap_3 = 116
-    nsec  = 9
-    sz    = 3
-
-class Sega_SF7000(IBM_MFM_Predefined):
-
-    time_per_rev = 0.2
-    clock = 2e-6
-
-    gap_3 = 42
-    nsec  = 16
-    id0   = 1
-    sz    = 1
+        self.time_per_rev = 60 / rpm
+        self.clock = self.time_per_rev / tracklen_bc
+        
+        super().__init__(cyl, head, config.h)
 
 
 def mfm_encode(dat):

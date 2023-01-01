@@ -277,14 +277,17 @@ class IBM_FM_Predefined(IBM_FM_Formatted):
     cskew = 0
     hskew = 0
     interleave = 1
-    
-    def __init__(self, cyl, head):
+
+    def __init__(self, cyl, head, h=None):
 
         super().__init__(cyl, head)
 
+        if h is None:
+            h = head
+
         # Create logical sector map in rotational order
         sec_map = [-1] * self.nsec
-        pos = (cyl*self.cskew + head*self.hskew) % self.nsec
+        pos = (cyl*self.cskew + head*self.hskew) % self.nsec if self.nsec else 0
         for i in range(self.nsec):
             while sec_map[pos] != -1:
                 pos = (pos + 1) % self.nsec
@@ -293,13 +296,14 @@ class IBM_FM_Predefined(IBM_FM_Formatted):
 
         pos = self.gap_4a
         if self.gap_1 is not None:
+            pos += self.gap_presync
             self.iams = [IAM(pos*16,(pos+1)*16)]
             pos += 1 + self.gap_1
 
         for i in range(self.nsec):
             pos += self.gap_presync
             idam = IDAM(pos*16, (pos+7)*16, 0xffff,
-                        c=cyl, h=head, r=self.id0+sec_map[i], n = self.sz)
+                        c=cyl, h=h, r=self.id0+sec_map[i], n = self.sz)
             pos += 7 + self.gap_2 + self.gap_presync
             size = 128 << self.sz
             dam = DAM(pos*16, (pos+1+size+2)*16, 0xffff,
@@ -314,28 +318,67 @@ class IBM_FM_Predefined(IBM_FM_Formatted):
         return mfm
 
 
-class Acorn_DFS(IBM_FM_Predefined):
+class IBM_FM_Config(IBM_FM_Predefined):
 
-    time_per_rev = 0.2
-    clock = 4e-6
+    GAP_3 = [ 27, 42, 58, 138, 255, 255, 255, 255 ]
+    
+    def __init__(self, config, cyl, head):
+        self.nsec = config.secs
+        self.id0 = config.id
+        self.sz = config.sz[0]
+        self.interleave = config.interleave
+        self.cskew = config.cskew
+        self.hskew = config.hskew
 
-    gap_1  = 0 # No IAM
-    gap_3  = 21
-    nsec   = 10
-    id0    = 0
-    sz     = 1
-    cskew  = 3
+        self.gap_1 = None if not config.iam else 26
+        if config.gap1 is not None:
+            self.gap_1 = config.gap1
+        if config.gap2 is not None:
+            self.gap_2 = config.gap2
+        self.gap_3 = 0
+        if config.gap3 is not None:
+            self.gap_3 = config.gap3
+        self.gap_4a = 40 if config.iam else 16
+        if config.gap4a is not None:
+            self.gap_4a = config.gap4a
 
-class Atari_90(IBM_FM_Predefined):
-    time_per_rev = 0.2
-    clock = 4e-6
+        idx_sz = self.gap_4a
+        if self.gap_1 is not None:
+            idx_sz += self.gap_presync + 1 + self.gap_1
+        idam_sz = self.gap_presync + 5 + 2 + self.gap_2
+        dam_sz_pre = self.gap_presync + 1
+        dam_sz_post = 2 + self.gap_3
 
-    gap_1 = 6
-    gap_3 = 17
-    nsec  = 18
-    id0   = 0
-    sz    = 0
-    cskew = 3
+        tracklen = idx_sz
+        for _ in range(self.nsec):
+            tracklen += idam_sz + dam_sz_pre + (128<<self.sz) + dam_sz_post
+        tracklen *= 16
+
+        rate, rpm = config.rate, config.rpm
+        if rate == 0:
+            # Micro-diskette = 125kbps, 8-inch disk = 250kbps
+            for i in range(2): # 0=125kbps, 1=250kbps
+                maxlen = ((50000*300//rpm) << i) + 5000
+                if tracklen < maxlen:
+                    break
+            rate = 125 << i # 125kbps or 250kbps
+
+        tracklen_bc = rate * 400 * 300 // rpm
+
+        if self.nsec != 0 and config.gap3 is None:
+            space = max(0, tracklen_bc - tracklen)
+            no = self.sz
+            self.gap_3 = min(space // (16*self.nsec), self.GAP_3[no])
+            dam_sz_post += self.gap_3
+            tracklen += 16 * self.nsec * self.gap_3
+
+        tracklen_bc = max(tracklen_bc, tracklen)
+
+        self.time_per_rev = 60 / rpm
+        self.clock = self.time_per_rev / tracklen_bc
+        
+        super().__init__(cyl, head, config.h)
+
 
 encode_list = []
 for x in range(256):

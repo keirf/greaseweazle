@@ -32,7 +32,7 @@ class DIM(IMG):
                 format_str = 'pc98.2hs'
             else:
                 raise error.Fatal("DIM: Unsupported format.")
-            fmt = formats.formats[format_str]()
+            fmt = formats.get_format(format_str)
             dat = f.read()
 
         img = cls(name, fmt)
