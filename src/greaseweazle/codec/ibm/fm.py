@@ -301,15 +301,19 @@ class IBM_FM_Predefined(IBM_FM_Formatted):
             pos += 1 + self.gap_1
 
         for i in range(self.nsec):
+            sec = sec_map[i]
             pos += self.gap_presync
             idam = IDAM(pos*16, (pos+7)*16, 0xffff,
-                        c=cyl, h=h, r=self.id0+sec_map[i], n = self.sz)
+                        c=cyl, h=h, r=self.id0+sec, n = self.sec_n(sec))
             pos += 7 + self.gap_2 + self.gap_presync
-            size = 128 << self.sz
+            size = 128 << idam.n
             dam = DAM(pos*16, (pos+1+size+2)*16, 0xffff,
                       mark=self.DAM, data=b'-=[BAD SECTOR]=-'*(size//16))
             self.sectors.append(Sector(idam, dam))
             pos += 1 + size + 2 + self.gap_3
+
+    def sec_n(self, i):
+        return self.sz[i] if i < len(self.sz) else self.sz[-1]
 
     @classmethod
     def decode_track(cls, cyl, head, track):
@@ -325,7 +329,7 @@ class IBM_FM_Config(IBM_FM_Predefined):
     def __init__(self, config, cyl, head):
         self.nsec = config.secs
         self.id0 = config.id
-        self.sz = config.sz[0]
+        self.sz = config.sz
         self.interleave = config.interleave
         self.cskew = config.cskew
         self.hskew = config.hskew
@@ -349,9 +353,9 @@ class IBM_FM_Config(IBM_FM_Predefined):
         dam_sz_pre = self.gap_presync + 1
         dam_sz_post = 2 + self.gap_3
 
-        tracklen = idx_sz
-        for _ in range(self.nsec):
-            tracklen += idam_sz + dam_sz_pre + (128<<self.sz) + dam_sz_post
+        tracklen = idx_sz + (idam_sz + dam_sz_pre + dam_sz_post) * self.nsec
+        for i in range(self.nsec):
+            tracklen += 128 << self.sec_n(i)
         tracklen *= 16
 
         rate, rpm = config.rate, config.rpm
@@ -367,7 +371,7 @@ class IBM_FM_Config(IBM_FM_Predefined):
 
         if self.nsec != 0 and config.gap3 is None:
             space = max(0, tracklen_bc - tracklen)
-            no = self.sz
+            no = self.sec_n(0)
             self.gap_3 = min(space // (16*self.nsec), self.GAP_3[no])
             dam_sz_post += self.gap_3
             tracklen += 16 * self.nsec * self.gap_3

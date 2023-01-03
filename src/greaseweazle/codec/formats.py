@@ -61,7 +61,11 @@ class IBMTrackConfig:
         elif key == 'bps':
             self.sz = []
             for x in val.split(','):
-                n = int(x)
+                y = re.match(r'(\d+)\*(\d+)', x)
+                if y is not None:
+                    n, l = int(y.group(1)), int(y.group(2))
+                else:
+                    n, l = int(x), 1
                 s = 0
                 while True:
                     if n == 128<<s:
@@ -69,7 +73,8 @@ class IBMTrackConfig:
                     s += 1
                     if s > 6:
                         raise ValueError('bps value out of range')
-                self.sz.append(s)
+                for _ in range(l):
+                    self.sz.append(s)
         elif key == 'interleave':
             val = int(val)
             self.interleave = val
@@ -300,7 +305,7 @@ def get_format(name, cfg=None):
                     continue
 
                 keyval_match = re.match(r'([a-zA-Z0-9:,._-]+)\s*='
-                                        '\s*([a-zA-Z0-9:,._-]+)', t)
+                                        '\s*([a-zA-Z0-9:,._*-]+)', t)
                 error.check(keyval_match is not None, 'syntax error')
                 track_config.add_param(keyval_match.group(1),
                                        keyval_match.group(2))
