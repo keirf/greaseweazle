@@ -11,89 +11,40 @@ from copy import copy
 
 from greaseweazle import error
 from greaseweazle.codec.ibm import fm, mfm
+from greaseweazle.codec.amiga import amigados
 from greaseweazle.tools import util
 
 class Format:
-    adf_compatible = False
-    img_compatible = False
-    default_trackset = 'c=0-79:h=0-1'
-    max_trackset = 'c=0-81:h=0-1'
-    def __init__(self):
-        self.default_tracks = util.TrackSet(self.default_trackset)
-        self.max_tracks = util.TrackSet(self.max_trackset)
-        self.decode_track = self.fmt.decode_track
 
-class Format_Amiga_AmigaDOS_DD(Format):
-    adf_compatible = True
-    def __init__(self):
-        import greaseweazle.codec.amiga.amigados as m
-        self.fmt = m.AmigaDOS_DD
-        self.default_revs = m.default_revs
-        super().__init__()
-    
-class Format_Amiga_AmigaDOS_HD(Format):
-    adf_compatible = True
-    def __init__(self):
-        import greaseweazle.codec.amiga.amigados as m
-        self.fmt = m.AmigaDOS_HD
-        self.default_revs = m.default_revs
-        super().__init__()
-
-class Format_IMG(Format):
-    img_compatible = True
     def __init__(self, disk_config):
         self.fmt = disk_config
         self.default_revs = mfm.default_revs
         self.default_trackset = disk_config.trackset()
         self.max_trackset = disk_config.trackset()
-        super().__init__()
+        self.default_tracks = util.TrackSet(self.default_trackset)
+        self.max_tracks = util.TrackSet(self.max_trackset)
+        self.decode_track = self.fmt.decode_track
 
-_formats = {
-    'amiga.amigados': Format_Amiga_AmigaDOS_DD,
-    'amiga.amigados_hd': Format_Amiga_AmigaDOS_HD,
-}
+    @property
+    def adf_compatible(self):
+        return self.fmt.adf_compatible()
 
-def get_cfg_lines(cfg):
-    if cfg is None:
-        cfg = 'diskdefs.cfg'
-        with importlib.resources.open_text('greaseweazle.data', cfg) as f:
-            lines = f.readlines()
-    else:
-        with open(os.path.expanduser(cfg), 'r') as f:
-            lines = f.readlines()
-    return (lines, cfg)
-
-def print_formats(cfg=None):
-    formats = []
-    for k, v in _formats.items():
-        formats.append('  ' + k)
-
-    lines, _ = get_cfg_lines(cfg)
-    for l in lines:
-        disk_match = re.match(r'\s*disk\s+([\w,.-]+)', l)
-        if disk_match:
-            formats.append('  ' + disk_match.group(1))
-
-    formats.sort()
-    return '\n'.join(filter(None, formats))
-
-
-def get_format(name, cfg=None):
-    if name in _formats:
-        return _formats[name]()
-    return get_dynamic_format(name, cfg)
+    @property
+    def img_compatible(self):
+        return self.fmt.img_compatible()
 
 
 class IBMTrackConfig:
 
-    def __init__(self, mode):
-        if mode not in ['ibm.mfm','ibm.fm']:
-            raise error.Fatal('unrecognised mode: %s' % mode)
+    adf_compatible = False
+    img_compatible = True
+
+    def __init__(self, format_name):
         self.secs = 0
         self.sz = []
         self.id = 1
         self.h = None
-        self.mode = mode
+        self.format_name = format_name
         self.interleave = 1
         self.cskew, self.hskew = 0, 0
         self.rpm = 300
@@ -160,7 +111,7 @@ class IBMTrackConfig:
         self.finalised = True
 
     def mk_track(self, cyl, head):
-        if self.mode == 'ibm.mfm':
+        if self.format_name == 'ibm.mfm':
             t = mfm.IBM_MFM_Config(self, cyl, head)
         else:
             t = fm.IBM_FM_Config(self, cyl, head)
@@ -221,6 +172,18 @@ class DiskConfig:
     def __call__(self, cyl, head):
         return self.mk_track(cyl, head)
 
+    def adf_compatible(self):
+        for t in self.track_map.values():
+            if not t.adf_compatible:
+                return False
+        return True
+
+    def img_compatible(self):
+        for t in self.track_map.values():
+            if not t.img_compatible:
+                return False
+        return True
+
 
 class ParseMode:
     Outer = 0
@@ -228,7 +191,26 @@ class ParseMode:
     Track = 2
 
 
-def get_dynamic_format(name, cfg):
+def get_cfg_lines(cfg):
+    if cfg is None:
+        cfg = 'diskdefs.cfg'
+        with importlib.resources.open_text('greaseweazle.data', cfg) as f:
+            lines = f.readlines()
+    else:
+        with open(os.path.expanduser(cfg), 'r') as f:
+            lines = f.readlines()
+    return (lines, cfg)
+
+
+def mk_track_config(format_name):
+    if format_name in ['amiga.amigados']:
+        return amigados.AmigaDOSTrackConfig(format_name)
+    if format_name in ['ibm.mfm','ibm.fm']:
+        return IBMTrackConfig(format_name)
+    raise error.Fatal('unrecognised format name: %s' % format_name)
+
+
+def get_format(name, cfg=None):
     parse_mode = ParseMode.Outer
     active, formats = False, []
     disk_config, track_config = None, None
@@ -266,7 +248,7 @@ def get_dynamic_format(name, cfg):
                     if (disk_config.cyls is None
                         or disk_config.heads is None):
                         raise ValueError("missing cyls or heads")
-                    track_config = IBMTrackConfig(tracks_match.group(2))
+                    track_config = mk_track_config(tracks_match.group(2))
                     for x in tracks_match.group(1).split(','):
                         if x == '*':
                             for c in range(disk_config.cyls):
@@ -330,4 +312,15 @@ def get_dynamic_format(name, cfg):
         return None
     disk_config.finalise()
 
-    return Format_IMG(disk_config)
+    return Format(disk_config)
+
+
+def print_formats(cfg=None):
+    formats = []
+    lines, _ = get_cfg_lines(cfg)
+    for l in lines:
+        disk_match = re.match(r'\s*disk\s+([\w,.-]+)', l)
+        if disk_match:
+            formats.append('  ' + disk_match.group(1))
+    formats.sort()
+    return '\n'.join(filter(None, formats))

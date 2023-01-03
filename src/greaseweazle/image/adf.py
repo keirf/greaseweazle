@@ -35,21 +35,16 @@ ADF image requires compatible format conversion""")
 
         adf = cls(name, fmt)
 
-        while True:
-            nsec = fmt.fmt.nsec
-            error.check((len(dat) % (2*nsec*512)) == 0, "Bad ADF image length")
-            ncyl = len(dat) // (2*nsec*512)
-            if ncyl < 90:
-                break
-            error.check(nsec == 11, "Bad ADF image length")
-            fmt = adf.fmt = formats.Format_Amiga_AmigaDOS_HD()
-
         pos = 0
         for t in fmt.max_tracks:
             tnr = t.cyl*2 + t.head
             ados = fmt.fmt(t.cyl, t.head)
             pos += ados.set_adf_track(dat[pos:])
             adf.to_track[tnr] = ados
+
+        error.check(pos >= len(dat),
+                    'Unexpected extra data at end of ADF image: '
+                    'try --format=amiga.amigados_hd')
 
         return adf
 
@@ -80,6 +75,7 @@ ADF image requires compatible format conversion""")
         tdat = bytearray()
 
         ntracks = max(self.to_track, default=0) + 1
+        nsec = self.fmt.fmt(0,0).nsec
 
         for tnr in range(ntracks):
             t = self.to_track[tnr] if tnr in self.to_track else None
@@ -87,13 +83,13 @@ ADF image requires compatible format conversion""")
                 tdat += t.get_adf_track()
             elif tnr < 160:
                 # Pad empty/damaged tracks.
-                tdat += amigados.bad_sector * self.fmt.fmt.nsec
+                tdat += amigados.bad_sector * nsec
             else:
                 # Do not extend past 160 tracks unless there is data.
                 break
 
         if ntracks < 160:
-            tdat += amigados.bad_sector * self.fmt.fmt.nsec * (160 - ntracks)
+            tdat += amigados.bad_sector * nsec * (160 - ntracks)
 
         return tdat
 

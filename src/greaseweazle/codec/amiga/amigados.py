@@ -9,6 +9,7 @@ import struct
 import itertools as it
 from bitarray import bitarray
 
+from greaseweazle import error
 from greaseweazle.track import MasterTrack, RawTrack
 
 default_revs = 1.1
@@ -159,6 +160,41 @@ class AmigaDOS_DD(AmigaDOS):
 class AmigaDOS_HD(AmigaDOS):
     nsec = 22
     clock = AmigaDOS_DD.clock / 2
+
+
+class AmigaDOSTrackConfig:
+
+    adf_compatible = True
+    img_compatible = False
+
+    def __init__(self, format_name):
+        if format_name not in ['amiga.amigados']:
+            raise error.Fatal('unrecognised format name: %s' % format_name)
+        self.secs = None
+        self.finalised = False
+
+    def add_param(self, key, val):
+        if key == 'secs':
+            val = int(val)
+            if val not in [11, 22]:
+                raise ValueError('%s out of range' % key)
+            self.secs = val
+        else:
+            raise error.Fatal('unrecognised track option %s' % key)
+
+    def finalise(self):
+        if self.finalised:
+            return
+        error.check(self.secs is not None,
+                    'number of sectors not specified')
+        self.finalised = True
+
+    def mk_track(self, cyl, head):
+        if self.secs == 11:
+            t = AmigaDOS_DD(cyl, head)
+        else:
+            t = AmigaDOS_HD(cyl, head)
+        return t
 
 
 def mfm_encode(dat):
