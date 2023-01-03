@@ -258,7 +258,7 @@ def get_dynamic_format(name, cfg):
                     active = False
                     continue
                 tracks_match = re.match(r'tracks\s+([0-9,.*-]+)'
-                                        ':([\w,.-]+)', t)
+                                        '\s+([\w,.-]+)', t)
                 if tracks_match:
                     parse_mode = ParseMode.Track
                     if not active:
