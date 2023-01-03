@@ -19,8 +19,7 @@ class Format:
     def __init__(self, disk_config):
         self.fmt = disk_config
         self.default_revs = disk_config.default_revs()
-        self.default_tracks = util.TrackSet(disk_config.trackset())
-        self.max_tracks = util.TrackSet(disk_config.trackset())
+        self.tracks = util.TrackSet(disk_config.trackset())
         self.decode_track = self.fmt.decode_track
 
     @property
@@ -155,7 +154,7 @@ class DiskConfig:
 
     def mk_track(self, cyl, head):
         if (cyl, head) not in self.track_map:
-            raise error.Fatal('Track %d.%d out of range' % (cyl, head))
+            return None
         return self.track_map[cyl, head].mk_track(cyl, head)
     
     def decode_track(self, cyl, head, track):

@@ -36,11 +36,12 @@ ADF image requires compatible format conversion""")
         adf = cls(name, fmt)
 
         pos = 0
-        for t in fmt.max_tracks:
+        for t in fmt.tracks:
             tnr = t.cyl*2 + t.head
             ados = fmt.fmt(t.cyl, t.head)
-            pos += ados.set_adf_track(dat[pos:])
-            adf.to_track[tnr] = ados
+            if ados is not None:
+                pos += ados.set_adf_track(dat[pos:])
+                adf.to_track[tnr] = ados
 
         error.check(pos >= len(dat),
                     'Unexpected extra data at end of ADF image: '

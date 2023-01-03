@@ -126,7 +126,7 @@ Known formats:\n%s"""
                               % (args.format, formats.print_formats(
                                   args.diskdefs)))
         decoder = args.fmt_cls.decode_track
-        def_tracks = copy.copy(args.fmt_cls.default_tracks)
+        def_tracks = copy.copy(args.fmt_cls.tracks)
     if def_tracks is None:
         def_tracks = util.TrackSet('c=0-81:h=0-1')
     out_def_tracks = copy.copy(def_tracks)

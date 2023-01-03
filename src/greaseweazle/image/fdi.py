@@ -36,13 +36,14 @@ class FDI(IMG):
         img = cls(name, fmt)
 
         pos = 0
-        for t in fmt.max_tracks:
+        for t in fmt.tracks:
             cyl, head = t.cyl, t.head
             if img.sides_swapped:
                 head ^= 1
             track = fmt.fmt(cyl, head)
-            pos += track.set_img_track(dat[pos:])
-            img.to_track[cyl,head] = track
+            if track is not None:
+                pos += track.set_img_track(dat[pos:])
+                img.to_track[cyl,head] = track
 
         return img
 

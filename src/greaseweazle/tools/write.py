@@ -207,7 +207,7 @@ Unknown format '%s'
 Known formats:\n%s"""
                                   % (args.format, formats.print_formats(
                                       args.diskdefs)))
-            def_tracks = args.fmt_cls.default_tracks
+            def_tracks = args.fmt_cls.tracks
         if def_tracks is None:
             def_tracks = util.TrackSet('c=0-81:h=0-1')
         if args.tracks is not None:
