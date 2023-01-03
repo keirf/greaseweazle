@@ -22,19 +22,9 @@ class Format:
         self.tracks = util.TrackSet(disk_config.trackset())
         self.decode_track = self.fmt.decode_track
 
-    @property
-    def adf_compatible(self):
-        return self.fmt.adf_compatible()
-
-    @property
-    def img_compatible(self):
-        return self.fmt.img_compatible()
-
 
 class IBMTrackConfig:
 
-    adf_compatible = False
-    img_compatible = True
     default_revs = mfm.default_revs
 
     def __init__(self, format_name):
@@ -164,18 +154,6 @@ class DiskConfig:
 
     def __call__(self, cyl, head):
         return self.mk_track(cyl, head)
-
-    def adf_compatible(self):
-        for t in self.track_map.values():
-            if not t.adf_compatible:
-                return False
-        return True
-
-    def img_compatible(self):
-        for t in self.track_map.values():
-            if not t.img_compatible:
-                return False
-        return True
 
     def default_revs(self):
         return max([x.default_revs for x in self.track_map.values()])

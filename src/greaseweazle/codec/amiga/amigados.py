@@ -51,13 +51,13 @@ class AmigaDOS:
     def nr_missing(self):
         return len([sec for sec in self.sector if sec is None])
 
-    def get_adf_track(self):
+    def get_img_track(self):
         tdat = bytearray()
         for sec in self.sector:
             tdat += sec[1] if sec is not None else bad_sector
         return tdat
 
-    def set_adf_track(self, tdat):
+    def set_img_track(self, tdat):
         totsize = self.nsec * 512
         if len(tdat) < totsize:
             tdat += bytes(totsize - len(tdat))
@@ -164,8 +164,6 @@ class AmigaDOS_HD(AmigaDOS):
 
 class AmigaDOSTrackConfig:
 
-    adf_compatible = True
-    img_compatible = False
     default_revs = default_revs
 
     def __init__(self, format_name):

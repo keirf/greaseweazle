@@ -15,8 +15,8 @@ class IMG(Image):
     
     def __init__(self, name, fmt):
         self.to_track = dict()
-        error.check(fmt is not None and fmt.img_compatible, """\
-Sector image requires compatible format conversion""")
+        error.check(fmt is not None, """\
+Sector image requires a disk format to be specified""")
         self.filename = name
         self.fmt = fmt
 
