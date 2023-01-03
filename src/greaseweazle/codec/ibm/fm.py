@@ -307,7 +307,7 @@ class IBM_FM_Predefined(IBM_FM_Formatted):
             pos += 7 + self.gap_2 + self.gap_presync
             size = 128 << self.sz
             dam = DAM(pos*16, (pos+1+size+2)*16, 0xffff,
-                      mark=self.DAM, data=bytes(size))
+                      mark=self.DAM, data=b'-=[BAD SECTOR]=-'*(size//16))
             self.sectors.append(Sector(idam, dam))
             pos += 1 + size + 2 + self.gap_3
 
