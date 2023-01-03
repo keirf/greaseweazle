@@ -169,16 +169,13 @@ class AmigaDOSTrackConfig:
     default_revs = default_revs
 
     def __init__(self, format_name):
-        if format_name not in ['amiga.amigados']:
-            raise error.Fatal('unrecognised format name: %s' % format_name)
         self.secs = None
         self.finalised = False
 
     def add_param(self, key, val):
         if key == 'secs':
             val = int(val)
-            if val not in [11, 22]:
-                raise ValueError('%s out of range' % key)
+            error.check(val in [11, 22], '%s out of range' % key)
             self.secs = val
         else:
             raise error.Fatal('unrecognised track option %s' % key)

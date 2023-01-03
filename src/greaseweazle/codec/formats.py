@@ -55,8 +55,7 @@ class IBMTrackConfig:
     def add_param(self, key, val):
         if key == 'secs':
             val = int(val)
-            if not(0 <= val <= 256):
-                raise ValueError('%s out of range' % key)
+            error.check(0 <= val <= 256, '%s out of range' % key)
             self.secs = val
         elif key == 'bps':
             self.sz = []
@@ -71,36 +70,30 @@ class IBMTrackConfig:
                     if n == 128<<s:
                         break
                     s += 1
-                    if s > 6:
-                        raise ValueError('bps value out of range')
+                    error.check(s <= 6, 'bps value out of range')
                 for _ in range(l):
                     self.sz.append(s)
         elif key == 'interleave':
             val = int(val)
+            error.check(1 <= val <= 255, '%s out of range' % key)
             self.interleave = val
-            if not(1 <= val <= 255):
-                raise ValueError('%s out of range' % key)
         elif key in ['id', 'cskew', 'hskew']:
             val = int(val)
-            if not(0 <= val <= 255):
-                raise ValueError('%s out of range' % key)
+            error.check(0 <= val <= 255, '%s out of range' % key)
             setattr(self, key, val)
         elif key in ['gap1', 'gap2', 'gap3', 'gap4a', 'h']:
             if val == 'auto':
                 val = None
             else:
                 val = int(val)
-                if not(0 <= val <= 255):
-                    raise ValueError('%s out of range' % key)
+                error.check(0 <= val <= 255, '%s out of range' % key)
             setattr(self, key, val)
         elif key == 'iam':
-            if val != 'yes' and val != 'no':
-                raise ValueError('Bad iam value')
+            error.check(val in ['yes', 'no'], 'bad iam value')
             self.iam = val == 'yes'
         elif key in ['rate', 'rpm']:
             val = int(val)
-            if not(1 <= val <= 2000):
-                raise ValueError('%s out of range' % key)
+            error.check(1 <= val <= 2000, '%s out of range' % key)
             setattr(self, key, val)
         else:
             raise error.Fatal('unrecognised track option %s' % key)
@@ -132,25 +125,22 @@ class DiskConfig:
     def add_param(self, key, val):
         if key == 'cyls':
             val = int(val)
-            if not(1 <= val <= 255):
-                raise ValueError('%s out of range' % key)
+            error.check(1 <= val <= 255, '%s out of range' % key)
             self.cyls = val
         elif key == 'heads':
             val = int(val)
-            if not(1 <= val <= 2):
-                raise ValueError('%s out of range' % key)
+            error.check(1 <= val <= 2, '%s out of range' % key)
             self.heads = val
         elif key == 'step':
             val = int(val)
-            if not(1 <= val <= 4):
-                raise ValueError('%s out of range' % key)
+            error.check(1 <= val <= 4, '%s out of range' % key)
             self.step = val
         else:
             raise error.Fatal('unrecognised disk option: %s' % key)
 
     def finalise(self):
-        if self.cyls is None or self.heads is None:
-            raise ValueError('missing cyls or heads')
+        error.check(self.cyls is not None, 'missing cyls')
+        error.check(self.heads is not None, 'missing heads')
 
     def trackset(self):
         s = 'c=0'
@@ -252,9 +242,10 @@ def get_format(name, cfg=None):
                     parse_mode = ParseMode.Track
                     if not active:
                         continue
-                    if (disk_config.cyls is None
-                        or disk_config.heads is None):
-                        raise ValueError("missing cyls or heads")
+                    error.check(disk_config.cyls is not None,
+                                'missing cyls')
+                    error.check(disk_config.heads is not None,
+                                'missing heads')
                     track_config = mk_track_config(tracks_match.group(2))
                     for x in tracks_match.group(1).split(','):
                         if x == '*':
@@ -265,8 +256,8 @@ def get_format(name, cfg=None):
                         else:
                             t_match = re.match(r'(\d+)(?:-(\d+))?'
                                                '(?:\.([01]))?', x)
-                            if t_match is None:
-                                raise ValueError('bad track specifier')
+                            error.check(t_match is not None,
+                                        'bad track specifier')
                             s = int(t_match.group(1))
                             e = t_match.group(2)
                             e = s if e is None else int(e)
@@ -274,11 +265,13 @@ def get_format(name, cfg=None):
                             if h is None:
                                 h = list(range(disk_config.heads))
                             else:
+                                error.check(int(h) < disk_config.heads,
+                                            'head out of range')
                                 h = [int(h)]
-                            if not(0 <= s < disk_config.cyls
-                                   and 0 <= e < disk_config.cyls
-                                   and s <= e):
-                                raise ValueError('cylinder out of range')
+                            error.check(0 <= s < disk_config.cyls
+                                        and 0 <= e < disk_config.cyls
+                                        and s <= e,
+                                        'cylinder out of range')
                             for c in range(s,e+1):
                                 for hd in h:
                                     disk_config.track_map[c,hd] = track_config
