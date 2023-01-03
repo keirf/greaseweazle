@@ -18,11 +18,9 @@ class Format:
 
     def __init__(self, disk_config):
         self.fmt = disk_config
-        self.default_revs = mfm.default_revs
-        self.default_trackset = disk_config.trackset()
-        self.max_trackset = disk_config.trackset()
-        self.default_tracks = util.TrackSet(self.default_trackset)
-        self.max_tracks = util.TrackSet(self.max_trackset)
+        self.default_revs = disk_config.default_revs()
+        self.default_tracks = util.TrackSet(disk_config.trackset())
+        self.max_tracks = util.TrackSet(disk_config.trackset())
         self.decode_track = self.fmt.decode_track
 
     @property
@@ -38,6 +36,7 @@ class IBMTrackConfig:
 
     adf_compatible = False
     img_compatible = True
+    default_revs = mfm.default_revs
 
     def __init__(self, format_name):
         self.secs = 0
@@ -183,6 +182,9 @@ class DiskConfig:
             if not t.img_compatible:
                 return False
         return True
+
+    def default_revs(self):
+        return max([x.default_revs for x in self.track_map.values()])
 
 
 class ParseMode:

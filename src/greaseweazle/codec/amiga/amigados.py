@@ -166,6 +166,7 @@ class AmigaDOSTrackConfig:
 
     adf_compatible = True
     img_compatible = False
+    default_revs = default_revs
 
     def __init__(self, format_name):
         if format_name not in ['amiga.amigados']:
