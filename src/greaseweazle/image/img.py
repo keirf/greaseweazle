@@ -48,6 +48,7 @@ Sector image requires a disk format to be specified""")
         img.noclobber = noclobber
         return img
 
+
     def get_track(self, cyl, side):
         if (cyl,side) not in self.to_track:
             return None
@@ -62,16 +63,14 @@ Sector image requires a disk format to be specified""")
 
         tdat = bytearray()
 
-        n_side = 2
-        n_cyl = max(self.to_track.keys(), default=(0,), key=lambda x:x[0])[0]
-        n_cyl += 1
-
-        for cyl in range(n_cyl):
-            for head in range(n_side):
-                if self.sides_swapped:
-                    head ^= 1
-                if (cyl,head) in self.to_track:
-                    tdat += self.to_track[cyl,head].get_img_track()
+        for t in self.fmt.tracks:
+            cyl, head = t.cyl, t.head
+            if self.sides_swapped:
+                head ^= 1
+            if (cyl,head) in self.to_track:
+                tdat += self.to_track[cyl,head].get_img_track()
+            else:
+                tdat += self.fmt.fmt(cyl, head).get_img_track()
 
         return tdat
 
