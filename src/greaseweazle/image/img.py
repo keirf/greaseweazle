@@ -34,7 +34,7 @@ Sector image requires a disk format to be specified""")
             cyl, head = t.cyl, t.head
             if img.sides_swapped:
                 head ^= 1
-            track = fmt.fmt(cyl, head)
+            track = fmt.mk_track(cyl, head)
             if track is not None:
                 pos += track.set_img_track(dat[pos:])
                 img.to_track[cyl,head] = track
@@ -70,7 +70,7 @@ Sector image requires a disk format to be specified""")
             if (cyl,head) in self.to_track:
                 tdat += self.to_track[cyl,head].get_img_track()
             else:
-                tdat += self.fmt.fmt(cyl, head).get_img_track()
+                tdat += self.fmt.mk_track(cyl, head).get_img_track()
 
         return tdat
 

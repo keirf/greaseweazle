@@ -42,7 +42,7 @@ class DIM(IMG):
             cyl, head = t.cyl, t.head
             if img.sides_swapped:
                 head ^= 1
-            track = fmt.fmt(cyl, head)
+            track = fmt.mk_track(cyl, head)
             if track is not None:
                 pos += track.set_img_track(dat[pos:])
                 img.to_track[cyl,head] = track
