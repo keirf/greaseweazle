@@ -11,6 +11,7 @@ from bitarray import bitarray
 import crcmod.predefined
 
 from greaseweazle.track import MasterTrack, RawTrack
+from .ibm import IDAM, DAM, Sector, IAM
 
 default_revs = 2
 
@@ -24,81 +25,6 @@ sync.frombytes(sync_bytes)
 
 crc16 = crcmod.predefined.Crc('crc-ccitt-false')
 
-def sec_sz(n):
-    return 128 << n if n <= 7 else 128 << 8
-
-class TrackArea:
-    def __init__(self, start, end, crc=None):
-        self.start = start
-        self.end = end
-        self.crc = crc
-    def delta(self, delta):
-        self.start -= delta
-        self.end -= delta
-    def __eq__(self, x):
-        return (isinstance(x, type(self))
-                and self.start == x.start
-                and self.end == x.end
-                and self.crc == x.crc)
-
-class IDAM(TrackArea):
-    def __init__(self, start, end, crc, c, h, r, n):
-        super().__init__(start, end, crc)
-        self.c = c
-        self.h = h
-        self.r = r
-        self.n = n
-    def __str__(self):
-        return ("IDAM:%6d-%6d c=%02x h=%02x r=%02x n=%02x CRC:%04x"
-                % (self.start, self.end, self.c, self.h, self.r, self.n,
-                   self.crc))
-    def __eq__(self, x):
-        return (super().__eq__(x)
-                and self.c == x.c and self.h == x.h
-                and self.r == x.r and self.n == x.n)
-    def __copy__(self):
-        return IDAM(self.start, self.end, self.crc,
-                    self.c, self.h, self.r, self.n)
-
-class DAM(TrackArea):
-    def __init__(self, start, end, crc, mark, data=None):
-        super().__init__(start, end, crc)
-        self.mark = mark
-        self.data = data
-    def __str__(self):
-        return "DAM: %6d-%6d mark=%02x" % (self.start, self.end, self.mark)
-    def __eq__(self, x):
-        return (super().__eq__(x)
-                and self.mark == x.mark
-                and self.data == x.data)
-    def __copy__(self):
-        return DAM(self.start, self.end, self.crc, self.mark, self.data)
-
-class Sector(TrackArea):
-    def __init__(self, idam, dam):
-        super().__init__(idam.start, dam.end, idam.crc | dam.crc)
-        self.idam = idam
-        self.dam = dam
-    def __str__(self):
-        s = "Sec: %6d-%6d CRC:%04x\n" % (self.start, self.end, self.crc)
-        s += " " + str(self.idam) + "\n"
-        s += " " + str(self.dam)
-        return s
-    def delta(self, delta):
-        super().delta(delta)
-        self.idam.delta(delta)
-        self.dam.delta(delta)
-    def __eq__(self, x):
-        return (super().__eq__(x)
-                and self.idam == x.idam
-                and self.dam == x.dam)
-    
-class IAM(TrackArea):
-    def __str__(self):
-        return "IAM: %6d-%6d" % (self.start, self.end)
-    def __copy__(self):
-        return IAM(self.start, self.end)
-    
 class IBM_MFM:
 
     IAM  = 0xfc

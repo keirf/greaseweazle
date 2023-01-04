@@ -13,7 +13,7 @@ import itertools as it
 from bitarray import bitarray
 
 from greaseweazle import error
-from greaseweazle.codec.ibm import mfm
+from greaseweazle.codec.ibm import ibm, mfm
 from greaseweazle.track import MasterTrack, RawTrack
 from .image import Image
 
@@ -333,12 +333,12 @@ class EDSK(Image):
                     c, h, r, n, stat1, stat2, data_size = struct.unpack(
                         '<6BH', sh[:8])
                     sh = sh[8:]
-                    native_size = mfm.sec_sz(n)
+                    native_size = ibm.sec_sz(n)
                     weak = []
                     errs = SectorErrors(stat1, stat2)
                     num_copies = 0 if errs.data_not_found else 1
                     if not extended:
-                        data_size = mfm.sec_sz(sec_sz)
+                        data_size = ibm.sec_sz(sec_sz)
                     sec_data = dat[data_pos:data_pos+data_size]
                     data_pos += data_size
                     if (extended

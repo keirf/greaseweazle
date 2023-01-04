@@ -10,90 +10,9 @@ import importlib.resources
 from copy import copy
 
 from greaseweazle import error
-from greaseweazle.codec.ibm import fm, mfm
+from greaseweazle.codec.ibm import ibm
 from greaseweazle.codec.amiga import amigados
 from greaseweazle.tools import util
-
-class IBMTrackFormat:
-
-    default_revs = mfm.default_revs
-
-    def __init__(self, format_name):
-        self.secs = 0
-        self.sz = []
-        self.id = 1
-        self.h = None
-        self.format_name = format_name
-        self.interleave = 1
-        self.cskew, self.hskew = 0, 0
-        self.rpm = 300
-        self.gap1, self.gap2, self.gap3, self.gap4a = None, None, None, None
-        self.iam = True
-        self.rate = 0
-        self.finalised = False
-
-    def add_param(self, key, val):
-        if key == 'secs':
-            val = int(val)
-            error.check(0 <= val <= 256, '%s out of range' % key)
-            self.secs = val
-        elif key == 'bps':
-            self.sz = []
-            for x in val.split(','):
-                y = re.match(r'(\d+)\*(\d+)', x)
-                if y is not None:
-                    n, l = int(y.group(1)), int(y.group(2))
-                else:
-                    n, l = int(x), 1
-                s = 0
-                while True:
-                    if n == 128<<s:
-                        break
-                    s += 1
-                    error.check(s <= 6, 'bps value out of range')
-                for _ in range(l):
-                    self.sz.append(s)
-        elif key == 'interleave':
-            val = int(val)
-            error.check(1 <= val <= 255, '%s out of range' % key)
-            self.interleave = val
-        elif key in ['id', 'cskew', 'hskew']:
-            val = int(val)
-            error.check(0 <= val <= 255, '%s out of range' % key)
-            setattr(self, key, val)
-        elif key in ['gap1', 'gap2', 'gap3', 'gap4a', 'h']:
-            if val == 'auto':
-                val = None
-            else:
-                val = int(val)
-                error.check(0 <= val <= 255, '%s out of range' % key)
-            setattr(self, key, val)
-        elif key == 'iam':
-            error.check(val in ['yes', 'no'], 'bad iam value')
-            self.iam = val == 'yes'
-        elif key in ['rate', 'rpm']:
-            val = int(val)
-            error.check(1 <= val <= 2000, '%s out of range' % key)
-            setattr(self, key, val)
-        else:
-            raise error.Fatal('unrecognised track option %s' % key)
-
-    def finalise(self):
-        if self.finalised:
-            return
-        error.check(self.iam or self.gap1 is None,
-                    'gap1 specified but no iam')
-        error.check(self.secs == 0 or len(self.sz) != 0,
-                    'sector size not specified')
-        self.finalised = True
-
-    def mk_track(self, cyl, head):
-        if self.format_name == 'ibm.mfm':
-            t = mfm.IBM_MFM_Formatted.from_config(self, cyl, head)
-        else:
-            t = fm.IBM_FM_Formatted.from_config(self, cyl, head)
-        return t
-    
 
 class DiskFormat:
 
@@ -170,7 +89,7 @@ def mk_track_format(format_name):
     if format_name in ['amiga.amigados']:
         return amigados.AmigaDOSTrackFormat(format_name)
     if format_name in ['ibm.mfm','ibm.fm']:
-        return IBMTrackFormat(format_name)
+        return ibm.IBMTrackFormat(format_name)
     raise error.Fatal('unrecognised format name: %s' % format_name)
 
 

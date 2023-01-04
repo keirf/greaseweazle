@@ -11,8 +11,9 @@ import itertools as it
 from bitarray import bitarray
 import crcmod.predefined
 
-from greaseweazle.codec.ibm import mfm
 from greaseweazle.track import MasterTrack, RawTrack
+from .ibm import IDAM, DAM, Sector, IAM
+from .mfm import decode
 
 default_revs = 2
 
@@ -35,12 +36,6 @@ iam_sync.frombytes(b'\xaa\xaa' + iam_sync_bytes)
 
 crc16 = crcmod.predefined.Crc('crc-ccitt-false')
 
-sec_sz = mfm.sec_sz
-IDAM   = mfm.IDAM
-DAM    = mfm.DAM
-Sector = mfm.Sector
-IAM    = mfm.IAM
-    
 class IBM_FM:
 
     IAM  = 0xfc
@@ -373,8 +368,6 @@ def encode(dat):
     for x in dat:
         out += struct.pack('>H', encode_list[x])
     return bytes(out)
-
-decode = mfm.decode
 
 
 # Local variables:

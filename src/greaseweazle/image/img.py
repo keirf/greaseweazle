@@ -44,6 +44,8 @@ Sector image requires a disk format to be specified""")
 
     @classmethod
     def to_file(cls, name, fmt, noclobber):
+        error.check(not cls.read_only,
+                    "%s: Cannot create %s image files" % (name, cls.__name__))
         img = cls(name, fmt)
         img.noclobber = noclobber
         return img
