@@ -198,10 +198,6 @@ class IBM_FM:
 
 class IBM_FM_Formatted(IBM_FM):
 
-    GAP_1  = 26 # Post-IAM
-    GAP_2  = 11 # Post-IDAM
-    GAP_3  = [ 27, 42, 58, 138, 255, 255, 255, 255 ]
-
     def __init__(self, cyl, head):
         super().__init__(cyl, head)
         self.raw_iams, self.raw_sectors = [], []
@@ -270,74 +266,40 @@ class IBM_FM_Formatted(IBM_FM):
             return False
         return self.sectors == readback_track.sectors
 
-    def construct_sectors(self):
-
-        # Create logical sector map in rotational order
-        sec_map, pos = [-1] * self.nsec, 0
-        if self.nsec != 0:
-            pos = (self.cyl*self.cskew + self.head*self.hskew) % self.nsec
-        for i in range(self.nsec):
-            while sec_map[pos] != -1:
-                pos = (pos + 1) % self.nsec
-            sec_map[pos] = i
-            pos = (pos + self.interleave) % self.nsec
-
-        pos = self.gap_4a
-        if self.gap_1 is not None:
-            pos += self.gap_presync
-            self.iams = [IAM(pos*16,(pos+1)*16)]
-            pos += 1 + self.gap_1
-
-        for i in range(self.nsec):
-            sec = sec_map[i]
-            pos += self.gap_presync
-            idam = IDAM(pos*16, (pos+7)*16, 0xffff,
-                        c=self.cyl, h=self.h, r=self.id0+sec,
-                        n = self.sec_n(sec))
-            pos += 7 + self.gap_2 + self.gap_presync
-            size = 128 << idam.n
-            dam = DAM(pos*16, (pos+1+size+2)*16, 0xffff,
-                      mark=self.DAM, data=b'-=[BAD SECTOR]=-'*(size//16))
-            self.sectors.append(Sector(idam, dam))
-            pos += 1 + size + 2 + self.gap_3
-
-    def sec_n(self, i):
-        return self.sz[i] if i < len(self.sz) else self.sz[-1]
+    GAP_1  = 26 # Post-IAM
+    GAP_2  = 11 # Post-IDAM
+    GAP_3  = [ 27, 42, 58, 138, 255, 255, 255, 255 ]
 
     @classmethod
-    def from_format(cls, config, cyl, head):
+    def from_config(cls, config, cyl, head):
+
+        def sec_n(i):
+            return config.sz[i] if i < len(config.sz) else config.sz[-1]
 
         t = cls(cyl, head)
-
-        t.nsec = config.secs
-        t.id0 = config.id
-        t.sz = config.sz
-        t.interleave = config.interleave
-        t.cskew = config.cskew
-        t.hskew = config.hskew
-        t.h = head if config.h is None else config.h
+        t.nsec = nsec = config.secs
 
         if config.iam:
-            t.gap_1 = t.GAP_1 if config.gap1 is None else config.gap1
+            gap_1 = t.GAP_1 if config.gap1 is None else config.gap1
         else:
-            t.gap_1 = None
-        t.gap_2 = t.GAP_2 if config.gap2 is None else config.gap2
-        t.gap_3 = 0 if config.gap3 is None else config.gap3
+            gap_1 = None
+        gap_2 = t.GAP_2 if config.gap2 is None else config.gap2
+        gap_3 = 0 if config.gap3 is None else config.gap3
         if config.gap4a is None:
-            t.gap_4a = 40 if config.iam else 16
+            gap_4a = 40 if config.iam else 16
         else:
-            t.gap_4a = config.gap4a
+            gap_4a = config.gap4a
 
-        idx_sz = t.gap_4a
-        if t.gap_1 is not None:
-            idx_sz += t.gap_presync + 1 + t.gap_1
-        idam_sz = t.gap_presync + 5 + 2 + t.gap_2
+        idx_sz = gap_4a
+        if gap_1 is not None:
+            idx_sz += t.gap_presync + 1 + gap_1
+        idam_sz = t.gap_presync + 5 + 2 + gap_2
         dam_sz_pre = t.gap_presync + 1
-        dam_sz_post = 2 + t.gap_3
+        dam_sz_post = 2 + gap_3
 
-        tracklen = idx_sz + (idam_sz + dam_sz_pre + dam_sz_post) * t.nsec
-        for i in range(t.nsec):
-            tracklen += 128 << t.sec_n(i)
+        tracklen = idx_sz + (idam_sz + dam_sz_pre + dam_sz_post) * nsec
+        for i in range(nsec):
+            tracklen += 128 << sec_n(i)
         tracklen *= 16
 
         rate, rpm = config.rate, config.rpm
@@ -351,18 +313,48 @@ class IBM_FM_Formatted(IBM_FM):
 
         tracklen_bc = rate * 400 * 300 // rpm
 
-        if t.nsec != 0 and config.gap3 is None:
+        if nsec != 0 and config.gap3 is None:
             space = max(0, tracklen_bc - tracklen)
-            no = t.sec_n(0)
-            t.gap_3 = min(space // (16*t.nsec), t.GAP_3[no])
-            dam_sz_post += t.gap_3
-            tracklen += 16 * t.nsec * t.gap_3
+            no = sec_n(0)
+            gap_3 = min(space // (16*nsec), t.GAP_3[no])
+            dam_sz_post += gap_3
+            tracklen += 16 * nsec * gap_3
 
         tracklen_bc = max(tracklen_bc, tracklen)
 
         t.time_per_rev = 60 / rpm
         t.clock = t.time_per_rev / tracklen_bc
-        t.construct_sectors()
+
+        # Create logical sector map in rotational order
+        sec_map, pos = [-1] * nsec, 0
+        if nsec != 0:
+            pos = (cyl*config.cskew + head*config.hskew) % nsec
+        for i in range(nsec):
+            while sec_map[pos] != -1:
+                pos = (pos + 1) % nsec
+            sec_map[pos] = i
+            pos = (pos + config.interleave) % nsec
+
+        pos = gap_4a
+        if gap_1 is not None:
+            pos += t.gap_presync
+            t.iams = [IAM(pos*16,(pos+1)*16)]
+            pos += 1 + gap_1
+
+        id0 = config.id
+        h = head if config.h is None else config.h
+        for i in range(nsec):
+            sec = sec_map[i]
+            pos += t.gap_presync
+            idam = IDAM(pos*16, (pos+7)*16, 0xffff,
+                        c = cyl, h = h, r= id0+sec, n = sec_n(sec))
+            pos += 7 + gap_2 + t.gap_presync
+            size = 128 << idam.n
+            dam = DAM(pos*16, (pos+1+size+2)*16, 0xffff,
+                      mark=t.DAM, data=b'-=[BAD SECTOR]=-'*(size//16))
+            t.sectors.append(Sector(idam, dam))
+            pos += 1 + size + 2 + gap_3
+
         return t
 
 

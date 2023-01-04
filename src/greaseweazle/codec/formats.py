@@ -89,9 +89,9 @@ class IBMTrackFormat:
 
     def mk_track(self, cyl, head):
         if self.format_name == 'ibm.mfm':
-            t = mfm.IBM_MFM_Formatted.from_format(self, cyl, head)
+            t = mfm.IBM_MFM_Formatted.from_config(self, cyl, head)
         else:
-            t = fm.IBM_FM_Formatted.from_format(self, cyl, head)
+            t = fm.IBM_FM_Formatted.from_config(self, cyl, head)
         return t
     
 
