@@ -3,6 +3,11 @@
 ** Keir Fraser <keir.xen@gmail.com>
 ************************************
 
+** v1.5 - 4 January 2023
+ - User-configurable disk formats: New option --diskdefs
+ - New disk formats: ensoniq.mirage and sci.prophet
+ - Fill missing/bad sectors with "-=[BAD SECTOR]=-" pattern
+
 ** v1.4 - 4 December 2022
  - Read support for DIM, FDI, HDM, XDF, and D88 image formats
    - Primarily used with Japanese computers
