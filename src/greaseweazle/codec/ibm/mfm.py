@@ -306,7 +306,7 @@ class IBM_MFM_Formatted(IBM_MFM):
         if nsec != 0 and config.gap3 is None:
             space = max(0, tracklen_bc - tracklen)
             no = sec_n(0)
-            gap_3 = min(space // (16*nsec), gap_3[no])
+            gap_3 = min(space // (16*nsec), t.GAP_3[no])
             dam_sz_post += gap_3
             tracklen += 16 * nsec * gap_3
 
