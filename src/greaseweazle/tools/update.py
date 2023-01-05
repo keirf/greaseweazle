@@ -123,8 +123,8 @@ def main(argv):
     epilog = """\
 Examples:
   gw update
-  gw update --force v1.0
-  gw update greaseweazle-firmware-v1.0.upd"""
+  gw update --force --tag v1.0
+  gw update --file greaseweazle-firmware-v1.0.upd"""
 
     parser = util.ArgumentParser(allow_abbrev=False,
                                  usage='%(prog)s [options]',
