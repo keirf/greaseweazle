@@ -229,17 +229,18 @@ class MasterTrack:
             if bit:
                 flux_list.append(flux_ticks)
                 flux_ticks = 0
-        if flux_ticks and for_writeout:
-            flux_list.append(flux_ticks)
 
         # Package up the flux for return.
         if for_writeout:
+            if flux_ticks:
+                flux_list.append(flux_ticks)
             flux = WriteoutFlux(ticks_to_index, flux_list,
                                 ticks_to_index / self.time_per_rev,
                                 index_cued = cue_at_index,
                                 terminate_at_index = splice_at_index)
         else:
-            flux = Flux([ticks_to_index]*2, flux_list*2,
+            flux_list = flux_list + [flux_ticks+flux_list[0]] + flux_list[1:]
+            flux = Flux([ticks_to_index]*2, flux_list,
                         ticks_to_index / self.time_per_rev,
                         index_cued = True)
             flux.splice = sum(bit_ticks[:self.splice])
