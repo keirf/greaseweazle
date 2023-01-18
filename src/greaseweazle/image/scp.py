@@ -89,7 +89,7 @@ class SCPOpts:
 
 class SCPTrack:
 
-    def __init__(self, tdh, dat, splice=None):
+    def __init__(self, tdh, dat, splice=0):
         self.tdh = tdh
         self.dat = dat
         self.splice = splice
@@ -257,7 +257,7 @@ class SCP(Image):
             val = 0
 
         flux = Flux(index_list, flux_list, SCP.sample_freq)
-        flux.splice = track.splice if track.splice is not None else 0
+        flux.splice = track.splice
         return flux
 
 
@@ -283,6 +283,7 @@ class SCP(Image):
             self.nr_revs = min(self.nr_revs, nr_revs)
 
         factor = SCP.sample_freq / flux.sample_freq
+        splice = round(flux.splice * factor)
 
         tdh, dat = bytearray(), bytearray()
         len_at_index = rev = 0
@@ -303,7 +304,7 @@ class SCP(Image):
                 rev += 1
                 if rev >= nr_revs:
                     # We're done: We simply discard any surplus flux samples
-                    self.to_track[cyl*2+side] = SCPTrack(tdh, dat)
+                    self.to_track[cyl*2+side] = SCPTrack(tdh, dat, splice)
                     return
                 to_index += flux.index_list[rev]
 
@@ -330,7 +331,7 @@ class SCP(Image):
             len_at_index = len(dat)
             rev += 1
 
-        self.to_track[cyl*2+side] = SCPTrack(tdh, dat)
+        self.to_track[cyl*2+side] = SCPTrack(tdh, dat, splice)
 
 
     def get_image(self):
@@ -354,18 +355,28 @@ class SCP(Image):
         ntracks = max(to_track, default=0) + 1
 
         # Generate the TLUT and concatenate all the tracks together.
-        trk_offs = bytearray()
+        trk_offs, trk_offs_len = bytearray(), 0x2a0
         trk_dat = bytearray()
+        wrsp, wrsp_len = bytearray(), (2+2+169)*4
+        wrsp += struct.pack('<4sI4s2I',
+                            b'EXTS', wrsp_len- 8,  # EXTS header
+                            b'WRSP', wrsp_len-16,  # WRSP header
+                            0)                     # WRSP flags field
+        trk_start = 0x10 + trk_offs_len + wrsp_len
+
         for tnr in range(ntracks):
             if tnr in to_track:
                 track = to_track[tnr]
-                trk_offs += struct.pack("<I", 0x2b0 + len(trk_dat))
+                trk_offs += struct.pack("<I", trk_start + len(trk_dat))
                 trk_dat += struct.pack("<3sB", b"TRK", tnr)
                 trk_dat += track.tdh + track.dat
+                wrsp += struct.pack("<I", track.splice)
             else:
                 trk_offs += struct.pack("<I", 0)
-        error.check(len(trk_offs) <= 0x2a0, "SCP: Too many tracks")
-        trk_offs += bytes(0x2a0 - len(trk_offs))
+                wrsp += struct.pack("<I", 0)
+        error.check(len(trk_offs) <= trk_offs_len, "SCP: Too many tracks")
+        trk_offs += bytes(trk_offs_len - len(trk_offs))
+        wrsp += bytes(wrsp_len - len(wrsp))
 
         # Calculate checksum over all data (except 16-byte image header).
         csum = 0
@@ -393,7 +404,7 @@ class SCP(Image):
                              csum & 0xffffffff)
 
         # Concatenate it all together and send it back.
-        return header + trk_offs + trk_dat
+        return header + trk_offs + wrsp + trk_dat
 
 
 # Local variables:
