@@ -118,7 +118,7 @@ def print_summary(args, summary):
             print("%d.%2d: " % (head, sec), end="")
             for cyl in args.tracks.cyls:
                 s = summary.get((cyl,head), None)
-                if s is None or sec > s.nsec:
+                if s is None or sec >= s.nsec:
                     print(" ", end="")
                 else:
                     tot_sec += 1
