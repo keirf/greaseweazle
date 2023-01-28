@@ -3,6 +3,13 @@
 ** Keir Fraser <keir.xen@gmail.com>
 ************************************
 
+** v1.6 - 28 January 2023
+ - diskdefs: Fix atari.90 and zx.trdos.640
+ - DCP image read support (obscure PC98 image format)
+ - Fix discontinuity at index mark when writing perfect flux images
+ - Emit a write-splice (WRSP) block when writing SCP images
+ - read, convert: Fix off-by-one error when printing summary
+
 ** v1.5 - 4 January 2023
  - User-configurable disk formats: New option --diskdefs
  - New disk formats: ensoniq.mirage and sci.prophet
