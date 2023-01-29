@@ -3,6 +3,9 @@
 ** Keir Fraser <keir.xen@gmail.com>
 ************************************
 
+** v1.7 - 29 January 2023
+ - Bug fix release: Fix reading IPF images with weak tracks
+
 ** v1.6 - 28 January 2023
  - diskdefs: Fix atari.90 and zx.trdos.640
  - DCP image read support (obscure PC98 image format)
