@@ -97,7 +97,7 @@ class DI_LOCK:
     TRKBIT    = 1<<12
     NOUPDATE  = 1<<13
     SETWSEED  = 1<<14
-    def_flags = (DENVAR | NOUPDATE | TYPE | OVLBIT | TRKBIT)
+    def_flags = (DENVAR | UPDATEFD | NOUPDATE | TYPE | OVLBIT | TRKBIT)
 
 class IPFTrack(MasterTrack):
 
