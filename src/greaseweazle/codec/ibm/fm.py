@@ -196,6 +196,7 @@ class IBM_FM_Formatted(IBM_FM):
     def __init__(self, cyl, head):
         super().__init__(cyl, head)
         self.raw_iams, self.raw_sectors = [], []
+        self.img_bps = None
 
     def decode_raw(self, track, pll=None):
         iams, sectors = self.iams, self.sectors
@@ -226,15 +227,21 @@ class IBM_FM_Formatted(IBM_FM):
     def set_img_track(self, tdat):
         pos = 0
         self.sectors.sort(key = lambda x: x.idam.r)
-        totsize = functools.reduce(lambda x, y: x + (128<<y.idam.n),
-                                   self.sectors, 0)
+        if self.img_bps is not None:
+            totsize = len(self.sectors) * self.img_bps
+        else:
+            totsize = functools.reduce(lambda x, y: x + (128<<y.idam.n),
+                                       self.sectors, 0)
         if len(tdat) < totsize:
             tdat += bytes(totsize - len(tdat))
         for s in self.sectors:
             s.crc = s.idam.crc = s.dam.crc = 0
             size = 128 << s.idam.n
             s.dam.data = tdat[pos:pos+size]
-            pos += size
+            if self.img_bps is not None:
+                pos += self.img_bps
+            else:
+                pos += size
         self.sectors.sort(key = lambda x: x.start)
         return totsize
 
@@ -244,6 +251,8 @@ class IBM_FM_Formatted(IBM_FM):
         sectors.sort(key = lambda x: x.idam.r)
         for s in sectors:
             tdat += s.dam.data
+            if self.img_bps is not None:
+                tdat += bytes(self.img_bps - len(s.dam.data))
         return tdat
         
     def verify_track(self, flux):
@@ -273,6 +282,7 @@ class IBM_FM_Formatted(IBM_FM):
 
         t = cls(cyl, head)
         t.nsec = nsec = config.secs
+        t.img_bps = config.img_bps
 
         if config.iam:
             gap_1 = t.GAP_1 if config.gap1 is None else config.gap1

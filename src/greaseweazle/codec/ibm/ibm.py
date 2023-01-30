@@ -102,6 +102,7 @@ class IBMTrackFormat:
         self.gap1, self.gap2, self.gap3, self.gap4a = None, None, None, None
         self.iam = True
         self.rate = 0
+        self.img_bps = None
         self.finalised = False
 
     def add_param(self, key, val):
@@ -147,6 +148,10 @@ class IBMTrackFormat:
             val = int(val)
             error.check(1 <= val <= 2000, '%s out of range' % key)
             setattr(self, key, val)
+        elif key == 'img_bps':
+            val = int(val)
+            error.check(128 <= val <= 8192, '%s out of range' % key)
+            self.img_bps = val
         else:
             raise error.Fatal('unrecognised track option %s' % key)
 
@@ -157,6 +162,9 @@ class IBMTrackFormat:
                     'gap1 specified but no iam')
         error.check(self.secs == 0 or len(self.sz) != 0,
                     'sector size not specified')
+        error.check((self.img_bps is None
+                     or self.img_bps >= max(self.sz, default=0)),
+                    'img_bps cannot be smaller than sector data size')
         self.finalised = True
 
     def mk_track(self, cyl, head):
