@@ -75,7 +75,7 @@ def read_with_retry(usb, args, t, decoder):
         if dat.nr_missing() == 0:
             break
         if (retry % args.retries) == 0:
-            if seek_retry == args.seek_retries:
+            if seek_retry > args.seek_retries:
                 print("T%u.%u: Giving up: %d sectors missing"
                       % (cyl, head, dat.nr_missing()))
                 break
@@ -189,7 +189,7 @@ def main(argv):
                         help="scale track data to effective drive SPEED")
     parser.add_argument("--retries", type=int, default=3, metavar="N",
                         help="number of retries per seek-retry")
-    parser.add_argument("--seek-retries", type=int, default=3, metavar="N",
+    parser.add_argument("--seek-retries", type=int, default=0, metavar="N",
                         help="number of seek retries")
     parser.add_argument("-n", "--no-clobber", action="store_true",
                         help="do not overwrite an existing file")
