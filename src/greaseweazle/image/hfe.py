@@ -8,6 +8,7 @@
 import struct
 
 from greaseweazle import error
+from greaseweazle.codec.ibm import fm
 from greaseweazle.track import MasterTrack, RawTrack
 from bitarray import bitarray
 from .image import Image
@@ -88,14 +89,18 @@ class HFE(Image):
 
 
     def emit_track(self, cyl, side, track):
+        # HFE convention is that FM is recorded at double density
+        is_fm = issubclass(type(track), fm.IBM_FM)
         t = track.raw_track() if hasattr(track, 'raw_track') else track
         if self.opts.bitrate is None:
             error.check(hasattr(t, 'bitrate'),
                         'HFE: Requires bitrate to be specified'
                         ' (eg. filename.hfe::bitrate=500)')
             self.opts.bitrate = round(t.bitrate / 2e3)
+            if is_fm:
+                self.opts.bitrate *= 2
             print('HFE: Data bitrate detected: %d kbit/s' % self.opts.bitrate)
-        if issubclass(type(t), MasterTrack):
+        if issubclass(type(t), MasterTrack) and not is_fm:
             # Rotate data to start at the index.
             index = -t.splice % len(t.bits)
             bits = t.bits[index:] + t.bits[:index]
