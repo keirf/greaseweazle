@@ -60,6 +60,7 @@ def write_from_image(usb, args, image):
             error.check(track.nr_missing() == 0,
                         'T%u.%u: %u missing sectors in input image'
                         % (cyl, head, track.nr_missing()))
+        if hasattr(track, 'raw_track'):
             track = track.raw_track()
 
         if args.precomp is not None:

@@ -122,7 +122,7 @@ class IMD(Image):
     def get_track(self, cyl, side):
         if (cyl,side) not in self.to_track:
             return None
-        return self.to_track[cyl,side].raw_track()
+        return self.to_track[cyl,side]
 
 
     def emit_track(self, cyl, side, track):
