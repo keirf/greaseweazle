@@ -11,7 +11,7 @@ from bitarray import bitarray
 import crcmod.predefined
 
 from greaseweazle.track import MasterTrack, RawTrack
-from .ibm import IDAM, DAM, Sector, IAM
+from .ibm import IDAM, DAM, Sector, IAM, IBMTrack
 
 default_revs = 2
 
@@ -25,35 +25,17 @@ sync.frombytes(sync_bytes)
 
 crc16 = crcmod.predefined.Crc('crc-ccitt-false')
 
-class IBM_MFM:
-
-    IAM  = 0xfc
-    IDAM = 0xfe
-    DAM  = 0xfb
-    DDAM = 0xf8
+class IBM_MFM(IBMTrack):
 
     gap_presync = 12
 
     gapbyte = 0x4e
-
-    def __init__(self, cyl, head):
-        self.cyl, self.head = cyl, head
-        self.sectors = []
-        self.iams = []
 
     def summary_string(self):
         nsec, nbad = len(self.sectors), self.nr_missing()
         s = "IBM MFM (%d/%d sectors)" % (nsec - nbad, nsec)
         return s
 
-    def has_sec(self, sec_id):
-        return self.sectors[sec_id].crc == 0
-
-    def nr_missing(self):
-        return len(list(filter(lambda x: x.crc != 0, self.sectors)))
-
-    def flux(self, *args, **kwargs):
-        return self.raw_track().flux(*args, **kwargs)
 
     def decode_raw(self, track, pll=None):
         flux = track.flux()

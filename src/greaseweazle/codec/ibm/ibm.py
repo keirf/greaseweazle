@@ -84,6 +84,28 @@ class IAM(TrackArea):
         return IAM(self.start, self.end)
 
 
+class IBMTrack:
+
+    IAM  = 0xfc
+    IDAM = 0xfe
+    DAM  = 0xfb
+    DDAM = 0xf8
+
+    def __init__(self, cyl, head):
+        self.cyl, self.head = cyl, head
+        self.sectors = []
+        self.iams = []
+
+    def has_sec(self, sec_id):
+        return self.sectors[sec_id].crc == 0
+
+    def nr_missing(self):
+        return len(list(filter(lambda x: x.crc != 0, self.sectors)))
+
+    def flux(self, *args, **kwargs):
+        return self.raw_track().flux(*args, **kwargs)
+
+
 from greaseweazle.codec.ibm import fm, mfm
 
 class IBMTrackFormat:
