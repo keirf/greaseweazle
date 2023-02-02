@@ -5,11 +5,13 @@
 # This is free and unencumbered software released into the public domain.
 # See the file COPYING for more details, or visit <http://unlicense.org>.
 
+from typing import Dict, Tuple, Optional
+
 import datetime, struct
 
 from greaseweazle import __version__
 from greaseweazle import error
-from greaseweazle.codec.ibm import ibm, fm, mfm
+from greaseweazle.codec.ibm import ibm
 from greaseweazle.track import MasterTrack
 from .image import Image
 
@@ -23,13 +25,14 @@ class IMDMode:
 
 class IMD(Image):
 
-    def __init__(self, name):
-        self.to_track = dict()
+    def __init__(self, name: str, noclobber=False):
+        self.to_track: Dict[Tuple[int,int],ibm.IBMTrackFormatted] = dict()
         self.filename = name
+        self.noclobber = noclobber
 
 
     @classmethod
-    def from_file(cls, name):
+    def from_file(cls, name: str) -> Image:
 
         with open(name, "rb") as f:
             dat = f.read()
@@ -57,23 +60,23 @@ class IMD(Image):
             error.check(0 <= head <= 1, 'IMD: Bad head value %x' % head)
 
             if mode == IMDMode.FM_250kbps or mode == IMDMode.FM_300kbps:
-                f = ibm.IBMTrackFormat('ibm.fm')
-                f.rpm, f.rate = 300, 125
+                fmt = ibm.IBMTrackFormat('ibm.fm')
+                fmt.rpm, fmt.rate = 300, 125
             elif mode == IMDMode.FM_500kbps:
-                f = ibm.IBMTrackFormat('ibm.fm')
-                f.rpm, f.rate = 300, 250
+                fmt = ibm.IBMTrackFormat('ibm.fm')
+                fmt.rpm, fmt.rate = 300, 250
             elif mode == IMDMode.MFM_250kbps or mode == IMDMode.MFM_300kbps:
-                f = ibm.IBMTrackFormat('ibm.mfm')
-                f.rpm, f.rate = 300, 250
+                fmt = ibm.IBMTrackFormat('ibm.mfm')
+                fmt.rpm, fmt.rate = 300, 250
             elif mode == IMDMode.MFM_500kbps:
-                f = ibm.IBMTrackFormat('ibm.mfm')
-                f.rpm, f.rate = 300, 500
+                fmt = ibm.IBMTrackFormat('ibm.mfm')
+                fmt.rpm, fmt.rate = 300, 500
             else:
                 raise error.Fatal('IMD: Unrecognised track mode %x' % mode)
 
-            f.secs, f.sz = nsec, [sec_n]
-            f.finalise()
-            t = f.mk_track(cyl, head)
+            fmt.secs, fmt.sz = nsec, [sec_n]
+            fmt.finalise()
+            t = fmt.mk_track(cyl, head)
 
             rmap = dat[i:i+nsec]
             i += nsec
@@ -105,35 +108,32 @@ class IMD(Image):
                     s.dam.data = dat[i:i+secsz]
                     i += secsz
                 if rec&2:
-                    s.dam.mark = mfm.IBM_MFM.DDAM
+                    s.dam.mark = ibm.Mark.DDAM
 
-                imd.to_track[cyl,head] = t
+            imd.to_track[cyl,head] = t
 
         return imd
 
 
     @classmethod
-    def to_file(cls, name, fmt, noclobber):
-        imd = cls(name)
-        imd.noclobber = noclobber
-        return imd
+    def to_file(cls, name: str, fmt, noclobber: bool) -> Image:
+        return cls(name, noclobber=noclobber)
 
 
-    def get_track(self, cyl, side):
+    def get_track(self, cyl: int, side: int) -> Optional[ibm.IBMTrackFormatted]:
         if (cyl,side) not in self.to_track:
             return None
         return self.to_track[cyl,side]
 
 
-    def emit_track(self, cyl, side, track):
-        error.check(issubclass(type(track), fm.IBM_FM)
-                    or issubclass(type(track), mfm.IBM_MFM),
+    def emit_track(self, cyl: int, side: int, track) -> None:
+        error.check(issubclass(type(track), ibm.IBMTrack),
                     'IMD: Cannot create T%d.%d: Not IBM.FM nor IBM.MFM'
                     % (cyl, side))
         self.to_track[cyl,side] = track
 
 
-    def get_image(self):
+    def get_image(self) -> bytes:
 
         tdat = bytearray()
 
@@ -143,7 +143,7 @@ class IMD(Image):
         tdat += sig.encode()
 
         for (c,h),t in sorted(self.to_track.items()):
-            if issubclass(type(t), fm.IBM_FM):
+            if t.mode is ibm.Mode.FM:
                 if t.clock < 3.0e-6:
                     mode = IMDMode.FM_500kbps # High Rate
                 elif t.time_per_rev < 0.185:
@@ -151,7 +151,7 @@ class IMD(Image):
                 else:
                     mode = IMDMode.FM_250kbps # 300 RPM
             else:
-                assert issubclass(type(t), mfm.IBM_MFM)
+                assert t.mode is ibm.Mode.MFM
                 if t.clock < 1.5e-6:
                     mode = IMDMode.MFM_500kbps # High Rate
                 elif t.time_per_rev < 0.185:
@@ -175,6 +175,8 @@ class IMD(Image):
                     head |= 0x80
                 if s.idam.h != h:
                     head |= 0x40
+            if sec_n is None:
+                sec_n = 0
             secsz = 128 << sec_n
             tdat += struct.pack('5B', mode, cyl, head, nsec, sec_n)
             tdat += bytes(rmap)
@@ -188,7 +190,7 @@ class IMD(Image):
                 rec = 0
                 if s.dam.data.count(s.dam.data[0]) == secsz:
                     rec |= 1
-                if s.dam.mark == mfm.IBM_MFM.DDAM:
+                if s.dam.mark == ibm.Mark.DDAM:
                     rec |= 2
                 if s.dam.crc != 0:
                     rec |= 4

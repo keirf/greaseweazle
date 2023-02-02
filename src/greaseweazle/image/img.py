@@ -5,6 +5,8 @@
 # This is free and unencumbered software released into the public domain.
 # See the file COPYING for more details, or visit <http://unlicense.org>.
 
+from typing import Dict, Tuple, Optional, Any
+
 from greaseweazle import error
 from greaseweazle.codec.ibm import mfm
 from .image import Image
@@ -13,16 +15,17 @@ class IMG(Image):
 
     sides_swapped = False
     
-    def __init__(self, name, fmt):
-        self.to_track = dict()
+    def __init__(self, name: str, fmt, noclobber=False):
+        self.to_track: Dict[Tuple[int,int],Any] = dict()
         error.check(fmt is not None, """\
 Sector image requires a disk format to be specified""")
         self.filename = name
         self.fmt = fmt
+        self.noclobber = noclobber
 
 
     @classmethod
-    def from_file(cls, name, fmt):
+    def from_file(cls, name: str, fmt) -> Image:
 
         with open(name, "rb") as f:
             dat = f.read()
@@ -43,25 +46,23 @@ Sector image requires a disk format to be specified""")
 
 
     @classmethod
-    def to_file(cls, name, fmt, noclobber):
+    def to_file(cls, name: str, fmt, noclobber: bool) -> Image:
         error.check(not cls.read_only,
                     "%s: Cannot create %s image files" % (name, cls.__name__))
-        img = cls(name, fmt)
-        img.noclobber = noclobber
-        return img
+        return cls(name, fmt, noclobber=noclobber)
 
 
-    def get_track(self, cyl, side):
+    def get_track(self, cyl: int, side: int):
         if (cyl,side) not in self.to_track:
             return None
         return self.to_track[cyl,side]
 
 
-    def emit_track(self, cyl, side, track):
+    def emit_track(self, cyl: int, side: int, track) -> None:
         self.to_track[cyl,side] = track
 
 
-    def get_image(self):
+    def get_image(self) -> bytes:
 
         tdat = bytearray()
 

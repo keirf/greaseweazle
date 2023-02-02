@@ -5,10 +5,12 @@
 # This is free and unencumbered software released into the public domain.
 # See the file COPYING for more details, or visit <http://unlicense.org>.
 
+from typing import Dict, Tuple, Optional
+
 import struct
 
 from greaseweazle import error
-from greaseweazle.codec.ibm import fm
+from greaseweazle.codec.ibm import ibm
 from greaseweazle.track import MasterTrack, RawTrack
 from bitarray import bitarray
 from .image import Image
@@ -17,14 +19,14 @@ class HFEOpts:
     """bitrate: Bitrate of new HFE image file.
     """
     
-    def __init__(self):
-        self._bitrate = None
+    def __init__(self) -> None:
+        self._bitrate: Optional[int] = None
 
     @property
-    def bitrate(self):
+    def bitrate(self) -> Optional[int]:
         return self._bitrate
     @bitrate.setter
-    def bitrate(self, bitrate):
+    def bitrate(self, bitrate: float):
         try:
             self._bitrate = int(bitrate)
             if self._bitrate <= 0:
@@ -35,15 +37,15 @@ class HFEOpts:
 
 class HFE(Image):
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.opts = HFEOpts()
         # Each track is (bitlen, rawbytes).
         # rawbytes is a bytes() object in little-endian bit order.
-        self.to_track = dict()
+        self.to_track: Dict[Tuple[int,int], Tuple[int,bytes]] = dict()
 
 
     @classmethod
-    def from_file(cls, name):
+    def from_file(cls, name: str):
 
         with open(name, "rb") as f:
             dat = f.read()
@@ -76,9 +78,10 @@ class HFE(Image):
         return hfe
 
 
-    def get_track(self, cyl, side):
+    def get_track(self, cyl: int, side: int) -> Optional[MasterTrack]:
         if (cyl,side) not in self.to_track:
             return None
+        assert self.opts.bitrate is not None
         bitlen, rawbytes = self.to_track[cyl,side]
         tdat = bitarray(endian='little')
         tdat.frombytes(rawbytes)
@@ -88,9 +91,10 @@ class HFE(Image):
         return track
 
 
-    def emit_track(self, cyl, side, track):
+    def emit_track(self, cyl: int, side: int, track) -> None:
         # HFE convention is that FM is recorded at double density
-        is_fm = issubclass(type(track), fm.IBM_FM)
+        is_fm = (issubclass(type(track), ibm.IBMTrack)
+                 and track.mode is ibm.Mode.FM)
         t = track.raw_track() if hasattr(track, 'raw_track') else track
         if self.opts.bitrate is None:
             error.check(hasattr(t, 'bitrate'),
@@ -114,7 +118,9 @@ class HFE(Image):
         self.to_track[cyl,side] = (len(bits), bits.tobytes())
 
 
-    def get_image(self):
+    def get_image(self) -> bytes:
+
+        assert self.opts.bitrate is not None
 
         n_side = 1
         n_cyl = max(self.to_track.keys(), default=(0,), key=lambda x:x[0])[0]

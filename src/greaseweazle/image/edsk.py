@@ -8,12 +8,14 @@
 # This is free and unencumbered software released into the public domain.
 # See the file COPYING for more details, or visit <http://unlicense.org>.
 
+from typing import Dict, Tuple, Optional, List
+
 import binascii, math, struct
 import itertools as it
 from bitarray import bitarray
 
 from greaseweazle import error
-from greaseweazle.codec.ibm import ibm, mfm
+from greaseweazle.codec.ibm import ibm
 from greaseweazle.track import MasterTrack, RawTrack
 from .image import Image
 
@@ -40,7 +42,7 @@ class SR2:
     RESERVED                  = 0x80
 
 class SectorErrors:
-    def __init__(self, sr1, sr2):
+    def __init__(self, sr1: int, sr2: int):
         self.id_crc_error = (sr1 & SR1.CRC_ERROR) != 0
         self.data_not_found = (sr2 & SR2.MISSING_ADDRESS_MARK) != 0
         self.data_crc_error = (sr2 & SR2.CRC_ERROR_IN_SECTOR_DATA) != 0
@@ -84,6 +86,8 @@ class EDSKTrack:
 
     gapbyte = 0x4e
     
+    verify_len: int
+    
     def __init__(self):
         self.time_per_rev = 0.2
         self.clock = 2e-6
@@ -114,8 +118,8 @@ class EDSKTrack:
         weak = next(weak_iter)
 
         # Start checking from the IAM sync
-        dump_start = self._find_sync(bits, mfm.iam_sync, 0)
-        self_start = self._find_sync(self.bits, mfm.iam_sync, 0)
+        dump_start = self._find_sync(bits, ibm.mfm_iam_sync, 0)
+        self_start = self._find_sync(self.bits, ibm.mfm_iam_sync, 0)
 
         # Include the IAM pre-sync header
         if dump_start is None:
@@ -149,8 +153,8 @@ class EDSKTrack:
                 return False
 
             # Find the next A1A1A1 sync pattern
-            dump_start = self._find_sync(bits, mfm.sync, dump_end)
-            self_start = self._find_sync(self.bits, mfm.sync, self_end)
+            dump_start = self._find_sync(bits, ibm.mfm_sync, dump_end)
+            self_start = self._find_sync(self.bits, ibm.mfm_sync, self_end)
 
         # Did we verify all regions in the pristine track?
         return self_start is None
@@ -159,12 +163,12 @@ class EDSK(Image):
 
     read_only = True
 
-    def __init__(self):
-        self.to_track = dict()
+    def __init__(self) -> None:
+        self.to_track: Dict[Tuple[int,int],EDSKTrack] = dict()
 
     # Find all weak ranges in the given sector data copies.
     @staticmethod
-    def find_weak_ranges(dat, size):
+    def find_weak_ranges(dat: bytes, size: int) -> List[Tuple[int,int]]:
         orig = dat[:size]
         s, w = size, []
         # Find first mismatching byte across all copies
@@ -189,7 +193,7 @@ class EDSK(Image):
         return w
 
     @staticmethod
-    def _build_8k_track(sectors):
+    def _build_8k_track(sectors: List) -> Optional[EDSKTrack]:
         if len(sectors) != 1:
             return None
         c,h,r,n,errs,data = sectors[0]
@@ -203,31 +207,31 @@ class EDSK(Image):
         track = EDSKTrack()
         t = track.bytes
         # Post-index gap
-        t += mfm.encode(bytes([track.gapbyte] * 16))
+        t += ibm.encode(bytes([track.gapbyte] * 16))
         # IAM
-        t += mfm.encode(bytes(track.gap_presync))
-        t += mfm.iam_sync_bytes
-        t += mfm.encode(bytes([mfm.IBM_MFM.IAM]))
-        t += mfm.encode(bytes([track.gapbyte] * 16))
+        t += ibm.encode(bytes(track.gap_presync))
+        t += ibm.mfm_iam_sync_bytes
+        t += ibm.encode(bytes([ibm.Mark.IAM]))
+        t += ibm.encode(bytes([track.gapbyte] * 16))
         # IDAM
-        t += mfm.encode(bytes(track.gap_presync))
-        t += mfm.sync_bytes
-        am = bytes([0xa1, 0xa1, 0xa1, mfm.IBM_MFM.IDAM, c, h, r, n])
-        crc = mfm.crc16.new(am).crcValue
+        t += ibm.encode(bytes(track.gap_presync))
+        t += ibm.mfm_sync_bytes
+        am = bytes([0xa1, 0xa1, 0xa1, ibm.Mark.IDAM, c, h, r, n])
+        crc = ibm.crc16.new(am).crcValue
         am += struct.pack('>H', crc)
-        t += mfm.encode(am[3:])
-        t += mfm.encode(bytes([track.gapbyte] * track.gap_2))
+        t += ibm.encode(am[3:])
+        t += ibm.encode(bytes([track.gapbyte] * track.gap_2))
         # DAM
-        t += mfm.encode(bytes(track.gap_presync))
-        t += mfm.sync_bytes
-        dmark = (mfm.IBM_MFM.DDAM if errs.deleted_dam
-                 else mfm.IBM_MFM.DAM)
+        t += ibm.encode(bytes(track.gap_presync))
+        t += ibm.mfm_sync_bytes
+        dmark = (ibm.Mark.DDAM if errs.deleted_dam
+                 else ibm.Mark.DAM)
         am = bytes([0xa1, 0xa1, 0xa1, dmark]) + data
-        t += mfm.encode(am[3:])
+        t += ibm.encode(am[3:])
         return track
 
     @staticmethod
-    def _build_kbi19_track(sectors):
+    def _build_kbi19_track(sectors: List) -> Optional[EDSKTrack]:
         ids = [0,1,4,7,10,13,16,2,5,8,11,14,17,3,6,9,12,15,18]
         if len(sectors) != len(ids):
             return None
@@ -236,54 +240,54 @@ class EDSK(Image):
             if r != id or n != 2:
                 return None
         def addcrc(t,n):
-            crc = mfm.crc16.new(mfm.decode(t[-n*2:])).crcValue
-            t += mfm.encode(struct.pack('>H', crc))
+            crc = ibm.crc16.new(ibm.decode(t[-n*2:])).crcValue
+            t += ibm.encode(struct.pack('>H', crc))
         track = EDSKTrack()
         t = track.bytes
         # Post-index gap
-        t += mfm.encode(bytes([track.gapbyte] * 64))
+        t += ibm.encode(bytes([track.gapbyte] * 64))
         # IAM
-        t += mfm.encode(bytes(track.gap_presync))
-        t += mfm.iam_sync_bytes
-        t += mfm.encode(bytes([mfm.IBM_MFM.IAM]))
-        t += mfm.encode(bytes([track.gapbyte] * 50))
+        t += ibm.encode(bytes(track.gap_presync))
+        t += ibm.mfm_iam_sync_bytes
+        t += ibm.encode(bytes([ibm.Mark.IAM]))
+        t += ibm.encode(bytes([track.gapbyte] * 50))
         for idx, s in enumerate(sectors):
             c,h,r,n,errs,data = s
             # IDAM
-            t += mfm.encode(bytes(track.gap_presync))
-            t += mfm.sync_bytes
-            t += mfm.encode(bytes([mfm.IBM_MFM.IDAM, c, h, r, n]))
+            t += ibm.encode(bytes(track.gap_presync))
+            t += ibm.mfm_sync_bytes
+            t += ibm.encode(bytes([ibm.Mark.IDAM, c, h, r, n]))
             addcrc(t, 8)
             if r == 0:
-                t += mfm.encode(bytes([track.gapbyte] * 17))
-                t += mfm.encode(b' KBI ')
+                t += ibm.encode(bytes([track.gapbyte] * 17))
+                t += ibm.encode(b' KBI ')
             else:
-                t += mfm.encode(bytes([track.gapbyte] * 8))
-                t += mfm.encode(b' KBI ')
-                t += mfm.encode(bytes([track.gapbyte] * 9))
+                t += ibm.encode(bytes([track.gapbyte] * 8))
+                t += ibm.encode(b' KBI ')
+                t += ibm.encode(bytes([track.gapbyte] * 9))
             # DAM
-            t += mfm.encode(bytes(track.gap_presync))
-            t += mfm.sync_bytes
-            dmark = (mfm.IBM_MFM.DDAM if errs.deleted_dam
-                     else mfm.IBM_MFM.DAM)
-            t += mfm.encode(bytes([dmark]))
+            t += ibm.encode(bytes(track.gap_presync))
+            t += ibm.mfm_sync_bytes
+            dmark = (ibm.Mark.DDAM if errs.deleted_dam
+                     else ibm.Mark.DAM)
+            t += ibm.encode(bytes([dmark]))
             if idx%3 != 0:
-                t += mfm.encode(data[:61])
+                t += ibm.encode(data[:61])
             elif r == 0:
-                t += mfm.encode(data[:512])
+                t += ibm.encode(data[:512])
                 addcrc(t,516)
             else:
-                t += mfm.encode(data[0:0x10e])
+                t += ibm.encode(data[0:0x10e])
                 addcrc(t,516)
-                t += mfm.encode(data[0x110:0x187])
+                t += ibm.encode(data[0x110:0x187])
                 addcrc(t,516)
-                t += mfm.encode(data[0x189:0x200])
+                t += ibm.encode(data[0x189:0x200])
                 addcrc(t,516)
-                t += mfm.encode(bytes([track.gapbyte] * 80))
+                t += ibm.encode(bytes([track.gapbyte] * 80))
         return track
 
     @classmethod
-    def from_file(cls, name):
+    def from_file(cls, name: str) -> Image:
 
         with open(name, "rb") as f:
             dat = f.read()
@@ -320,12 +324,12 @@ class EDSK(Image):
                 track = EDSKTrack()
                 t = track.bytes
                 # Post-index gap
-                t += mfm.encode(bytes([track.gapbyte] * track.gap_4a))
+                t += ibm.encode(bytes([track.gapbyte] * track.gap_4a))
                 # IAM
-                t += mfm.encode(bytes(track.gap_presync))
-                t += mfm.iam_sync_bytes
-                t += mfm.encode(bytes([mfm.IBM_MFM.IAM]))
-                t += mfm.encode(bytes([track.gapbyte] * track.gap_1))
+                t += ibm.encode(bytes(track.gap_presync))
+                t += ibm.mfm_iam_sync_bytes
+                t += ibm.encode(bytes([ibm.Mark.IAM]))
+                t += ibm.encode(bytes([track.gapbyte] * track.gap_1))
                 sh = dat[o+24:o+24+8*nsecs]
                 data_pos = o + 256 # skip track header and sector-info table
                 clippable, ngap3, sectors, idam_included = 0, 0, [], False
@@ -354,30 +358,30 @@ class EDSK(Image):
                     sectors.append((c,h,r,n,errs,sec_data))
                     # IDAM
                     if not idam_included:
-                        t += mfm.encode(bytes(track.gap_presync))
-                        t += mfm.sync_bytes
-                        am = bytes([0xa1, 0xa1, 0xa1, mfm.IBM_MFM.IDAM,
+                        t += ibm.encode(bytes(track.gap_presync))
+                        t += ibm.mfm_sync_bytes
+                        am = bytes([0xa1, 0xa1, 0xa1, ibm.Mark.IDAM,
                                     c, h, r, n])
-                        crc = mfm.crc16.new(am).crcValue
+                        crc = ibm.crc16.new(am).crcValue
                         if errs.id_crc_error:
                             crc ^= 0x5555
                         am += struct.pack('>H', crc)
-                        t += mfm.encode(am[3:])
-                        t += mfm.encode(bytes([track.gapbyte] * track.gap_2))
+                        t += ibm.encode(am[3:])
+                        t += ibm.encode(bytes([track.gapbyte] * track.gap_2))
                     # DAM
                     gap_included, idam_included = False, False
                     if errs.id_crc_error or errs.data_not_found:
                         continue
-                    t += mfm.encode(bytes(track.gap_presync))
-                    t += mfm.sync_bytes
+                    t += ibm.encode(bytes(track.gap_presync))
+                    t += ibm.mfm_sync_bytes
                     track.weak += [((s+len(t)//2+1)*16, n*16) for s,n in weak]
-                    dmark = (mfm.IBM_MFM.DDAM if errs.deleted_dam
-                             else mfm.IBM_MFM.DAM)
+                    dmark = (ibm.Mark.DDAM if errs.deleted_dam
+                             else ibm.Mark.DAM)
                     if errs.data_crc_error:
                         if sh:
                             # Look for next IDAM
                             idam = bytes([0]*12 + [0xa1]*3
-                                         + [mfm.IBM_MFM.IDAM])
+                                         + [ibm.Mark.IDAM])
                             idx = sec_data.find(idam)
                         else:
                             # Last sector: Look for GAP3
@@ -400,33 +404,33 @@ class EDSK(Image):
                             sec_data = sec_data[:-12]
                         if sh:
                             # Look for next IDAM
-                            idam = bytes([0]*12 + [0xa1]*3 + [mfm.IBM_MFM.IDAM]
+                            idam = bytes([0]*12 + [0xa1]*3 + [ibm.Mark.IDAM]
                                          + list(sh[:4]))
                             idx = sec_data.find(idam)
                             if idx > native_size:
                                 # Sector data includes next IDAM. Output it
                                 # here and skip it on next iteration.
-                                t += mfm.encode(bytes([dmark]))
-                                t += mfm.encode(sec_data[:idx+12])
-                                t += mfm.sync_bytes
-                                t += mfm.encode(sec_data[idx+12+3:])
+                                t += ibm.encode(bytes([dmark]))
+                                t += ibm.encode(sec_data[:idx+12])
+                                t += ibm.mfm_sync_bytes
+                                t += ibm.encode(sec_data[idx+12+3:])
                                 idam_included = True
                                 continue
                         # Long data includes CRC and GAP
                         gap_included = True
                     if gap_included:
-                        t += mfm.encode(bytes([dmark]))
-                        t += mfm.encode(sec_data)
+                        t += ibm.encode(bytes([dmark]))
+                        t += ibm.encode(sec_data)
                         continue
                     am = bytes([0xa1, 0xa1, 0xa1, dmark]) + sec_data
-                    crc = mfm.crc16.new(am).crcValue
+                    crc = ibm.crc16.new(am).crcValue
                     if errs.data_crc_error:
                         crc ^= 0x5555
                     am += struct.pack('>H', crc)
-                    t += mfm.encode(am[3:])
+                    t += ibm.encode(am[3:])
                     if sh:
                         # GAP3 for all but last sector
-                        t += mfm.encode(bytes([track.gapbyte] * gap_3))
+                        t += ibm.encode(bytes([track.gapbyte] * gap_3))
                         ngap3 += 1
 
                 # Special track handlers
@@ -466,11 +470,11 @@ class EDSK(Image):
             track.verify_len = len(track.bytes)*8
             tracklen = int((track.time_per_rev / track.clock) / 16)
             gap = max(40, tracklen - len(t)//2)
-            track.bytes += mfm.encode(bytes([track.gapbyte] * gap))
+            track.bytes += ibm.encode(bytes([track.gapbyte] * gap))
 
             # Add the clock buts
             track.bits = bitarray(endian='big')
-            track.bits.frombytes(mfm.mfm_encode(track.bytes))
+            track.bits.frombytes(ibm.mfm_encode(track.bytes))
 
             # Register the track
             edsk.to_track[cyl,head] = track
@@ -479,7 +483,7 @@ class EDSK(Image):
         return edsk
 
 
-    def get_track(self, cyl, side):
+    def get_track(self, cyl: int, side: int) -> Optional[MasterTrack]:
         if (cyl,side) not in self.to_track:
             return None
         return self.to_track[cyl,side].raw_track()

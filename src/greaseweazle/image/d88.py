@@ -5,34 +5,32 @@
 # This is free and unencumbered software released into the public domain.
 # See the file COPYING for more details, or visit <http://unlicense.org>.
 
+from typing import Dict, Tuple, Optional
+
 import struct
 import os
 
 from greaseweazle import error
-from greaseweazle.image.img import IMG
 from greaseweazle.codec.formats import *
-from greaseweazle.codec.ibm import mfm, fm
+from greaseweazle.codec.ibm import ibm, mfm, fm
 from .image import Image
 
 from greaseweazle.codec import formats
 
-class D88(IMG):
-    default_format = None
+class D88(Image):
+
     read_only = True
 
+    def __init__(self, name: str):
+        self.to_track: Dict[Tuple[int,int],ibm.IBMTrackFormatted] = dict()
+        self.filename = name
+
     @classmethod
-    def from_file(cls, name, fmt=None):
+    def from_file(cls, name: str, fmt=None) -> Image:
 
         with open(name, "rb") as f:
             header = f.read(32)
             (disk_name, terminator, write_protect, media_flag, disk_size) = struct.unpack('<16sB9xBBL', header)
-            if media_flag == 0x20:
-                format_str = 'pc98.2hd'
-            elif media_flag == 0x00:
-                format_str = 'pc98.2d'
-            else:
-                raise error.Fatal("D88: Unsupported media format.")
-            fmt = formats.get_format(format_str)
             track_table = [x[0] for x in struct.iter_unpack('<L', f.read(640))]
             if track_table[0] == 688:
                 track_table.extend([x[0] for x in struct.iter_unpack('<L', f.read(16))])
@@ -42,7 +40,7 @@ class D88(IMG):
             if f.tell() != disk_size:
                 print('D88: Warning: Multiple disks found in image, only using first.')
 
-            img = cls(name, fmt)
+            d88 = cls(name)
 
             for track_index, track_offset in enumerate(track_table):
                 if track_offset == 0:
@@ -58,10 +56,11 @@ class D88(IMG):
                 track = None
                 track_mfm_flag = None
                 pos = None
+                secs = []
                 num_sectors_track = 255
-                sector_idx = 0
-                while sector_idx < num_sectors_track:
-                    (c, h, r, n, num_sectors, mfm_flag, deleted, status, data_size) = \
+                for _ in range(num_sectors_track):
+                    (c, h, r, n, num_sectors, mfm_flag,
+                     deleted, status, data_size) = \
                         struct.unpack('<BBBBHBBB5xH', f.read(16))
                     if status != 0x00:
                         raise error.Fatal('D88: FDC error codes are unsupported.')
@@ -71,25 +70,20 @@ class D88(IMG):
                         if media_flag == 0x00:
 
                             if mfm_flag == 0x40:
-                                track = fm.IBM_FM_Formatted(physical_cyl, physical_head)
-                                track.clock = 4e-6
-                                track.gap_3 = 0x1b
+                                track = ibm.IBMTrackFormat('ibm.fm')
+                                track.rate = 125
                             else:
-                                track = mfm.IBM_MFM_Formatted(physical_cyl, physical_head)
-                                track.clock = 2e-6
-                                track.gap_3 = 0x1b
-                            track.time_per_rev = 0.2
+                                track = ibm.IBMTrackFormat('ibm.mfm')
+                                track.rate = 250
+                            track.rpm = 300
                         else:
                             if mfm_flag == 0x40:
-                                track = fm.IBM_FM_Formatted(physical_cyl, physical_head)
-                                track.clock = 2e-6
-                                track.gap_3 = 0x1b
+                                track = ibm.IBMTrackFormat('ibm.fm')
+                                track.rate = 250
                             else:
-                                track = mfm.IBM_MFM_Formatted(physical_cyl, physical_head)
-                                track.clock = 1e-6
-                                track.gap_3 = 116
-                            track.time_per_rev = 60/360
-                        pos = track.gap_4a
+                                track = ibm.IBMTrackFormat('ibm.mfm')
+                                track.rate = 500
+                            track.rpm = 360
                         track_mfm_flag = mfm_flag
                         num_sectors_track = num_sectors
                     if mfm_flag != track_mfm_flag:
@@ -100,32 +94,27 @@ class D88(IMG):
                     size = 128 << n
                     if size != data_size:
                         raise error.Fatal('D88: Extra sector data is unsupported.')
-                    pos += track.gap_presync
-                    if mfm_flag == 0x40:
-                        idam = fm.IDAM(pos*16, (pos+7)*16, 0, c, h, r, n)
-                        pos += 7 + track.gap_2 + track.gap_presync
-                        dam = fm.DAM(pos*16, (pos+1+size+2)*16, 0, track.DAM, data)
-                        sector = fm.Sector(idam, dam)
-                        track.sectors.append(sector)
-                        pos += 1 + size + 2 + track.gap_3
-                    else:
-                        idam = mfm.IDAM(pos*16, (pos+10)*16, 0, c, h, r, n)
-                        pos += 10 + track.gap_2 + track.gap_presync
-                        if size <= 128:
-                            track.gap_3 = 0x1b
-                        elif size <= 256:
-                            track.gap_3 = 0x36
-                        dam = mfm.DAM(pos*16, (pos+4+size+2)*16, 0, track.DAM, data)
-                        sector = mfm.Sector(idam, dam)
-                        track.sectors.append(sector)
-                        pos += 4 + size + 2 + track.gap_3
-                    sector_idx += 1
+                    secs.append((c,h,r,n,data))
 
-                img.to_track[physical_cyl, physical_head] = track
+                if track is None:
+                    continue
+                track.finalise()
+                t = track.mk_track(physical_cyl, physical_head)
 
-            img.format_str = format_str
+                for nr,s in enumerate(t.sectors):
+                    c,h,r,n,data = secs[nr]
+                    s.crc = s.idam.crc = s.dam.crc = 0
+                    s.idam.c, s.idam.h, s.idam.r, s.idam.n = c,h,r,n
+                    s.dam.data = data
 
-        return img
+                d88.to_track[physical_cyl, physical_head] = t
+
+        return d88
+
+    def get_track(self, cyl: int, side: int) -> Optional[ibm.IBMTrackFormatted]:
+        if (cyl,side) not in self.to_track:
+            return None
+        return self.to_track[cyl,side]
 
 # Local variables:
 # python-indent: 4

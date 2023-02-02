@@ -5,6 +5,8 @@
 # This is free and unencumbered software released into the public domain.
 # See the file COPYING for more details, or visit <http://unlicense.org>.
 
+from typing import Dict, Tuple, Optional, List
+
 import struct
 from enum import IntFlag
 
@@ -101,14 +103,14 @@ class SCP(Image):
     sample_freq = 40000000
 
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.opts = SCPOpts()
-        self.nr_revs = None
-        self.to_track = dict()
+        self.nr_revs: Optional[int] = None
+        self.to_track: Dict[int, SCPTrack] = dict()
         self.index_cued = True
 
     
-    def side_count(self):
+    def side_count(self) -> List[int]:
         s = [0,0] # non-empty tracks on each side
         for tnr in self.to_track:
             s[tnr&1] += 1
@@ -116,7 +118,7 @@ class SCP(Image):
 
 
     @classmethod
-    def from_file(cls, name):
+    def from_file(cls, name: str) -> Image:
 
         splices = None
 
@@ -232,7 +234,7 @@ class SCP(Image):
         return scp
 
 
-    def get_track(self, cyl, side):
+    def get_track(self, cyl: int, side: int) -> Optional[Flux]:
         tracknr = cyl * 2 + side
         if not tracknr in self.to_track:
             return None
@@ -261,7 +263,7 @@ class SCP(Image):
         return flux
 
 
-    def emit_track(self, cyl, side, track):
+    def emit_track(self, cyl: int, side: int, track) -> None:
         """Converts @track into a Supercard Pro Track and appends it to
         the current image-in-progress.
         """
@@ -334,7 +336,7 @@ class SCP(Image):
         self.to_track[cyl*2+side] = SCPTrack(tdh, dat, splice)
 
 
-    def get_image(self):
+    def get_image(self) -> bytes:
 
         # Work out the single-sided byte code
         s = self.side_count()
