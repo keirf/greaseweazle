@@ -27,6 +27,9 @@ dist:
 	rm -rf $(PROJ)-*
 	$(PYTHON) setup.py sdist --formats=zip -d .
 
+mypy:
+	$(PYTHON) -m mypy --config-file=scripts/tests/mypy.ini
+
 windist: install
 	rm -rf $(PROJ)-*
 	mkdir -p $(PROJ)-$(VER)

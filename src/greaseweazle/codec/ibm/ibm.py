@@ -5,6 +5,8 @@
 # This is free and unencumbered software released into the public domain.
 # See the file COPYING for more details, or visit <http://unlicense.org>.
 
+from typing import Any, List, Optional, Union
+
 import re
 from greaseweazle import error
 
@@ -91,10 +93,14 @@ class IBMTrack:
     DAM  = 0xfb
     DDAM = 0xf8
 
-    def __init__(self, cyl, head):
+    # Subclasses must define these
+    time_per_rev: float
+    clock: float
+
+    def __init__(self, cyl: int, head: int):
         self.cyl, self.head = cyl, head
-        self.sectors = []
-        self.iams = []
+        self.sectors: List[Sector] = []
+        self.iams: List[IAM] = []
 
     def has_sec(self, sec_id):
         return self.sectors[sec_id].crc == 0
@@ -105,6 +111,27 @@ class IBMTrack:
     def flux(self, *args, **kwargs):
         return self.raw_track().flux(*args, **kwargs)
 
+    # private helper for decode_raw()
+    def add_deduped_areas(self, areas: List[TrackArea]) -> None:
+        a: Optional[TrackArea]
+        for a in areas:
+            list: List[Any]
+            if isinstance(a, IAM):
+                list = self.iams
+            elif isinstance(a, Sector):
+                list = self.sectors
+            else:
+                continue
+            for i, s in enumerate(list):
+                if abs(s.start - a.start) < 1000:
+                    if isinstance(a, Sector) and s.crc != 0 and a.crc == 0:
+                        self.sectors[i] = a
+                    a = None
+                    break
+            if a is not None:
+                list.append(a)
+        self.iams.sort(key=lambda x:x.start)
+        self.sectors.sort(key=lambda x:x.start)
 
 from greaseweazle.codec.ibm import fm, mfm
 

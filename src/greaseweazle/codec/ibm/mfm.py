@@ -5,13 +5,15 @@
 # This is free and unencumbered software released into the public domain.
 # See the file COPYING for more details, or visit <http://unlicense.org>.
 
+from typing import List, Optional
+
 import copy, heapq, struct, functools
 import itertools as it
 from bitarray import bitarray
 import crcmod.predefined
 
 from greaseweazle.track import MasterTrack, RawTrack
-from .ibm import IDAM, DAM, Sector, IAM, IBMTrack
+from .ibm import TrackArea, IDAM, DAM, Sector, IAM, IBMTrack
 
 default_revs = 2
 
@@ -31,20 +33,20 @@ class IBM_MFM(IBMTrack):
 
     gapbyte = 0x4e
 
-    def summary_string(self):
+    def summary_string(self) -> str:
         nsec, nbad = len(self.sectors), self.nr_missing()
         s = "IBM MFM (%d/%d sectors)" % (nsec - nbad, nsec)
         return s
 
 
-    def decode_raw(self, track, pll=None):
+    def decode_raw(self, track, pll=None) -> None:
         flux = track.flux()
         flux.cue_at_index()
         raw = RawTrack(time_per_rev = self.time_per_rev,
                        clock = self.clock, data = flux, pll = pll)
         bits, _ = raw.get_all_data()
 
-        areas = []
+        areas: List[TrackArea] = []
         idam = None
 
         ## 1. Calculate offsets within dump
@@ -106,24 +108,10 @@ class IBM_MFM(IBMTrack):
         areas.sort(key=lambda x:x.start)
 
         # Add to the deduped lists
-        for a in areas:
-            if isinstance(a, IAM):
-                list = self.iams
-            elif isinstance(a, Sector):
-                list = self.sectors
-            else:
-                continue
-            for i, s in enumerate(list):
-                if abs(s.start - a.start) < 1000:
-                    if isinstance(a, Sector) and s.crc != 0 and a.crc == 0:
-                        self.sectors[i] = a
-                    a = None
-                    break
-            if a is not None:
-                list.append(a)
+        self.add_deduped_areas(areas)
 
 
-    def raw_track(self):
+    def raw_track(self) -> MasterTrack:
 
         areas = heapq.merge(self.iams, self.sectors, key=lambda x:x.start)
         t = bytes()
@@ -166,12 +154,13 @@ class IBM_MFM(IBMTrack):
 
 class IBM_MFM_Formatted(IBM_MFM):
 
-    def __init__(self, cyl, head):
+    def __init__(self, cyl: int, head: int):
         super().__init__(cyl, head)
-        self.raw_iams, self.raw_sectors = [], []
-        self.img_bps = None
+        self.raw_iams: List[IAM] = []
+        self.raw_sectors: List[Sector] = []
+        self.img_bps: Optional[int] = None
 
-    def decode_raw(self, track, pll=None):
+    def decode_raw(self, track, pll=None) -> None:
         iams, sectors = self.iams, self.sectors
         self.iams, self.sectors = self.raw_iams, self.raw_sectors
         super().decode_raw(track, pll)
@@ -197,7 +186,7 @@ class IBM_MFM_Formatted(IBM_MFM):
             print('T%d.%d: Ignoring unexpected sector C:%d H:%d R:%d N:%d'
                   % (self.cyl, self.head, *m))
 
-    def set_img_track(self, tdat):
+    def set_img_track(self, tdat: bytearray) -> int:
         pos = 0
         self.sectors.sort(key = lambda x: x.idam.r)
         if self.img_bps is not None:
@@ -218,7 +207,7 @@ class IBM_MFM_Formatted(IBM_MFM):
         self.sectors.sort(key = lambda x: x.start)
         return totsize
 
-    def get_img_track(self):
+    def get_img_track(self) -> bytearray:
         tdat = bytearray()
         sectors = self.sectors.copy()
         sectors.sort(key = lambda x: x.idam.r)
@@ -228,14 +217,14 @@ class IBM_MFM_Formatted(IBM_MFM):
                 tdat += bytes(self.img_bps - len(s.dam.data))
         return tdat
         
-    def verify_track(self, flux):
+    def verify_track(self, flux) -> bool:
         readback_track = IBM_MFM_Formatted(self.cyl, self.head)
         readback_track.clock = self.clock
         readback_track.time_per_rev = self.time_per_rev
-        for x in self.iams:
-            readback_track.iams.append(copy.copy(x))
-        for x in self.sectors:
-            idam, dam = copy.copy(x.idam), copy.copy(x.dam)
+        for iam in self.iams:
+            readback_track.iams.append(copy.copy(iam))
+        for sec in self.sectors:
+            idam, dam = copy.copy(sec.idam), copy.copy(sec.dam)
             idam.crc, dam.crc = 0xffff, 0xffff
             readback_track.sectors.append(Sector(idam, dam))
         readback_track.decode_raw(flux)

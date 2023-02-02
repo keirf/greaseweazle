@@ -5,12 +5,20 @@
 # This is free and unencumbered software released into the public domain.
 # See the file COPYING for more details, or visit <http://unlicense.org>.
 
-from greaseweazle import error
+from __future__ import annotations
+from typing import List
 
+from greaseweazle import error
 
 class Flux:
 
-    def __init__(self, index_list, flux_list, sample_freq, index_cued=True):
+    _ticks_per_rev: float
+    
+    def __init__(self,
+                 index_list: List[float],
+                 flux_list: List[float],
+                 sample_freq: float,
+                 index_cued = True) -> None:
         self.index_list = index_list
         self.list = flux_list
         self.sample_freq = sample_freq
@@ -18,7 +26,7 @@ class Flux:
         self.index_cued = index_cued
 
 
-    def __str__(self):
+    def __str__(self) -> str:
         s = "\nFlux: %.2f MHz" % (self.sample_freq*1e-6)
         s += ("\n Total: %u samples, %.2fms\n"
               % (len(self.list), sum(self.list)*1000/self.sample_freq))
@@ -29,12 +37,12 @@ class Flux:
         return s[:-1]
 
 
-    def summary_string(self):
+    def summary_string(self) -> str:
         return ("Raw Flux (%u flux in %.2fms)"
                 % (len(self.list), sum(self.list)*1000/self.sample_freq))
 
 
-    def append(self, flux):
+    def append(self, flux: Flux) -> None:
         # Scale the new flux if required, to match existing sample frequency.
         # This will result in floating-point flux values.
         if self.sample_freq == flux.sample_freq:
@@ -50,7 +58,7 @@ class Flux:
         self.list += f_list
 
 
-    def cue_at_index(self):
+    def cue_at_index(self) -> None:
 
         if self.index_cued:
             return
@@ -69,7 +77,7 @@ class Flux:
         self.index_cued = True
 
 
-    def flux_for_writeout(self, cue_at_index=True):
+    def flux_for_writeout(self, cue_at_index=True) -> Flux:
 
         error.check(self.index_cued,
                     "Cannot write non-index-cued raw flux")
@@ -117,17 +125,17 @@ class Flux:
 
 
 
-    def flux(self):
+    def flux(self) -> Flux:
         return self
 
 
-    def scale(self, factor):
+    def scale(self, factor) -> None:
         """Scale up all flux and index timings by specified factor."""
         self.sample_freq /= factor
 
 
     @property
-    def ticks_per_rev(self):
+    def ticks_per_rev(self) -> float:
         """Mean time between index pulses, in sample ticks"""
         try:
             index_list = self.index_list
@@ -140,7 +148,7 @@ class Flux:
 
 
     @property
-    def time_per_rev(self):
+    def time_per_rev(self) -> float:
         """Mean time between index pulses, in seconds (float)"""
         return self.ticks_per_rev / self.sample_freq
 
@@ -148,13 +156,13 @@ class Flux:
 class WriteoutFlux(Flux):
 
     def __init__(self, ticks_to_index, flux_list, sample_freq,
-                 index_cued, terminate_at_index):
+                 index_cued, terminate_at_index) -> None:
         super().__init__([ticks_to_index], flux_list, sample_freq)
         self.index_cued = index_cued
         self.terminate_at_index = terminate_at_index
 
 
-    def __str__(self):
+    def __str__(self) -> str:
         s = ("\nWriteoutFlux: %.2f MHz, %.2fms to index, %s\n"
              " Total: %u samples, %.2fms"
              % (self.sample_freq*1e-6,
@@ -164,7 +172,7 @@ class WriteoutFlux(Flux):
         return s
 
 
-    def summary_string(self):
+    def summary_string(self) -> str:
         s = ("Flux: %.1fms period, %.1f ms total, %s"
              % (self.index_list[0]*1000/self.sample_freq,
                 sum(self.list)*1000/self.sample_freq,
@@ -172,12 +180,12 @@ class WriteoutFlux(Flux):
         return s
 
 
-    def flux_for_writeout(self, cue_at_index=True):
+    def flux_for_writeout(self, cue_at_index=True) -> Flux:
         raise error.Fatal("WriteoutFlux: flux_for_writeout is unsupported")
  
 
     @property
-    def ticks_per_rev(self):
+    def ticks_per_rev(self) -> float:
         """Mean time between index pulses, in sample ticks"""
         return sum(self.index_list) / len(self.index_list)
 

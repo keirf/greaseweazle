@@ -5,12 +5,15 @@
 # This is free and unencumbered software released into the public domain.
 # See the file COPYING for more details, or visit <http://unlicense.org>.
 
+from typing import List, Optional, Tuple
+
 import struct
 import itertools as it
 from bitarray import bitarray
 
 from greaseweazle import error
 from greaseweazle.track import MasterTrack, RawTrack
+from greaseweazle.flux import Flux
 
 default_revs = 1.1
 
@@ -22,55 +25,61 @@ bad_sector = b'-=[BAD SECTOR]=-' * 32
 
 class AmigaDOS:
 
+    # Subclasses must define these
+    nsec: int
+    clock: float
+
     time_per_rev = 0.2
 
-    def __init__(self, cyl, head):
+    def __init__(self, cyl: int, head: int):
         self.tracknr = cyl*2 + head
+        self.sector: List[Optional[Tuple[bytes,bytes]]]
         self.sector = [None] * self.nsec
+        self.map: List[Optional[int]]
         self.map = [None] * self.nsec
 
-    def summary_string(self):
+    def summary_string(self) -> str:
         nsec, nbad = self.nsec, self.nr_missing()
         s = "AmigaDOS (%d/%d sectors)" % (nsec - nbad, nsec)
         return s
 
     # private
-    def exists(self, sec_id, togo):
+    def exists(self, sec_id, togo) -> bool:
         return ((self.sector[sec_id] is not None)
                 or (self.map[self.nsec-togo] is not None))
 
     # private
-    def add(self, sec_id, togo, label, data):
+    def add(self, sec_id, togo, label, data) -> None:
         assert not self.exists(sec_id, togo)
         self.sector[sec_id] = label, data
         self.map[self.nsec-togo] = sec_id
 
-    def has_sec(self, sec_id):
+    def has_sec(self, sec_id) -> bool:
         return self.sector[sec_id] is not None
 
-    def nr_missing(self):
+    def nr_missing(self) -> int:
         return len([sec for sec in self.sector if sec is None])
 
-    def get_img_track(self):
+    def get_img_track(self) -> bytearray:
         tdat = bytearray()
         for sec in self.sector:
             tdat += sec[1] if sec is not None else bad_sector
         return tdat
 
-    def set_img_track(self, tdat):
+    def set_img_track(self, tdat: bytearray) -> int:
         totsize = self.nsec * 512
         if len(tdat) < totsize:
             tdat += bytes(totsize - len(tdat))
         self.map = list(range(self.nsec))
-        for sec in self.map:
+        for sec in range(self.nsec):
             self.sector[sec] = bytes(16), tdat[sec*512:(sec+1)*512]
         return totsize
 
-    def flux(self, *args, **kwargs):
+    def flux(self, *args, **kwargs) -> Flux:
         return self.raw_track().flux(*args, **kwargs)
 
 
-    def decode_raw(self, track, pll=None):
+    def decode_raw(self, track, pll=None) -> None:
         raw = RawTrack(time_per_rev = self.time_per_rev,
                        clock = self.clock, data = track, pll = pll)
         bits, _ = raw.get_all_data()
@@ -105,7 +114,7 @@ class AmigaDOS:
             self.add(sec_id, togo, label, data)
 
 
-    def raw_track(self):
+    def raw_track(self) -> MasterTrack:
 
         # List of sector IDs missing from the sector map:
         missing = iter([x for x in range(self.nsec) if not x in self.map])
@@ -166,11 +175,11 @@ class AmigaDOSTrackFormat:
 
     default_revs = default_revs
 
-    def __init__(self, format_name):
+    def __init__(self, format_name: str):
         self.secs = None
         self.finalised = False
 
-    def add_param(self, key, val):
+    def add_param(self, key: str, val) -> None:
         if key == 'secs':
             val = int(val)
             error.check(val in [11, 22], '%s out of range' % key)
@@ -178,14 +187,15 @@ class AmigaDOSTrackFormat:
         else:
             raise error.Fatal('unrecognised track option %s' % key)
 
-    def finalise(self):
+    def finalise(self) -> None:
         if self.finalised:
             return
         error.check(self.secs is not None,
                     'number of sectors not specified')
         self.finalised = True
 
-    def mk_track(self, cyl, head):
+    def mk_track(self, cyl: int, head: int) -> AmigaDOS:
+        t: AmigaDOS
         if self.secs == 11:
             t = AmigaDOS_DD(cyl, head)
         else:

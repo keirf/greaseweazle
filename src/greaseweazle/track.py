@@ -5,6 +5,7 @@
 # This is free and unencumbered software released into the public domain.
 # See the file COPYING for more details, or visit <http://unlicense.org>.
 
+from typing import Any, List, Tuple, Union
 import binascii
 import itertools as it
 from bitarray import bitarray
@@ -12,7 +13,7 @@ from greaseweazle.flux import Flux, WriteoutFlux
 from greaseweazle import optimised
 
 class PLL:
-    def __init__(self, pllspec):
+    def __init__(self, pllspec: str):
         self.period_adj_pct = 5
         self.phase_adj_pct = 60
         for x in pllspec.split(':'):
@@ -23,7 +24,7 @@ class PLL:
                 self.phase_adj_pct = int(v)
             else:
                 raise ValueError()
-    def __str__(self):
+    def __str__(self) -> str:
         return ("PLL: period_adj=%d%% phase_adj=%d%%"
                 % (self.period_adj_pct, self.phase_adj_pct))
 
@@ -43,12 +44,13 @@ class Precomp:
     FM  = 1
     GCR = 2
     TYPESTRING = [ 'MFM', 'FM', 'GCR' ]
-    def __str__(self):
+    def __str__(self) -> str:
         return "Precomp: %s, %dns" % (Precomp.TYPESTRING[self.type], self.ns)
-    def __init__(self, type, ns):
+    def __init__(self, type: int, ns: float):
         self.type = type
         self.ns = ns
-    def apply(self, bits, bit_ticks, scale):
+    def apply(self, bits: bitarray, bit_ticks: List[float],
+              scale: float) -> None:
         t = self.ns * scale
         if self.type == Precomp.MFM:
             for i in bits.itersearch(bitarray('10100', endian='big')):
@@ -72,11 +74,15 @@ class Precomp:
 # A pristine representation of a track, from a codec and/or a perfect image.
 class MasterTrack:
 
+    # verify state may be added "ad hoc" to a MasterTrack object
+    verify: Any
+    verify_revs: float
+
     @property
-    def bitrate(self):
+    def bitrate(self) -> float:
         return len(self.bits) / self.time_per_rev
 
-    def scale(self, factor):
+    def scale(self, factor: float):
         """Scale up index timing by specified factor."""
         self.time_per_rev *= factor
 
@@ -85,7 +91,9 @@ class MasterTrack:
     # bit_ticks: Per-bitcell time values, in unitless 'ticks'
     # splice: Location of the track splice, in bitcells, after the index
     # weak: List of (start, length) weak ranges
-    def __init__(self, bits, time_per_rev, bit_ticks=None, splice=0, weak=[]):
+    def __init__(self, bits: Union[bitarray, bytes],
+                 time_per_rev: float,
+                 bit_ticks=None, splice=0, weak=[]):
         if isinstance(bits, bytes):
             self.bits = bitarray(endian='big')
             self.bits.frombytes(bits)
@@ -98,7 +106,7 @@ class MasterTrack:
         self.precomp = None
         self.force_random_weak = True
 
-    def __str__(self):
+    def __str__(self) -> str:
         s = "\nMaster Track: splice @ %d\n" % self.splice
         s += (" %d bits, %.1f kbit/s"
               % (len(self.bits), self.bitrate/1000))
@@ -113,7 +121,7 @@ class MasterTrack:
         #s += str(binascii.hexlify(self.bits.tobytes()))
         return s
 
-    def summary_string(self):
+    def summary_string(self) -> str:
         s = ('Bitcells (%d bits, %.1f kbit/s, %.1f rpm'
              % (len(self.bits), self.bitrate/1000, 60 / self.time_per_rev))
         if self.bit_ticks:
@@ -123,10 +131,10 @@ class MasterTrack:
         s += ')'
         return s
 
-    def flux_for_writeout(self, cue_at_index=True):
+    def flux_for_writeout(self, cue_at_index=True) -> Flux:
         return self.flux(for_writeout=True, cue_at_index=cue_at_index)
 
-    def flux(self, for_writeout=False, cue_at_index=True):
+    def flux(self, for_writeout=False, cue_at_index=True) -> Flux:
 
         # We're going to mess with the track data, so take a copy.
         bits = self.bits.copy()
@@ -223,7 +231,7 @@ class MasterTrack:
         # Convert the stretched track data into flux.
         bit_ticks_i = iter(bit_ticks)
         flux_list = []
-        flux_ticks = 0
+        flux_ticks: float = 0
         for bit in bits:
             flux_ticks += next(bit_ticks_i)
             if bit:
@@ -231,6 +239,7 @@ class MasterTrack:
                 flux_ticks = 0
 
         # Package up the flux for return.
+        flux: Flux
         if for_writeout:
             if flux_ticks:
                 flux_list.append(flux_ticks)
@@ -254,7 +263,7 @@ class RawTrack:
     # clock: Expected time per raw bitcell, in seconds (float)
     # data: Flux object, or a form convertible to a Flux object
     # time_per_rev: Expected time per revolution, in seconds (optional, float)
-    def __init__(self, clock, data, time_per_rev=None, pll=None):
+    def __init__(self, clock: float, data, time_per_rev=None, pll=None):
         self.clock = clock
         self.time_per_rev = time_per_rev
         self.clock_max_adj = 0.10
@@ -262,12 +271,12 @@ class RawTrack:
         self.pll_period_adj = pll.period_adj_pct / 100
         self.pll_phase_adj = pll.phase_adj_pct / 100
         self.bitarray = bitarray(endian='big')
-        self.timearray = []
-        self.revolutions = []
+        self.timearray: List[float] = []
+        self.revolutions: List[int] = []
         self.import_flux_data(data)
 
 
-    def __str__(self):
+    def __str__(self) -> str:
         s = "\nRaw Track: %d revolutions\n" % len(self.revolutions)
         for rev in range(len(self.revolutions)):
             b, _ = self.get_revolution(rev)
@@ -279,17 +288,17 @@ class RawTrack:
         return s[:-1]
 
 
-    def get_revolution(self, nr):
+    def get_revolution(self, nr) -> Tuple[bitarray, List[float]]:
         start = sum(self.revolutions[:nr])
         end = start + self.revolutions[nr]
         return self.bitarray[start:end], self.timearray[start:end]
 
 
-    def get_all_data(self):
+    def get_all_data(self) -> Tuple[bitarray, List[float]]:
         return self.bitarray, self.timearray
 
 
-    def import_flux_data(self, data):
+    def import_flux_data(self, data) -> None:
 
         flux = data.flux()
         freq = flux.sample_freq
@@ -310,7 +319,7 @@ class RawTrack:
         flux_iter = it.chain(flux.list, [tail])
 
         try:
-            optimised.flux_to_bitcells(
+            optimised.flux_to_bitcells( # type: ignore[attr-defined]
                 self.bitarray, self.timearray, self.revolutions,
                 index_iter, flux_iter,
                 freq, clock, clock_min, clock_max,
@@ -326,7 +335,7 @@ class RawTrack:
 def flux_to_bitcells(bit_array, time_array, revolutions,
                      index_iter, flux_iter,
                      freq, clock_centre, clock_min, clock_max,
-                     pll_period_adj, pll_phase_adj):
+                     pll_period_adj, pll_phase_adj) -> None:
 
     nbits = 0
     ticks = 0.0

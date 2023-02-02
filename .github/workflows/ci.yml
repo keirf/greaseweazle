@@ -7,6 +7,25 @@ name: CI
 
 jobs:
 
+  test-ubuntu:
+    runs-on: ubuntu-20.04
+    steps:
+
+    - uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+
+    - name: Dependency packages (apt)
+      run: |
+        sudo apt update
+        sudo apt -y install python3-pip
+
+    - name: Dependency packages (pip)
+      run: python3 -m pip install --user setuptools_scm
+
+    - name: Tests
+      run: . scripts/tests/test.sh
+
   build-ubuntu:
     runs-on: ubuntu-20.04
     steps:
