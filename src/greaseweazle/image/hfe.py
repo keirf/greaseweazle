@@ -120,8 +120,6 @@ class HFE(Image):
 
     def get_image(self) -> bytes:
 
-        assert self.opts.bitrate is not None
-
         n_side = 1
         n_cyl = max(self.to_track.keys(), default=(0,), key=lambda x:x[0])[0]
         n_cyl += 1
@@ -129,6 +127,11 @@ class HFE(Image):
         # We dynamically build the Track-LUT and -Data arrays.
         tlut = bytearray()
         tdat = bytearray()
+
+        # Empty disk may have no bitrate
+        if self.opts.bitrate is None:
+            assert not self.to_track
+            self.opts.bitrate = 250
 
         # Stuff real data into the image.
         for i in range(n_cyl):
