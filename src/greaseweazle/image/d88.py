@@ -5,7 +5,7 @@
 # This is free and unencumbered software released into the public domain.
 # See the file COPYING for more details, or visit <http://unlicense.org>.
 
-from typing import Dict, Tuple, Optional
+from typing import Dict, Tuple, Optional, List
 
 import struct
 import os
@@ -56,9 +56,9 @@ class D88(Image):
                 track = None
                 track_mfm_flag = None
                 pos = None
-                secs = []
+                secs: List[Tuple[int,int,int,int,bytes]] = []
                 num_sectors_track = 255
-                for _ in range(num_sectors_track):
+                while len(secs) < num_sectors_track:
                     (c, h, r, n, num_sectors, mfm_flag,
                      deleted, status, data_size) = \
                         struct.unpack('<BBBBHBBB5xH', f.read(16))
@@ -95,9 +95,10 @@ class D88(Image):
                     if size != data_size:
                         raise error.Fatal('D88: Extra sector data is unsupported.')
                     secs.append((c,h,r,n,data))
-
                 if track is None:
                     continue
+                track.secs = len(secs)
+                track.sz = [x[3] for x in secs]
                 track.finalise()
                 t = track.mk_track(physical_cyl, physical_head)
 
