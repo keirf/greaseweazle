@@ -12,6 +12,7 @@ import itertools as it
 from bitarray import bitarray
 
 from greaseweazle import error
+from greaseweazle.codec.ibm import ibm
 from greaseweazle.track import MasterTrack, RawTrack
 from greaseweazle.flux import Flux
 
@@ -141,7 +142,7 @@ class AmigaDOS:
         t += bytes(tlen//8-len(t))
 
         track = MasterTrack(
-            bits = mfm_encode(t),
+            bits = ibm.mfm_encode(t),
             time_per_rev = 0.2)
         track.verify = self
         track.verify_revs = default_revs
@@ -202,18 +203,6 @@ class AmigaDOSTrackFormat:
             t = AmigaDOS_HD(cyl, head)
         return t
 
-
-def mfm_encode(dat):
-    y = 0
-    out = bytearray()
-    for x in dat:
-        y = (y<<8) | x
-        if (x & 0xaa) == 0:
-            y |= ~((y>>1)|(y<<1)) & 0xaaaa
-        y &= 255
-        out.append(y)
-    return bytes(out)
-    
 
 def encode(dat):
     return bytes(it.chain(map(lambda x: (x >> 1) & 0x55, dat),
