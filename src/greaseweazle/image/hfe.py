@@ -104,10 +104,16 @@ class HFE(Image):
             if is_fm:
                 self.opts.bitrate *= 2
             print('HFE: Data bitrate detected: %d kbit/s' % self.opts.bitrate)
-        if issubclass(type(t), MasterTrack) and not is_fm:
+        if issubclass(type(t), MasterTrack):
             # Rotate data to start at the index.
             index = -t.splice % len(t.bits)
             bits = t.bits[index:] + t.bits[:index]
+            if is_fm: # FM data is recorded to HFE at double rate
+                double_bytes = ibm.encode(bits.tobytes())
+                double_bits = bitarray(endian='big')
+                double_bits.frombytes(double_bytes)
+                double_bits = double_bits[:2*len(bits)]
+                bits = double_bits
             bits.bytereverse()
         else:
             flux = t.flux()
