@@ -391,7 +391,7 @@ class SCP(Image):
         wrsp += bytes(wrsp_len - len(wrsp))
 
         creation_time = round(time.time())
-        footer_offs = 0x10 + trk_offs_len + wrsp_len + len(trk_dat)
+        footer_offs = trk_start + len(trk_dat)
         footer = f'Greaseweazle {__version__}'.encode()
         footer += struct.pack('<6I2Q4B4s',
                               0, # drive manufacturer

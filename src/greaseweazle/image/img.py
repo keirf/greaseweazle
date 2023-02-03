@@ -8,7 +8,6 @@
 from typing import Dict, Tuple, Optional, Any
 
 from greaseweazle import error
-from greaseweazle.codec.ibm import mfm
 from .image import Image
 
 class IMG(Image):

@@ -12,7 +12,7 @@ import os
 
 from greaseweazle import error
 from greaseweazle.codec.formats import *
-from greaseweazle.codec.ibm import ibm, mfm, fm
+from greaseweazle.codec.ibm import ibm
 from .image import Image
 
 from greaseweazle.codec import formats

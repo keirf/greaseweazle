@@ -97,6 +97,28 @@ crc16 = crcmod.predefined.Crc('crc-ccitt-false')
 def sec_sz(n):
     return 128 << n if n <= 7 else 128 << 8
 
+class Gaps:
+    def __init__(self, gap1, gap2, gap3, gap4a):
+        self.gap1 = gap1 # Post IAM
+        self.gap2 = gap2 # Post IDAM
+        self.gap3 = gap3 # Post DAM
+        self.gap4a = gap4a # Post Index
+
+FMGaps = Gaps(
+    gap1 = 26,
+    gap2 = 11,
+    gap3 = [ 27, 42, 58, 138, 255, 255, 255, 255 ],
+    gap4a = 40
+)
+
+MFMGaps = Gaps(
+    gap1 = 50,
+    gap2 = 22,
+    gap3 = [ 32, 54, 84, 116, 255, 255, 255, 255 ],
+    gap4a = 80
+)
+
+
 class Mark:
     IAM  = 0xfc
     IDAM = 0xfe
@@ -545,8 +567,104 @@ class IBMTrackFormatted(IBMTrack):
             return False
         return self.sectors == readback_track.sectors
 
+    @classmethod
+    def from_config(cls, config: IBMTrackFormat, cyl: int, head: int):
 
-from greaseweazle.codec.ibm import fm, mfm
+        def sec_n(i):
+            return config.sz[i] if i < len(config.sz) else config.sz[-1]
+
+        if config.format_name == 'ibm.mfm':
+            mode, gaps = Mode.MFM, MFMGaps
+            synclen = 4 # A1 A1 A1 Mark
+        else:
+            mode, gaps = Mode.FM, FMGaps
+            synclen = 1 # Mark
+
+        t = cls(cyl, head, mode)
+        t.nsec = nsec = config.secs
+        t.img_bps = config.img_bps
+
+        if config.iam:
+            gap1 = gaps.gap1 if config.gap1 is None else config.gap1
+        else:
+            gap1 = None
+        gap2 = gaps.gap2 if config.gap2 is None else config.gap2
+        gap3 = 0 if config.gap3 is None else config.gap3
+        gap4a = gaps.gap4a if config.gap4a is None else config.gap4a
+
+        idx_sz = gap4a
+        if gap1 is not None:
+            idx_sz += t.gap_presync + synclen + gap1
+        idam_sz = t.gap_presync + synclen + 4 + 2 + gap2
+        dam_sz_pre = t.gap_presync + synclen
+        dam_sz_post = 2 + gap3
+
+        tracklen = idx_sz + (idam_sz + dam_sz_pre + dam_sz_post) * nsec
+        for i in range(nsec):
+            tracklen += 128 << sec_n(i)
+        tracklen *= 16
+
+        rate, rpm = config.rate, config.rpm
+        if rate == 0:
+            # FM: 0 = Micro-diskette (125kbps), 1 = 8-inch disk (250kbps)
+            # MFM: 1 = DD (250kbps), 2 = HD (500kbps), 3 = ED (1000kbps)
+            for i in (range(2),range(1,4))[mode is Mode.MFM]:
+                maxlen = ((50000*300//rpm) << i) + 5000
+                if tracklen < maxlen:
+                    break
+            rate = 125 << i # 125kbps or 250kbps
+
+        if mode is Mode.MFM and config.gap2 is None and rate >= 1000:
+            # At ED rate the default GAP2 is 41 bytes.
+            gap2 = 41
+            idam_sz += gap2 - gaps.gap2
+            tracklen += 16 * nsec * (gap2 - gaps.gap2)
+
+        tracklen_bc = rate * 400 * 300 // rpm
+
+        if nsec != 0 and config.gap3 is None:
+            space = max(0, tracklen_bc - tracklen)
+            no = sec_n(0)
+            gap3 = min(space // (16*nsec), gaps.gap3[no])
+            dam_sz_post += gap3
+            tracklen += 16 * nsec * gap3
+
+        tracklen_bc = max(tracklen_bc, tracklen)
+
+        t.time_per_rev = 60 / rpm
+        t.clock = t.time_per_rev / tracklen_bc
+
+        # Create logical sector map in rotational order
+        sec_map, pos = [-1] * nsec, 0
+        if nsec != 0:
+            pos = (cyl*config.cskew + head*config.hskew) % nsec
+        for i in range(nsec):
+            while sec_map[pos] != -1:
+                pos = (pos + 1) % nsec
+            sec_map[pos] = i
+            pos = (pos + config.interleave) % nsec
+
+        pos = gap4a
+        if gap1 is not None:
+            pos += t.gap_presync
+            t.iams = [IAM(pos*16,(pos+synclen)*16)]
+            pos += synclen + gap1
+
+        id0 = config.id
+        h = head if config.h is None else config.h
+        for i in range(nsec):
+            sec = sec_map[i]
+            pos += t.gap_presync
+            idam = IDAM(pos*16, (pos+synclen+4+2)*16, 0xffff,
+                        c = cyl, h = h, r= id0+sec, n = sec_n(sec))
+            pos += synclen + 4 + 2 + gap2 + t.gap_presync
+            size = 128 << idam.n
+            dam = DAM(pos*16, (pos+synclen+size+2)*16, 0xffff,
+                      mark=Mark.DAM, data=b'-=[BAD SECTOR]=-'*(size//16))
+            t.sectors.append(Sector(idam, dam))
+            pos += synclen + size + 2 + gap3
+
+        return t
 
 class IBMTrackFormat:
 
@@ -630,11 +748,7 @@ class IBMTrackFormat:
         self.finalised = True
 
     def mk_track(self, cyl, head):
-        if self.format_name == 'ibm.mfm':
-            t = mfm.IBM_MFM_Formatted.from_config(self, cyl, head)
-        else:
-            t = fm.IBM_FM_Formatted.from_config(self, cyl, head)
-        return t
+        return IBMTrackFormatted.from_config(self, cyl, head)
 
 # Local variables:
 # python-indent: 4
