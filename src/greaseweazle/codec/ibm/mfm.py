@@ -21,7 +21,7 @@ class IBM_MFM_Formatted(IBMTrackFormatted):
     GAP_3  = [ 32, 54, 84, 116, 255, 255, 255, 255 ]
 
     def __init__(cls, cyl: int, head: int):
-        super().__init__(cyl, head, Mode.FM)
+        super().__init__(cyl, head, Mode.MFM)
     
     @classmethod
     def from_config(cls, config: IBMTrackFormat, cyl: int, head: int):
