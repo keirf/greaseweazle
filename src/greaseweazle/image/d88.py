@@ -26,7 +26,7 @@ class D88(Image):
         self.filename = name
 
     @classmethod
-    def from_file(cls, name: str, fmt=None) -> Image:
+    def from_file(cls, name: str) -> Image:
 
         with open(name, "rb") as f:
             header = f.read(32)
