@@ -7,9 +7,10 @@
 
 from typing import Dict, Tuple, Optional, List
 
-import struct
+import struct, time
 from enum import IntFlag
 
+from greaseweazle import __version__
 from greaseweazle import error
 from greaseweazle.flux import Flux
 from .image import Image
@@ -380,21 +381,38 @@ class SCP(Image):
         trk_offs += bytes(trk_offs_len - len(trk_offs))
         wrsp += bytes(wrsp_len - len(wrsp))
 
+        creation_time = round(time.time())
+        footer_offs = 0x10 + trk_offs_len + wrsp_len + len(trk_dat)
+        footer = f'Greaseweazle {__version__}'.encode()
+        footer += struct.pack('<6I2Q4B4s',
+                              0, # drive manufacturer
+                              0, # drive model
+                              0, # drive serial
+                              0, # creator name
+                              footer_offs, # application name
+                              0, # comments
+                              creation_time, # creation time
+                              creation_time, # modification time
+                              0, # application version
+                              0, # hardware version
+                              0, # firmware version
+                              0x24, # format version (v2.4)
+                              b'FPCS')
+
         # Calculate checksum over all data (except 16-byte image header).
         csum = 0
-        for x in trk_offs:
-            csum += x
-        for x in trk_dat:
+        data = trk_offs + wrsp + trk_dat + footer
+        for x in data:
             csum += x
 
         # Generate the image header.
-        flags = SCPHeaderFlags.TPI_96
+        flags = SCPHeaderFlags.TPI_96 | SCPHeaderFlags.FOOTER
         if self.index_cued:
             flags |= SCPHeaderFlags.INDEXED
         nr_revs = self.nr_revs if self.nr_revs is not None else 0
         header = struct.pack("<3s9BI",
                              b"SCP",    # Signature
-                             0x24,      # Version 2.4
+                             0,
                              self.opts.disktype,
                              nr_revs,
                              0,         # start track
@@ -406,7 +424,7 @@ class SCP(Image):
                              csum & 0xffffffff)
 
         # Concatenate it all together and send it back.
-        return header + trk_offs + wrsp + trk_dat
+        return header + data
 
 
 # Local variables:
