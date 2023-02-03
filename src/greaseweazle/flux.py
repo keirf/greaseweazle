@@ -22,7 +22,7 @@ class Flux:
         self.index_list = index_list
         self.list = flux_list
         self.sample_freq = sample_freq
-        self.splice = 0
+        self.splice = None
         self.index_cued = index_cued
 
 
@@ -79,16 +79,19 @@ class Flux:
 
     def flux_for_writeout(self, cue_at_index=True) -> Flux:
 
+        # Splice at index unless we know better.
+        splice = 0 if self.splice is None else self.splice
+
         error.check(self.index_cued,
                     "Cannot write non-index-cued raw flux")
-        error.check(self.splice == 0 or len(self.index_list) > 1,
+        error.check(splice == 0 or len(self.index_list) > 1,
                     "Cannot write single-revolution unaligned raw flux")
-        splice_at_index = (self.splice == 0)
+        splice_at_index = (splice == 0)
 
         # Copy the required amount of flux to a fresh list.
         flux_list = []
         to_index = self.index_list[0]
-        remain = to_index + self.splice
+        remain = to_index + splice
         for f in self.list:
             if f > remain:
                 break
@@ -102,7 +105,7 @@ class Flux:
             # little fast.
             if remain > 0:
                 flux_list.append(remain)
-            prepend = max(round(to_index/10 - self.splice), 0)
+            prepend = max(round(to_index/10 - splice), 0)
             if prepend != 0:
                 four_us = max(self.sample_freq * 4e-6, 1)
                 flux_list = [four_us]*round(prepend/four_us) + flux_list

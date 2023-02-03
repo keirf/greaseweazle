@@ -12,7 +12,6 @@ import datetime, struct
 from greaseweazle import __version__
 from greaseweazle import error
 from greaseweazle.codec.ibm import ibm
-from greaseweazle.track import MasterTrack
 from .image import Image
 
 class IMDMode:

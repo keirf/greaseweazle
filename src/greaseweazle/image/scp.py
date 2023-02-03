@@ -92,7 +92,7 @@ class SCPOpts:
 
 class SCPTrack:
 
-    def __init__(self, tdh, dat, splice=0):
+    def __init__(self, tdh, dat, splice=None):
         self.tdh = tdh
         self.dat = dat
         self.splice = splice
@@ -286,7 +286,7 @@ class SCP(Image):
             self.nr_revs = min(self.nr_revs, nr_revs)
 
         factor = SCP.sample_freq / flux.sample_freq
-        splice = round(flux.splice * factor)
+        splice = None if flux.splice is None else round(flux.splice * factor)
 
         tdh, dat = bytearray(), bytearray()
         len_at_index = rev = 0
@@ -357,26 +357,35 @@ class SCP(Image):
 
         ntracks = max(to_track, default=0) + 1
 
+        # Emit a WRSP block iff we have at least one known splice point.
+        emit_wrsp = False
+        for track in to_track.values():
+            if track.splice is not None:
+                emit_wrsp = True
+        wrsp, wrsp_len = bytearray(), 0
+        if emit_wrsp:
+            wrsp_len = (2+2+169)*4
+            wrsp += struct.pack('<4sI4s2I',
+                                b'EXTS', wrsp_len- 8,  # EXTS header
+                                b'WRSP', wrsp_len-16,  # WRSP header
+                                0)                     # WRSP flags field
+
         # Generate the TLUT and concatenate all the tracks together.
         trk_offs, trk_offs_len = bytearray(), 0x2a0
         trk_dat = bytearray()
-        wrsp, wrsp_len = bytearray(), (2+2+169)*4
-        wrsp += struct.pack('<4sI4s2I',
-                            b'EXTS', wrsp_len- 8,  # EXTS header
-                            b'WRSP', wrsp_len-16,  # WRSP header
-                            0)                     # WRSP flags field
         trk_start = 0x10 + trk_offs_len + wrsp_len
-
         for tnr in range(ntracks):
             if tnr in to_track:
                 track = to_track[tnr]
                 trk_offs += struct.pack("<I", trk_start + len(trk_dat))
                 trk_dat += struct.pack("<3sB", b"TRK", tnr)
                 trk_dat += track.tdh + track.dat
-                wrsp += struct.pack("<I", track.splice)
+                splice = 0 if track.splice is None else track.splice
             else:
                 trk_offs += struct.pack("<I", 0)
-                wrsp += struct.pack("<I", 0)
+                splice = 0
+            if emit_wrsp:
+                wrsp += struct.pack("<I", splice)
         error.check(len(trk_offs) <= trk_offs_len, "SCP: Too many tracks")
         trk_offs += bytes(trk_offs_len - len(trk_offs))
         wrsp += bytes(wrsp_len - len(wrsp))
