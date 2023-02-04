@@ -3,6 +3,13 @@
 ** Keir Fraser <keir.xen@gmail.com>
 ************************************
 
+** v1.8 - 4 February 2023
+ - IMD: Read & write IMD image files
+ - IMG, diskdef: Allow sector padding in IMG files
+ - gw read: No seeking to cyl 0 on retry, by default
+ - HFE: Fix data rate of FM tracks
+ - SCP: Fix checksum calculation, and verify on import
+
 ** v1.7 - 29 January 2023
  - Bug fix release: Fix reading IPF images with weak tracks
 
