@@ -126,9 +126,12 @@ class SCP(Image):
         with open(name, "rb") as f:
             dat = f.read()
 
-        header = struct.unpack("<3s9BI", dat[0:16])
-        sig, _, disk_type, nr_revs, _, _, flags, _, single_sided, _, _ = header
+        (sig, _, disk_type, nr_revs, _, _, flags, _, single_sided, _,
+         checksum) = struct.unpack("<3s9BI", dat[0:16])
         error.check(sig == b"SCP", "SCP: Bad signature")
+
+        if sum(dat[16:]) & 0xffffffff != checksum:
+            print('SCP: WARNING: Bad image checksum')
 
         index_cued = flags & 1 or nr_revs == 1
 
@@ -408,11 +411,8 @@ class SCP(Image):
                               0x24, # format version (v2.4)
                               b'FPCS')
 
-        # Calculate checksum over all data (except 16-byte image header).
-        csum = 0
+        # Concatenate all data together for checksumming.
         data = trk_offs + wrsp + trk_dat + footer
-        for x in data:
-            csum += x
 
         # Generate the image header.
         flags = SCPHeaderFlags.TPI_96 | SCPHeaderFlags.FOOTER
@@ -430,7 +430,7 @@ class SCP(Image):
                              0,         # 16-bit cell width
                              single_sided,
                              0,         # 25ns capture
-                             csum & 0xffffffff)
+                             sum(data) & 0xffffffff)
 
         # Concatenate it all together and send it back.
         return header + data
