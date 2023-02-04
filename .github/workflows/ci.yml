@@ -24,7 +24,9 @@ jobs:
       run: python3 -m pip install --user setuptools_scm
 
     - name: Tests
-      run: . scripts/tests/test.sh
+      run: |
+        . scripts/tests/mypy.sh
+        . scripts/tests/test.sh
 
   build-ubuntu:
     runs-on: ubuntu-20.04
