@@ -1,7 +1,7 @@
 
 include Rules.mk
 
-TARGETS := version install uninstall clean _dist dist windist mrproper
+TARGETS := version install uninstall clean dist windist mypy
 .PHONY: $(TARGETS)
 
 PROJ = greaseweazle
@@ -18,17 +18,14 @@ uninstall:
 	$(PYTHON) -m pip uninstall $(PROJ)
 
 clean:
-	rm -rf build dist
+	rm -rf build dist .mypy_cache src/greaseweazle/__init__.py
 	rm -rf src/*.egg-info src/greaseweazle/optimised/*.so
 	rm -rf $(PROJ)-* ipf ipf.zip
-	find src -name __pycache__ | xargs rm -rf
+	find . -name __pycache__ | xargs rm -rf
 
 dist:
 	rm -rf $(PROJ)-*
 	$(PYTHON) setup.py sdist --formats=zip -d .
-
-mypy:
-	$(PYTHON) -m mypy --config-file=scripts/tests/mypy.ini
 
 windist: install
 	rm -rf $(PROJ)-*
@@ -45,3 +42,9 @@ windist: install
 	cp -a ipf/capsimg_binary/CAPSImg.dll $(PROJ)-$(VER)/
 	rm -rf ipf ipf.zip
 	$(ZIP) $(PROJ)-$(VER)-win.zip $(PROJ)-$(VER)
+
+# mypy testing
+src/greaseweazle/__init__.py:
+	echo "__version__: str" >$@
+mypy: src/greaseweazle/__init__.py
+	$(PYTHON) -m mypy --config-file=scripts/tests/mypy.ini

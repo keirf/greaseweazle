@@ -21,11 +21,11 @@ jobs:
         sudo apt -y install python3-pip
 
     - name: Dependency packages (pip)
-      run: python3 -m pip install --user setuptools_scm
+      run: python3 -m pip install --user setuptools_scm mypy types-requests .
 
     - name: Tests
       run: |
-        . scripts/tests/mypy.sh
+        make mypy
         . scripts/tests/test.sh
 
   build-ubuntu:
