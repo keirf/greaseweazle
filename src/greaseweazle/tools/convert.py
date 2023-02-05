@@ -52,7 +52,7 @@ def convert(args, in_image, out_image, decoder=None):
         if args.adjust_speed is not None:
             track.scale(args.adjust_speed / track.time_per_rev)
 
-        if decoder is None:
+        if decoder is None or not args.raw_image_class:
             dat = track
             print("T%u.%u: %s" % (cyl, head, track.summary_string()))
         else:
@@ -144,8 +144,6 @@ Known formats:\n%s"""
         print("Format " + args.format)
 
     in_image = open_input_image(args, in_image_class)
-    if not args.raw_image_class:
-        decoder = None
     with open_output_image(args, out_image_class) as out_image:
         convert(args, in_image, out_image, decoder=decoder)
 
