@@ -6,6 +6,8 @@
 ![Downloads Badge][downloads-badge]
 ![Version Badge][version-badge]
 
+<img src="https://raw.githubusercontent.com/wiki/keirf/greaseweazle/assets/banner.jpg">
+
 This repository contains the host tools for controlling Greaseweazle:
 an [Open Source][designfiles] USB device capable of reading and
 writing raw data on nearly any type of floppy disk.
