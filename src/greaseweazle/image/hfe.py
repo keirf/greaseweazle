@@ -5,6 +5,7 @@
 # This is free and unencumbered software released into the public domain.
 # See the file COPYING for more details, or visit <http://unlicense.org>.
 
+from __future__ import annotations
 from typing import Dict, Tuple, Optional
 
 import struct
@@ -35,13 +36,31 @@ class HFEOpts:
             raise error.Fatal("HFE: Invalid bitrate: '%s'" % bitrate)
 
 
+class HFETrack:
+    def __init__(self, bits: bitarray) -> None:
+        self.bits = bits
+
+    @classmethod
+    def from_hfe_bytes(cls, b: bytes) -> HFETrack:
+        bits = bitarray(endian='big')
+        bits.frombytes(b)
+        bits.bytereverse()
+        return cls(bits)
+
+    def to_hfe_bytes(self) -> bytes:
+        bits = bitarray(endian='big')
+        bits.frombytes(self.bits.tobytes())
+        bits.bytereverse()
+        return bits.tobytes()
+
+
 class HFE(Image):
 
     def __init__(self) -> None:
         self.opts = HFEOpts()
         # Each track is (bitlen, rawbytes).
         # rawbytes is a bytes() object in little-endian bit order.
-        self.to_track: Dict[Tuple[int,int], Tuple[int,bytes]] = dict()
+        self.to_track: Dict[Tuple[int,int], HFETrack] = dict()
 
 
     @classmethod
@@ -73,7 +92,7 @@ class HFE(Image):
                     tdat += dat[d_off:d_off+d_nr]
                     todo -= d_nr
                     offset += 1
-                hfe.to_track[cyl,side] = (len(tdat)*8, tdat)
+                hfe.to_track[cyl,side] = HFETrack.from_hfe_bytes(tdat)
 
         return hfe
 
@@ -82,12 +101,10 @@ class HFE(Image):
         if (cyl,side) not in self.to_track:
             return None
         assert self.opts.bitrate is not None
-        bitlen, rawbytes = self.to_track[cyl,side]
-        tdat = bitarray(endian='little')
-        tdat.frombytes(rawbytes)
+        t = self.to_track[cyl,side]
         track = MasterTrack(
-            bits = tdat[:bitlen],
-            time_per_rev = bitlen / (2000*self.opts.bitrate))
+            bits = t.bits,
+            time_per_rev = len(t.bits) / (2000*self.opts.bitrate))
         return track
 
 
@@ -112,16 +129,13 @@ class HFE(Image):
                 double_bytes = ibm.encode(bits.tobytes())
                 double_bits = bitarray(endian='big')
                 double_bits.frombytes(double_bytes)
-                double_bits = double_bits[:2*len(bits)]
-                bits = double_bits
-            bits.bytereverse()
+                bits = double_bits[:2*len(bits)]
         else:
             flux = t.flux()
             flux.cue_at_index()
             raw = RawTrack(clock = 5e-4 / self.opts.bitrate, data = flux)
             bits, _ = raw.get_revolution(0)
-            bits.bytereverse()
-        self.to_track[cyl,side] = (len(bits), bits.tobytes())
+        self.to_track[cyl,side] = HFETrack(bits)
 
 
     def get_image(self) -> bytes:
@@ -152,14 +166,14 @@ class HFE(Image):
                 # At least one side of this cylinder is populated.
                 if s1 is not None:
                     n_side = 2
-                bc = [s0 if s0 is not None else (0,bytes()),
-                      s1 if s1 is not None else (0,bytes())]
-                nr_bytes = max(len(t[1]) for t in bc)
+                bc = [s0.to_hfe_bytes() if s0 is not None else bytes(),
+                      s1.to_hfe_bytes() if s1 is not None else bytes()]
+                nr_bytes = max(len(t) for t in bc)
                 nr_blocks = (nr_bytes + 0xff) // 0x100
                 tlut += struct.pack("<2H", len(tdat)//512 + 2, 2 * nr_bytes)
                 for b in range(nr_blocks):
                     for t in bc:
-                        slice = t[1][b*256:(b+1)*256]
+                        slice = t[b*256:(b+1)*256]
                         tdat += slice + bytes([0x88] * (256 - len(slice)))
 
         # Construct the image header.
