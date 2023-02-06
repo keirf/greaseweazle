@@ -9,7 +9,7 @@
 
 description = "Read a disk to the specified image file."
 
-import sys
+import sys, copy
 
 from greaseweazle.tools import util
 from greaseweazle import error
@@ -60,6 +60,10 @@ def read_with_retry(usb, args, t, decoder):
         return flux, flux
 
     dat = decoder(cyl, head, flux)
+    if dat is None:
+        print("T%u.%u: WARNING: Out of range for for format '%s': No format "
+              "conversion applied" % (cyl, head, args.format))
+        return flux, None
     for pll in plls[1:]:
         if dat.nr_missing() == 0:
             break
@@ -156,9 +160,12 @@ def read_to_image(usb, args, image, decoder=None):
     for t in args.tracks:
         cyl, head = t.cyl, t.head
         flux, dat = read_with_retry(usb, args, t, decoder)
-        if decoder is not None:
+        if decoder is not None and dat is not None:
             summary[cyl,head] = dat
-        image.emit_track(cyl, head, flux if args.raw else dat)
+        if args.raw:
+            image.emit_track(cyl, head, flux)
+        elif dat is not None:
+            image.emit_track(cyl, head, dat)
 
     if decoder is not None:
         print_summary(args, summary)
@@ -220,7 +227,7 @@ Known formats:\n%s"""
                                   % (args.format, formats.print_formats(
                                       args.diskdefs)))
             decoder = args.fmt_cls.decode_track
-            def_tracks = args.fmt_cls.tracks
+            def_tracks = copy.copy(args.fmt_cls.tracks)
             if args.revs is None: args.revs = args.fmt_cls.default_revs
         if def_tracks is None:
             def_tracks = util.TrackSet('c=0-81:h=0-1')

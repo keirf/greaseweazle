@@ -9,7 +9,7 @@
 
 description = "Write a disk from the specified image file."
 
-import sys
+import sys, copy
 
 from greaseweazle.tools import util
 from greaseweazle import error, track
@@ -57,6 +57,10 @@ def write_from_image(usb, args, image):
 
         if args.raw_image_class and args.fmt_cls is not None:
             track = args.fmt_cls.decode_track(cyl, head, track)
+            if track is None:
+                print("T%u.%u: WARNING: out of range for format '%s': Track "
+                      "skipped" % (cyl, head, args.format))
+                continue
             error.check(track.nr_missing() == 0,
                         'T%u.%u: %u missing sectors in input image'
                         % (cyl, head, track.nr_missing()))
@@ -208,7 +212,7 @@ Unknown format '%s'
 Known formats:\n%s"""
                                   % (args.format, formats.print_formats(
                                       args.diskdefs)))
-            def_tracks = args.fmt_cls.tracks
+            def_tracks = copy.copy(args.fmt_cls.tracks)
         if def_tracks is None:
             def_tracks = util.TrackSet('c=0-81:h=0-1')
         if args.tracks is not None:

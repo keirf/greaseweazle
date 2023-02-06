@@ -60,7 +60,8 @@ class DiskFormat:
     
     def decode_track(self, cyl, head, track):
         t = self.mk_track(cyl, head)
-        t.decode_raw(track)
+        if t is not None:
+            t.decode_raw(track)
         return t
 
     @property

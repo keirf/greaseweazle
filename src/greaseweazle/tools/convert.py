@@ -57,6 +57,10 @@ def convert(args, in_image, out_image, decoder=None):
             print("T%u.%u: %s" % (cyl, head, track.summary_string()))
         else:
             dat = decoder(cyl, head, track)
+            if dat is None:
+                print("T%u.%u: WARNING: out of range for format '%s': Track "
+                      "skipped" % (cyl, head, args.format))
+                continue
             for pll in plls[1:]:
                 if dat.nr_missing() == 0:
                     break
