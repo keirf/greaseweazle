@@ -670,26 +670,29 @@ class IBMTrackFormat:
 
     default_revs = default_revs
 
-    def __init__(self, format_name):
+    def __init__(self, format_name: str):
         self.secs = 0
-        self.sz = []
+        self.sz: List[int] = []
         self.id = 1
-        self.h = None
+        self.h: Optional[int] = None
         self.format_name = format_name
         self.interleave = 1
         self.cskew, self.hskew = 0, 0
         self.rpm = 300
-        self.gap1, self.gap2, self.gap3, self.gap4a = None, None, None, None
+        self.gap1: Optional[int] = None
+        self.gap2: Optional[int] = None
+        self.gap3: Optional[int] = None
+        self.gap4a: Optional[int] = None
         self.iam = True
         self.rate = 0
-        self.img_bps = None
+        self.img_bps: Optional[int] = None
         self.finalised = False
 
-    def add_param(self, key, val):
+    def add_param(self, key: str, val: str) -> None:
         if key == 'secs':
-            val = int(val)
-            error.check(0 <= val <= 256, '%s out of range' % key)
-            self.secs = val
+            n = int(val)
+            error.check(0 <= n <= 256, '%s out of range' % key)
+            self.secs = n
         elif key == 'bps':
             self.sz = []
             for x in val.split(','):
@@ -707,35 +710,35 @@ class IBMTrackFormat:
                 for _ in range(l):
                     self.sz.append(s)
         elif key == 'interleave':
-            val = int(val)
-            error.check(1 <= val <= 255, '%s out of range' % key)
-            self.interleave = val
+            n = int(val)
+            error.check(1 <= n <= 255, '%s out of range' % key)
+            self.interleave = n
         elif key in ['id', 'cskew', 'hskew']:
-            val = int(val)
-            error.check(0 <= val <= 255, '%s out of range' % key)
-            setattr(self, key, val)
+            n = int(val)
+            error.check(0 <= n <= 255, '%s out of range' % key)
+            setattr(self, key, n)
         elif key in ['gap1', 'gap2', 'gap3', 'gap4a', 'h']:
             if val == 'auto':
-                val = None
+                n = None
             else:
-                val = int(val)
-                error.check(0 <= val <= 255, '%s out of range' % key)
-            setattr(self, key, val)
+                n = int(val)
+                error.check(0 <= n <= 255, '%s out of range' % key)
+            setattr(self, key, n)
         elif key == 'iam':
             error.check(val in ['yes', 'no'], 'bad iam value')
             self.iam = val == 'yes'
         elif key in ['rate', 'rpm']:
-            val = int(val)
-            error.check(1 <= val <= 2000, '%s out of range' % key)
-            setattr(self, key, val)
+            n = int(val)
+            error.check(1 <= n <= 2000, '%s out of range' % key)
+            setattr(self, key, n)
         elif key == 'img_bps':
-            val = int(val)
-            error.check(128 <= val <= 8192, '%s out of range' % key)
-            self.img_bps = val
+            n = int(val)
+            error.check(128 <= n <= 8192, '%s out of range' % key)
+            self.img_bps = n
         else:
             raise error.Fatal('unrecognised track option %s' % key)
 
-    def finalise(self):
+    def finalise(self) -> None:
         if self.finalised:
             return
         error.check(self.iam or self.gap1 is None,
@@ -747,7 +750,7 @@ class IBMTrackFormat:
                     'img_bps cannot be smaller than sector data size')
         self.finalised = True
 
-    def mk_track(self, cyl, head):
+    def mk_track(self, cyl: int, head: int) -> IBMTrackFormatted:
         return IBMTrackFormatted.from_config(self, cyl, head)
 
 # Local variables:
