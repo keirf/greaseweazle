@@ -6,9 +6,10 @@
 # See the file COPYING for more details, or visit <http://unlicense.org>.
 
 from __future__ import annotations
-from typing import Dict, Tuple, Optional
+from typing import Dict, Tuple, Optional, List
 
 import struct
+import itertools as it
 
 from greaseweazle import error
 from greaseweazle.codec.ibm import ibm
@@ -22,6 +23,7 @@ class HFEOpts:
     
     def __init__(self) -> None:
         self._bitrate: Optional[int] = None
+        self._version = 1
 
     @property
     def bitrate(self) -> Optional[int]:
@@ -35,21 +37,38 @@ class HFEOpts:
         except ValueError:
             raise error.Fatal("HFE: Invalid bitrate: '%s'" % bitrate)
 
+    @property
+    def version(self) -> int:
+        return self._version
+    @version.setter
+    def version(self, version) -> None:
+        try:
+            self._version = int(version)
+            if self._version != 1 and self._version != 3:
+                raise ValueError
+        except ValueError:
+            raise error.Fatal("HFE: Invalid version: '%s'" % version)
+
 
 class HFETrack:
-    def __init__(self, bits: bitarray) -> None:
-        self.bits = bits
+    def __init__(self, track: MasterTrack) -> None:
+        self.track = track
 
     @classmethod
-    def from_hfe_bytes(cls, b: bytes) -> HFETrack:
+    def from_bitarray(cls, bits: bitarray, bitrate: int) -> HFETrack:
+        return cls(MasterTrack(
+            bits = bits, time_per_rev = len(bits) / (2000*bitrate)))
+
+    @classmethod
+    def from_hfe_bytes(cls, b: bytes, bitrate: int) -> HFETrack:
         bits = bitarray(endian='big')
         bits.frombytes(b)
         bits.bytereverse()
-        return cls(bits)
+        return cls.from_bitarray(bits, bitrate)
 
     def to_hfe_bytes(self) -> bytes:
         bits = bitarray(endian='big')
-        bits.frombytes(self.bits.tobytes())
+        bits.frombytes(self.track.bits.tobytes())
         bits.bytereverse()
         return bits.tobytes()
 
@@ -71,13 +90,18 @@ class HFE(Image):
 
         (sig, f_rev, n_cyl, n_side, t_enc, bitrate,
          _, _, _, tlut_base) = struct.unpack("<8s4B2H2BH", dat[:20])
-        error.check(sig != b"HXCHFEV3", "HFEv3 is not supported")
-        error.check(sig == b"HXCPICFE" and f_rev <= 1, "Not a valid HFE file")
+        if sig == b"HXCHFEV3":
+            version = 3
+        else:
+            error.check(sig == b"HXCPICFE", "Not a valid HFE file")
+            version = 1
+        error.check(f_rev <= 1, "Not a valid HFE file")
         error.check(0 < n_cyl, "HFE: Invalid #cyls")
         error.check(0 < n_side < 3, "HFE: Invalid #sides")
 
         hfe = cls()
         hfe.opts.bitrate = bitrate
+        hfe.opts.version = version
 
         tlut = dat[tlut_base*512:tlut_base*512+n_cyl*4]
         
@@ -92,7 +116,11 @@ class HFE(Image):
                     tdat += dat[d_off:d_off+d_nr]
                     todo -= d_nr
                     offset += 1
-                hfe.to_track[cyl,side] = HFETrack.from_hfe_bytes(tdat)
+                track_v1 = HFETrack.from_hfe_bytes(tdat, bitrate)
+                if version == 1:
+                    hfe.to_track[cyl,side] = track_v1
+                else:
+                    hfe.to_track[cyl,side] = hfev3_mk_track(track_v1)
 
         return hfe
 
@@ -100,12 +128,7 @@ class HFE(Image):
     def get_track(self, cyl: int, side: int) -> Optional[MasterTrack]:
         if (cyl,side) not in self.to_track:
             return None
-        assert self.opts.bitrate is not None
-        t = self.to_track[cyl,side]
-        track = MasterTrack(
-            bits = t.bits,
-            time_per_rev = len(t.bits) / (2000*self.opts.bitrate))
-        return track
+        return self.to_track[cyl,side].track
 
 
     def emit_track(self, cyl: int, side: int, track) -> None:
@@ -122,23 +145,54 @@ class HFE(Image):
                 self.opts.bitrate *= 2
             print('HFE: Data bitrate detected: %d kbit/s' % self.opts.bitrate)
         if issubclass(type(t), MasterTrack):
-            # Rotate data to start at the index.
+            # Rotate data and timings to start at the index.
             index = -t.splice % len(t.bits)
             bits = t.bits[index:] + t.bits[:index]
+            bit_ticks = (t.bit_ticks[index:] + t.bit_ticks[:index]
+                         if t.bit_ticks else None)
+            # Rotate the weak areas
+            weak = []
+            for s, n in t.weak:
+                s -= t.splice
+                if s < 0:
+                    if s + n > 0:
+                        weak.append((s % len(t.bits), -s))
+                        weak.append((0, s + n))
+                    else:
+                        weak.append((s % len(t.bits), n))
+                else:
+                    weak.append((s, n))
             if is_fm: # FM data is recorded to HFE at double rate
                 double_bytes = ibm.encode(bits.tobytes())
                 double_bits = bitarray(endian='big')
                 double_bits.frombytes(double_bytes)
                 bits = double_bits[:2*len(bits)]
+                if bit_ticks is not None:
+                    bit_ticks = [x for x in bit_ticks for _ in range(2)]
+                weak = [(2*x,2*y) for (x,y) in weak]
+            mt = MasterTrack(
+                bits = bits, time_per_rev = t.time_per_rev,
+                bit_ticks = bit_ticks, weak = weak)
         else:
             flux = t.flux()
             flux.cue_at_index()
             raw = RawTrack(clock = 5e-4 / self.opts.bitrate, data = flux)
-            bits, _ = raw.get_revolution(0)
-        self.to_track[cyl,side] = HFETrack(bits)
+            bits, bit_ticks = raw.get_revolution(0)
+            mt = MasterTrack(
+                bits = bits, time_per_rev = flux.time_per_rev,
+                bit_ticks = bit_ticks)
+        self.to_track[cyl,side] = HFETrack(mt)
 
 
     def get_image(self) -> bytes:
+
+        # Empty disk may have no bitrate
+        if self.opts.bitrate is None:
+            assert not self.to_track
+            self.opts.bitrate = 250
+
+        if self.opts.version == 3:
+            return hfev3_get_image(self)
 
         n_side = 1
         n_cyl = max(self.to_track.keys(), default=(0,), key=lambda x:x[0])[0]
@@ -147,11 +201,6 @@ class HFE(Image):
         # We dynamically build the Track-LUT and -Data arrays.
         tlut = bytearray()
         tdat = bytearray()
-
-        # Empty disk may have no bitrate
-        if self.opts.bitrate is None:
-            assert not self.to_track
-            self.opts.bitrate = 250
 
         # Stuff real data into the image.
         for i in range(n_cyl):
@@ -195,6 +244,322 @@ class HFE(Image):
 
         return header + tlut + tdat
 
+
+###
+### HFE V3 TRACK PARSER
+###
+
+class HFEv3_Op:
+    Nop      = 0xf0
+    Index    = 0xf1
+    Bitrate  = 0xf2
+    SkipBits = 0xf3
+    Rand     = 0xf4
+
+class HFEv3_Range:
+    def __init__(self, s: int, n: int, val=0):
+        self.s, self.n, self.val = s, n, val
+    @property
+    def e(self) -> int:
+        return self.s + self.n
+
+def hfev3_mk_track(track_v1: HFETrack) -> HFETrack:
+
+    def add_weak(weak: List[HFEv3_Range], pos: int, nr: int) -> None:
+        if len(weak) != 0:
+            w = weak[-1]
+            if w.e == pos:
+                w.n += nr
+                return
+        weak.append(HFEv3_Range(pos, nr))
+
+    # Input: Raw HFE
+    tdat = track_v1.track.bits.tobytes()
+
+    # Outputs: Bitcells, bitcell timings, weak areas.
+    bits = bitarray(endian='big')
+    ticks: List[int] = []
+    weak: List[HFEv3_Range] = []
+
+    i = rate = 0
+    while i < len(tdat):
+        x, i = tdat[i], i+1
+        if x == HFEv3_Op.Nop:
+            pass
+        elif x == HFEv3_Op.Index:
+            pass # TODO: Support hard-sector images
+        elif x == HFEv3_Op.Bitrate:
+            error.check(i+1 <= len(tdat), 'HFEv3: Short track data')
+            rate, i = tdat[i], i+1
+        elif x == HFEv3_Op.SkipBits:
+            error.check(i+2 <= len(tdat), 'HFEv3: Short track data')
+            nr, x, i = tdat[i], tdat[i+1], i+2
+            error.check(0 < nr < 8, 'HFEv3: Bad skipbits value: %d' % nr)
+            if x == HFEv3_Op.Rand:
+                add_weak(weak, len(bits), 8-nr)
+                x = 0
+            try:
+                bits.frombytes(bytes([x << nr]))
+            except ValueError:
+                raise error.Fatal('HFEv3: Bad skipbits: %02x/%d' % (x, nr))
+            bits = bits[:-nr]
+            ticks += [rate]*(8-nr)
+        elif x == HFEv3_Op.Rand:
+            add_weak(weak, len(bits), 8)
+            bits.frombytes(bytes(1))
+            ticks += [rate]*8
+        else:
+            bits.frombytes(bytes([x]))
+            ticks += [rate]*8
+
+    # If the track did not start with a Bitrate opcode, cycle the rate round
+    # from the end of the track.
+    error.check(rate != 0, 'HFEv3: Bitrate was never set in track')
+    for i in range(len(ticks)):
+        if ticks[i] != 0: break
+        ticks[i] = rate
+
+    mt = MasterTrack(
+        bits = bits, time_per_rev = sum(ticks)/36e6,
+        bit_ticks = ticks, weak = list(map(lambda x: (x.s, x.n), weak)))
+    return HFETrack(mt)
+
+
+###
+### HFE V3 TRACK GENERATOR
+###
+
+# HFEv3_Chunk: Represents a consecutive range of input bitcells with identical
+# bitcell timings and weakness property.
+class HFEv3_Chunk:
+    def __init__(self, nbits: int, time_per_bit: float, is_random: bool):
+        self.nbits = nbits
+        self.time_per_bit = time_per_bit
+        self.is_random = is_random
+    def __str__(self) -> str:
+        s = "%d bits, %.4fus per bit" % (self.nbits, self.time_per_bit*1e6)
+        if self.is_random:
+            s += ", random"
+        return s
+
+class HFEv3_Generator:
+    def __init__(self, track: MasterTrack) -> None:
+        # Properties of the input track.
+        self.track = track
+        self.ticks_per_rev = (len(track.bits) if track.bit_ticks is None
+                              else sum(track.bit_ticks))
+        self.time_per_tick = self.track.time_per_rev / self.ticks_per_rev
+        # tick_iter: An iterator over ranges of consecutive bitcells with
+        # identical ticks per bitcell.
+        if track.bit_ticks is None:
+            self.ticks = [(0,len(track.bits),1)]
+        else:
+            self.ticks = []
+            c, s = track.bit_ticks[0], 0
+            for i, t in enumerate(track.bit_ticks):
+                if t != c:
+                    self.ticks.append((s, i-s, c))
+                    c, s = t, i
+            self.ticks.append((s, len(track.bit_ticks)-s, c))
+        self.tick_iter = map(lambda x: HFEv3_Range(*x),
+                             it.chain(self.ticks, [(len(track.bits),0,0)]))
+        self.tick_cur = next(self.tick_iter)
+        # weak_iter: An iterator over weak ranges.
+        self.weak_iter = map(lambda x: HFEv3_Range(*x),
+                             it.chain(track.weak, [(len(track.bits),0)]))
+        self.weak_cur = next(self.weak_iter)
+        # out: The raw HFEv3 output bytestream that we are generating.
+        self.out = bytearray([HFEv3_Op.Index])
+        # time: Input track current time, in seconds.
+        # hfe_time: HFE track output current time, in seconds.
+        self.time = self.hfe_time = 0.0
+        # pos: Input track current position, in bitcells.
+        self.pos = 0
+        # rate: Current HFE output rate, as set by HFEv3_Op.Bitrate.
+        # rate_change_pos: Byte position we last updated rate in HFE output.
+        self.rate, self.rate_change_pos = -1, 0
+        # chunk: Chunk of input bitcells currently being processed.
+        self.chunk = self.next_chunk()
+
+    def next_chunk(self) -> Optional[HFEv3_Chunk]:
+        # All done? Then return nothing.
+        if self.pos >= len(self.track.bits):
+            return None
+        # Position among bitcells with identical timing.
+        while self.pos >= self.tick_cur.e:
+            self.tick_cur = next(self.tick_iter)
+        assert self.pos >= self.tick_cur.s
+        n = self.tick_cur.e - self.pos
+        # Position relative to weak ranges.
+        while self.pos >= self.weak_cur.e:
+            self.weak_cur = next(self.weak_iter)
+        if self.pos < self.weak_cur.s:
+            n = min(n, self.weak_cur.s - self.pos)
+            is_random = False
+        else:
+            n = min(n, self.weak_cur.e - self.pos)
+            is_random = True
+        return HFEv3_Chunk(n, self.time_per_tick * self.tick_cur.val,
+                           is_random)
+
+    def increment_position(self, n: int) -> None:
+        c = self.chunk
+        assert c is not None
+        self.pos += n
+        self.time += n * c.time_per_bit
+        self.hfe_time += n * self.rate/36e6
+        c.nbits -= n
+        if c.nbits == 0:
+            self.chunk = self.next_chunk()
+
+    def raw_hfe_bytes(self) -> bytes:
+        x = bitarray(endian='big')
+        x.frombytes(self.out)
+        x.bytereverse()
+        return x.tobytes()
+
+    @classmethod
+    def empty(cls, time_per_rev: float, bitrate: float) -> HFEv3_Generator:
+        nbits = round(2000 * bitrate * time_per_rev)
+        return cls(MasterTrack(
+            bits = bitarray(nbits),
+            time_per_rev = time_per_rev,
+            weak = [(0, nbits)]))
+
+
+def hfev3_get_image(hfe: HFE) -> bytes:
+
+    n_side = 1
+    n_cyl = max(hfe.to_track.keys(), default=(0,), key=lambda x:x[0])[0]
+    n_cyl += 1
+
+    # We dynamically build the Track-LUT and -Data arrays.
+    tlut = bytearray()
+    tdat = bytearray()
+
+    try:
+        default_time_per_rev = (next(iter(hfe.to_track.values()))
+                                .track.time_per_rev)
+    except StopIteration:
+        default_time_per_rev = 0.2
+
+    bitrate = hfe.opts.bitrate
+    assert bitrate is not None
+
+    # Stuff real data into the image.
+    for cyl in range(n_cyl):
+        time_per_rev = (hfe.to_track[cyl,0].track.time_per_rev
+                        if (cyl,0) in hfe.to_track
+                        else hfe.to_track[cyl,1].track.time_per_rev
+                        if (cyl,1) in hfe.to_track
+                        else default_time_per_rev)
+        s = list()
+        s.append(HFEv3_Generator(hfe.to_track[cyl,0].track)
+                 if (cyl,0) in hfe.to_track
+                 else HFEv3_Generator.empty(time_per_rev, bitrate))
+        s.append(HFEv3_Generator(hfe.to_track[cyl,1].track)
+                 if (cyl,1) in hfe.to_track
+                 else HFEv3_Generator.empty(time_per_rev, bitrate))
+
+        if (cyl,1) in hfe.to_track:
+            n_side = 2
+
+        max_skew, max_delta = 0.0, 0.0
+        while True:
+            # Select the track 'x' with work to do and shortest output buffer.
+            x, y, c = s[0], s[1], s[0].chunk
+            if c is None or (len(y.out) < len(x.out) and y.chunk is not None):
+                x, y, c = y, x, y.chunk
+                if c is None:
+                    break
+
+            # Calculate timing error across drive heads, in bitcells.
+            # This also accounts for differences in output byte position.
+            diff = (round((x.time - y.time) / c.time_per_bit)
+                    + (len(y.out) - len(x.out)) * 8)
+            max_skew = max(max_skew, abs(diff))
+
+            # Adjust time per bit for accumulated error in time due to
+            # rounding error in the HFEv3_Op.Bitrate parameter.
+            # Note that we distribute the correction factor across the
+            # worst-case number of bitcells before we allow ourselves
+            # another minor bitrate adjustment.
+            rate_distance = 64 # byte-cells
+            tpb = c.time_per_bit + (x.time - x.hfe_time) / (rate_distance*8)
+
+            # Do a rate change if the rate has significantly changed or,
+            # for a change of +/-1, if we haven't changed rate in a while.
+            rate = round(tpb * 36e6)
+            if (rate != x.rate
+                and (abs(rate-x.rate) > 1 or diff >= 16
+                     or (len(x.out) - x.rate_change_pos) > rate_distance)):
+                x.out.append(HFEv3_Op.Bitrate)
+                x.out.append(rate)
+                x.rate = rate
+                x.rate_change_pos = len(x.out)
+                diff -= 16
+
+            # Insert Nop padding if we still need it.
+            if diff >= 8:
+                x.out.append(HFEv3_Op.Nop)
+
+            # Emit up to 8 bitcells.
+            n = min(c.nbits, 8)
+            if n < 8:
+                x.out.append(HFEv3_Op.SkipBits)
+                x.out.append(8 - n)
+            if c.is_random:
+                x.out.append(HFEv3_Op.Rand)
+            else:
+                x.out.append(x.track.bits[x.pos:x.pos+n].tobytes()[0]>>(8-n))
+
+            # Update tallies.
+            x.increment_position(n)
+            max_delta = max(max_delta, abs(x.time - x.hfe_time))
+
+        info = 'HFEv3 [%d] ' % cyl
+        for i,x in enumerate(s):
+            delta = len(x.out)-len(x.track.bits)//8
+            info += ('h%d:%d/+%d/+%.02f%% ' %
+                     (i, len(x.out), delta, delta*8*100/len(x.track.bits)))
+        info += 'hskew:%dbc rate-err:%.02fus' % (max_skew, max_delta*1e6)
+        print(info)
+
+        nr_bytes = max(len(x.out) for x in s)
+        error.check(
+            nr_bytes < 32768,
+            '''\
+            HFEv3: Track too long to fit in image!
+            Are you trying to convert raw flux (SCP, KF, etc)?
+            If so: You can't (yet). If not: Report a bug.''')
+
+        nr_blocks = (nr_bytes + 0xff) // 0x100
+        for x in s:
+            x.out += bytes([HFEv3_Op.Nop]) * (nr_blocks*0x100 - len(x.out))
+        bc = [x.raw_hfe_bytes() for x in s]
+        tlut += struct.pack("<2H", len(tdat)//512 + 2, 2 * nr_bytes)
+        for b in range(nr_blocks):
+            for t in bc:
+                tdat += t[b*256:(b+1)*256]
+
+    # Construct the image header.
+    header = struct.pack("<8s4B2H2BH",
+                         b"HXCHFEV3",
+                         0,
+                         n_cyl,
+                         n_side,
+                         0xff, # unknown encoding
+                         hfe.opts.bitrate,
+                         0,    # rpm (unused)
+                         0xff, # unknown interface
+                         1,    # rsvd
+                         1)    # track list offset
+
+    # Pad the header and TLUT to 512-byte blocks.
+    header += bytes([0xff] * (0x200 - len(header)))
+    tlut += bytes([0xff] * (0x200 - len(tlut)))
+
+    return header + tlut + tdat
 
 # Local variables:
 # python-indent: 4
