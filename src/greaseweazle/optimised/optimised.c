@@ -94,18 +94,26 @@ flux_to_bitcells(PyObject *self, PyObject *args)
 
             nbits += 1;
             ticks -= clock;
-            if (PyList_Append_SR(time_array, PyFloat_FromDouble(clock)) < 0)
-                return NULL;
+
             if (ticks < clock/2) {
                 if (!bitarray_append(bit_array, Py_True))
                     return NULL;
                 break;
             }
 
+            if (PyList_Append_SR(time_array, PyFloat_FromDouble(clock)) < 0)
+                return NULL;
             if (!bitarray_append(bit_array, Py_False))
                 return NULL;
 
         }
+
+        /* PLL: Adjust clock phase according to mismatch. */
+        new_ticks = ticks * (1.0 - pll_phase_adj);
+        if (PyList_Append_SR(
+                time_array,
+                PyFloat_FromDouble(clock + ticks - new_ticks)) < 0)
+            return NULL;
 
         /* PLL: Adjust clock frequency according to phase mismatch. */
         if (zeros <= 3) {
@@ -120,11 +128,7 @@ flux_to_bitcells(PyObject *self, PyObject *args)
             clock = clock_min;
         else if (clock > clock_max)
             clock = clock_max;
-        /* PLL: Adjust clock phase according to mismatch. */
-        new_ticks = ticks * (1.0 - pll_phase_adj);
-        if (PyList_SetItem(time_array, PyList_Size(time_array)-1,
-                           PyFloat_FromDouble(ticks - new_ticks)) < 0)
-            return NULL;
+
         ticks = new_ticks;
 
     }
@@ -256,3 +260,13 @@ PyMODINIT_FUNC PyInit_optimised(void)
     append_s = Py_BuildValue("s", "append");
     return PyModule_Create(&moduledef);
 }
+
+/*
+ * Local variables:
+ * mode: C
+ * c-file-style: "Linux"
+ * c-basic-offset: 4
+ * tab-width: 4
+ * indent-tabs-mode: nil
+ * End:
+ */
