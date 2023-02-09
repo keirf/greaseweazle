@@ -1,6 +1,12 @@
 from setuptools import setup, find_packages, Extension
 from setuptools_scm import get_version
 
+import platform
+if platform.system() == 'Linux':
+    extra_compile_args = ['-Wall', '-Werror']
+else:
+    extra_compile_args = []
+
 def version():
     version = get_version()
     with open('src/greaseweazle/__init__.py', 'w') as f:
@@ -21,7 +27,8 @@ setup(name = 'greaseweazle',
       package_data = { 'greaseweazle.data': ['*.cfg'] },
       ext_modules = [
           Extension('greaseweazle.optimised.optimised',
-                    sources = ['src/greaseweazle/optimised/optimised.c'])
+                    sources = ['src/greaseweazle/optimised/optimised.c'],
+                    extra_compile_args = extra_compile_args)
       ],
       entry_points= {
           'console_scripts': ['gw=greaseweazle.cli:main']
