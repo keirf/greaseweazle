@@ -48,11 +48,8 @@ class D88(Image):
                 f.seek(track_offset)
                 if f.tell() >= disk_size:
                     continue
-                if media_flag == 0x00:
-                    physical_cyl = track_index // 2 * 2
-                else:
-                    physical_cyl = track_index // 2
-                physical_head = track_index % 2
+                cyl = track_index // 2
+                head = track_index % 2
                 track = None
                 track_mfm_flag = None
                 pos = None
@@ -100,7 +97,7 @@ class D88(Image):
                 track.secs = len(secs)
                 track.sz = [x[3] for x in secs]
                 track.finalise()
-                t = track.mk_track(physical_cyl, physical_head)
+                t = track.mk_track(cyl, head)
 
                 for nr,s in enumerate(t.sectors):
                     c,h,r,n,data = secs[nr]
@@ -108,7 +105,7 @@ class D88(Image):
                     s.idam.c, s.idam.h, s.idam.r, s.idam.n = c,h,r,n
                     s.dam.data = data
 
-                d88.to_track[physical_cyl, physical_head] = t
+                d88.to_track[cyl, head] = t
 
         return d88
 
