@@ -11,11 +11,8 @@ import struct
 import os
 
 from greaseweazle import error
-from greaseweazle.codec.formats import *
 from greaseweazle.codec.ibm import ibm
 from .image import Image
-
-from greaseweazle.codec import formats
 
 class D88(Image):
 
@@ -29,16 +26,18 @@ class D88(Image):
     def from_file(cls, name: str) -> Image:
 
         with open(name, "rb") as f:
-            header = f.read(32)
-            (disk_name, terminator, write_protect, media_flag, disk_size) = struct.unpack('<16sB9xBBL', header)
+            header = struct.unpack('<16sB9xBBL', f.read(32))
+            disk_name, terminator, write_prot, media_flag, disk_size = header
             track_table = [x[0] for x in struct.iter_unpack('<L', f.read(640))]
             if track_table[0] == 688:
-                track_table.extend([x[0] for x in struct.iter_unpack('<L', f.read(16))])
+                track_table.extend([x[0] for x in
+                                    struct.iter_unpack('<L', f.read(16))])
             elif track_table[0] != 672:
                 raise error.Fatal("D88: Unsupported track table length.")
             f.seek(0, os.SEEK_END)
             if f.tell() != disk_size:
-                print('D88: Warning: Multiple disks found in image, only using first.')
+                print('D88: Warning: Multiple disks found in image, '
+                      'only using first.')
 
             d88 = cls(name)
 
@@ -59,10 +58,10 @@ class D88(Image):
                     (c, h, r, n, num_sectors, mfm_flag,
                      deleted, status, data_size) = \
                         struct.unpack('<BBBBHBBB5xH', f.read(16))
-                    if status != 0x00:
-                        raise error.Fatal('D88: FDC error codes are unsupported.')
-                    if deleted != 0x00:
-                        raise error.Fatal('D88: Deleted data is unsupported.')
+                    error.check(status == 0x00,
+                                'D88: FDC error codes are unsupported.')
+                    error.check(deleted == 0x00,
+                                'D88: Deleted data is unsupported.')
                     if track is None:
                         if media_flag == 0x00:
 
@@ -83,14 +82,16 @@ class D88(Image):
                             track.rpm = 360
                         track_mfm_flag = mfm_flag
                         num_sectors_track = num_sectors
-                    if mfm_flag != track_mfm_flag:
-                        raise error.Fatal('D88: Mixed FM and MFM sectors in one track are unsupported.')
-                    if num_sectors_track != num_sectors:
-                        raise error.Fatal('D88: Corrupt number of sectors per track in sector header.')
+                    error.check(mfm_flag == track_mfm_flag,
+                                'D88: Mixed FM and MFM sectors in one track '
+                                'are unsupported.')
+                    error.check(num_sectors_track == num_sectors,
+                                'D88: Corrupt number of sectors per track '
+                                'in sector header.')
                     data = f.read(data_size)
                     size = 128 << n
-                    if size != data_size:
-                        raise error.Fatal('D88: Extra sector data is unsupported.')
+                    error.check(size == data_size,
+                                'D88: Extra sector data is unsupported.')
                     secs.append((c,h,r,n,data))
                 if track is None:
                     continue
