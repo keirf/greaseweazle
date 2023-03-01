@@ -33,6 +33,7 @@ class CmdlineHelpFormatter(argparse.ArgumentDefaultsHelpFormatter,
 class ArgumentParser(argparse.ArgumentParser):
     def __init__(self, formatter_class=CmdlineHelpFormatter, *args, **kwargs):
         return super().__init__(formatter_class=formatter_class,
+                                allow_abbrev=False,
                                 *args, **kwargs)
 
 drive_desc = """\

@@ -126,8 +126,7 @@ Examples:
   gw update --force --tag v1.0
   gw update --file greaseweazle-firmware-v1.0.upd"""
 
-    parser = util.ArgumentParser(allow_abbrev=False,
-                                 usage='%(prog)s [options]',
+    parser = util.ArgumentParser(usage='%(prog)s [options]',
                                  epilog=epilog)
     parser.add_argument("--file", help="use specified update file")
     parser.add_argument("--tag", help="use specified GitHub release tag")
