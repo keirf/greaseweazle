@@ -418,8 +418,7 @@ class SCP(Image):
         data = trk_offs + wrsp + trk_dat + footer
 
         # Generate the image header.
-        flags = (SCPHeaderFlags.TPI_96 | SCPHeaderFlags.FOOTER
-                | SCPHeaderFlags.FLUX_CREATOR)
+        flags = SCPHeaderFlags.TPI_96 | SCPHeaderFlags.FOOTER
         if self.index_cued:
             flags |= SCPHeaderFlags.INDEXED
         nr_revs = self.nr_revs if self.nr_revs is not None else 0
