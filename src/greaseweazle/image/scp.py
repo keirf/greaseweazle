@@ -395,21 +395,24 @@ class SCP(Image):
 
         creation_time = round(time.time())
         footer_offs = trk_start + len(trk_dat)
-        footer = f'Greaseweazle {__version__}'.encode()
-        footer += struct.pack('<6I2Q4B4s',
-                              0, # drive manufacturer
-                              0, # drive model
-                              0, # drive serial
-                              0, # creator name
-                              footer_offs, # application name
-                              0, # comments
-                              creation_time, # creation time
-                              creation_time, # modification time
-                              0, # application version
-                              0, # hardware version
-                              0, # firmware version
-                              0x24, # format version (v2.4)
-                              b'FPCS')
+        app_name = f'Greaseweazle {__version__}'.encode()
+        footer = struct.pack(f'<H{len(app_name)}sc6I2Q4B4s',
+                             len(app_name),
+                             app_name,
+                             b'\0',
+                             0, # drive manufacturer
+                             0, # drive model
+                             0, # drive serial
+                             0, # creator name
+                             footer_offs, # application name
+                             0, # comments
+                             creation_time, # creation time
+                             creation_time, # modification time
+                             0, # application version
+                             0, # hardware version
+                             0, # firmware version
+                             0x24, # format version (v2.4)
+                             b'FPCS')
 
         # Concatenate all data together for checksumming.
         data = trk_offs + wrsp + trk_dat + footer
