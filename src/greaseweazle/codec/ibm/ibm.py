@@ -336,7 +336,6 @@ class IBMTrackRaw(IBMTrack):
             mark = decode(bits[offs+3*16:offs+4*16].tobytes())[0]
             if mark == Mark.IAM:
                 areas.append(IAM(offs, offs+4*16))
-                self.has_iam = True
 
         for offs in bits.itersearch(mfm_sync):
 
@@ -403,7 +402,6 @@ class IBMTrackRaw(IBMTrack):
         for offs in bits.itersearch(fm_iam_sync):
             offs += 16
             areas.append(IAM(offs, offs+1*16))
-            self.has_iam = True
 
         for offs in bits.itersearch(fm_sync_prefix):
             offs += 16
