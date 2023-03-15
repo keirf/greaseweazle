@@ -80,7 +80,8 @@ class TrackDef:
 
 class DiskDef:
 
-    def __init__(self) -> None:
+    def __init__(self, format_name: str) -> None:
+        self.format_name = format_name
         self.cyls: Optional[int] = None
         self.heads: Optional[int] = None
         self.step = 1
@@ -175,16 +176,17 @@ class ParseMode:
     Disk  = 1
     Track = 2
 
-def get_diskdef(
-        format_name: str,
-        diskdef_filename: Optional[str] = None
-) -> Optional[DiskDef]:
+def get_diskdefs(
+        format_name: Optional[str],
+        diskdef_filename: Optional[str]
+) -> List[DiskDef]:
 
     parse_mode = ParseMode.Outer
     active = False
     disk: Optional[DiskDef] = None
     track: Optional[TrackDef] = None
     lines, diskdef_filename = read_diskdef_file_lines(diskdef_filename)
+    defs: List[DiskDef] = []
 
     for linenr, l in enumerate(lines, start=1):
         try:
@@ -202,14 +204,19 @@ def get_diskdef(
                 error.check(disk_match is not None, 'syntax error')
                 assert disk_match is not None # mypy
                 parse_mode = ParseMode.Disk
-                active = disk_match.group(1) == format_name
+                active = disk_match.group(1) == format_name or not format_name
                 if active:
-                    disk = DiskDef()
+                    disk = DiskDef(disk_match.group(1))
 
             elif parse_mode == ParseMode.Disk:
                 if t == 'end':
                     parse_mode = ParseMode.Outer
-                    active = False
+                    if active:
+                        assert disk is not None
+                        disk.finalise()
+                        defs.append(disk)
+                        disk = None
+                        active = False
                     continue
                 tracks_match = re.match(r'tracks\s+([0-9,.*-]+)'
                                         '\s+([\w,.-]+)', t)
@@ -289,11 +296,21 @@ def get_diskdef(
             err.args = (ctxt + err.args[0],) + err.args[1:]
             raise
 
-    if disk is None:
-        return None
-    disk.finalise()
+    return defs
 
-    return disk
+def get_all_diskdefs(
+        diskdef_filename: Optional[str] = None
+) -> Dict[str, DiskDef]:
+    defs = get_diskdefs(None, diskdef_filename)
+    return { d.format_name: d for d in defs }
+
+
+def get_diskdef(
+        format_name: str,
+        diskdef_filename: Optional[str] = None
+) -> Optional[DiskDef]:
+    defs = get_diskdefs(format_name, diskdef_filename)
+    return defs[0] if defs else None
 
 
 def print_formats(diskdef_filename: Optional[str] = None) -> str:
