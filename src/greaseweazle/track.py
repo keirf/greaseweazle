@@ -331,7 +331,7 @@ class RawTrack:
                 freq, clock, clock_min, clock_max,
                 self.pll_period_adj, self.pll_phase_adj)
 
-            
+
 def flux_to_bitcells(bit_array, time_array, revolutions,
                      index_iter, flux_iter,
                      freq, clock_centre, clock_min, clock_max,
@@ -352,23 +352,28 @@ def flux_to_bitcells(bit_array, time_array, revolutions,
         # Clock out zero or more 0s, followed by a 1.
         zeros = 0
         while True:
+            ticks -= clock
+            if ticks < clock/2:
+                break
+            zeros += 1
+            bit_array.append(False)
+        bit_array.append(True)
 
+        # PLL: Adjust clock window position according to phase mismatch.
+        new_ticks = ticks * (1 - pll_phase_adj)
+
+        # Distribute the clock adjustment across all bits we just emitted.
+        _clock = clock + (ticks - new_ticks) / (zeros + 1)
+        for i in range(zeros + 1):
             # Check if we cross the index mark.
-            to_index -= clock
+            to_index -= _clock
             if to_index < 0:
                 revolutions.append(nbits)
                 nbits = 0
                 to_index += next(index_iter)
-
+            # Emit bit time.
             nbits += 1
-            ticks -= clock
-            time_array.append(clock)
-            if ticks >= clock/2:
-                zeros += 1
-                bit_array.append(False)
-            else:
-                bit_array.append(True)
-                break
+            time_array.append(_clock)
 
         # PLL: Adjust clock frequency according to phase mismatch.
         if zeros <= 3:
@@ -379,9 +384,7 @@ def flux_to_bitcells(bit_array, time_array, revolutions,
             clock += (clock_centre - clock) * pll_period_adj
         # Clamp the clock's adjustment range.
         clock = min(max(clock, clock_min), clock_max)
-        # PLL: Adjust clock phase according to mismatch.
-        new_ticks = ticks * (1 - pll_phase_adj)
-        time_array[-1] += ticks - new_ticks
+
         ticks = new_ticks
 
 # Local variables:

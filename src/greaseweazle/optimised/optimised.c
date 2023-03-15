@@ -39,8 +39,8 @@ flux_to_bitcells(PyObject *self, PyObject *args)
 
     /* Local variables */
     PyObject *item;
-    double clock, new_ticks, ticks, to_index;
-    int zeros, nbits;
+    double _clock, clock, new_ticks, ticks, to_index;
+    int i, zeros, nbits;
 
     if (!PyArg_ParseTuple(args, "OOOOOdddddd",
                           &bit_array, &time_array, &revolutions,
@@ -76,10 +76,27 @@ flux_to_bitcells(PyObject *self, PyObject *args)
             continue;
 
         /* Clock out zero or more 0s, followed by a 1. */
-        for (zeros = 0; ; zeros++) {
+        zeros = 0;
+        for (;;) {
+            ticks -= clock;
+            if (ticks < clock/2)
+                break;
+            zeros += 1;
+            if (!bitarray_append(bit_array, Py_False))
+                return NULL;
+        }
+        if (!bitarray_append(bit_array, Py_True))
+            return NULL;
+
+        /* PLL: Adjust clock window position according to phase mismatch. */
+        new_ticks = ticks * (1.0 - pll_phase_adj);
+
+        /* Distribute the clock adjustment across all bits we just emitted. */
+        _clock = clock + (ticks - new_ticks) / (zeros + 1);
+        for (i = 0; i <= zeros; i++) {
 
             /* Check if we cross the index mark. */
-            to_index -= clock;
+            to_index -= _clock;
             if (to_index < 0) {
                 if (PyList_Append_SR(revolutions, PyLong_FromLong(nbits)) < 0)
                     return NULL;
@@ -92,28 +109,12 @@ flux_to_bitcells(PyObject *self, PyObject *args)
                     return NULL;
             }
 
+            /* Emit bit time. */
             nbits += 1;
-            ticks -= clock;
-
-            if (ticks < clock/2) {
-                if (!bitarray_append(bit_array, Py_True))
-                    return NULL;
-                break;
-            }
-
-            if (PyList_Append_SR(time_array, PyFloat_FromDouble(clock)) < 0)
-                return NULL;
-            if (!bitarray_append(bit_array, Py_False))
+            if (PyList_Append_SR(time_array, PyFloat_FromDouble(_clock)) < 0)
                 return NULL;
 
         }
-
-        /* PLL: Adjust clock phase according to mismatch. */
-        new_ticks = ticks * (1.0 - pll_phase_adj);
-        if (PyList_Append_SR(
-                time_array,
-                PyFloat_FromDouble(clock + ticks - new_ticks)) < 0)
-            return NULL;
 
         /* PLL: Adjust clock frequency according to phase mismatch. */
         if (zeros <= 3) {
