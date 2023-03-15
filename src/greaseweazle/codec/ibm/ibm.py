@@ -318,13 +318,10 @@ class IBMTrack:
 
 class IBMTrackRaw(IBMTrack):
 
-    def mfm_decode_raw(self, track, pll=None) -> List[TrackArea]:
-        flux = track.flux()
-        flux.cue_at_index()
-        raw = RawTrack(time_per_rev = self.time_per_rev,
-                       clock = self.clock, data = flux, pll = pll)
-        bits, _ = raw.get_all_data()
+    @staticmethod
+    def mfm_decode_raw(raw: RawTrack) -> List[TrackArea]:
 
+        bits, _ = raw.get_all_data()
         areas: List[TrackArea] = []
         idam = None
 
@@ -387,13 +384,10 @@ class IBMTrackRaw(IBMTrack):
 
         return areas
 
-    def fm_decode_raw(self, track, pll=None) -> List[TrackArea]:
-        flux = track.flux()
-        flux.cue_at_index()
-        raw = RawTrack(time_per_rev = self.time_per_rev,
-                       clock = self.clock, data = flux, pll = pll)
-        bits, _ = raw.get_all_data()
+    @staticmethod
+    def fm_decode_raw(raw: RawTrack) -> List[TrackArea]:
 
+        bits, _ = raw.get_all_data()
         areas: List[TrackArea] = []
         idam = None
 
@@ -458,10 +452,15 @@ class IBMTrackRaw(IBMTrack):
 
     def decode_raw(self, track, pll=None) -> None:
         
+        flux = track.flux()
+        flux.cue_at_index()
+        raw = RawTrack(time_per_rev = self.time_per_rev,
+                       clock = self.clock, data = flux, pll = pll)
+
         if self.mode is Mode.FM:
-            areas = self.fm_decode_raw(track, pll)
+            areas = self.fm_decode_raw(raw)
         else:
-            areas = self.mfm_decode_raw(track, pll)
+            areas = self.mfm_decode_raw(raw)
 
         # Add to the deduped lists
         a: Optional[TrackArea]
