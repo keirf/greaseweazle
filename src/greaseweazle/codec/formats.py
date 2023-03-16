@@ -208,6 +208,26 @@ def print_formats(cfg=None):
     for l in lines:
         disk_match = re.match(r'\s*disk\s+([\w,.-]+)', l)
         if disk_match:
-            formats.append('  ' + disk_match.group(1))
+            formats.append(disk_match.group(1))
+    formats = list(filter(None, formats))
     formats.sort()
-    return '\n'.join(filter(None, formats))
+    return '\n'.join(format_columns(formats))
+
+
+def format_columns(names, line_width=79, indent='  ', separator=' ', padding=' '):
+    maxlen = max(len(name) for name in names)
+    column_width = len(separator) + maxlen
+    padstr = padding * maxlen
+    def pad(s):
+        return s + padstr[:maxlen - len(s)]
+    num_cols = (line_width - len(indent) + len(separator)) // column_width
+    num_rows = -(len(names) // -num_cols)
+    rows = [[""] * num_cols for i in range(num_rows)]
+    r = c = 0
+    for name in names:
+        rows[r][c] = pad(name)
+        r += 1
+        if r >= num_rows:
+            r = 0
+            c += 1
+    return [indent + separator.join(row).rstrip() for row in rows]
