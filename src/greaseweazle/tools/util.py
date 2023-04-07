@@ -36,6 +36,15 @@ class ArgumentParser(argparse.ArgumentParser):
                                 allow_abbrev=False,
                                 *args, **kwargs)
 
+def min_int(_min):
+    def x(value):
+        ivalue = int(value)
+        if ivalue < _min:
+            raise argparse.ArgumentTypeError("must be %d or greater" % _min)
+        return ivalue
+    return x
+uint = min_int(0)
+
 drive_desc = """\
 DRIVE: Drive (and bus) identifier:
   0 | 1 | 2           :: Shugart bus unit

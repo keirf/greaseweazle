@@ -48,7 +48,7 @@ def main(argv):
     parser.add_argument("--device", help="device name (COM/serial port)")
     parser.add_argument("--drive", type=util.drive_letter, default='A',
                         help="drive to read")
-    parser.add_argument("--revs", type=int, metavar="N", default=1,
+    parser.add_argument("--revs", type=util.min_int(1), metavar="N", default=1,
                         help="number of revolutions to erase per track")
     parser.add_argument("--tracks", type=util.TrackSet, metavar="TSPEC",
                         help="which tracks to erase")
@@ -59,8 +59,6 @@ def main(argv):
     parser.description = description
     parser.prog += ' ' + argv[1]
     args = parser.parse_args(argv[2:])
-
-    error.check(args.revs > 0, '--revs: must be greater than zero')
 
     try:
         usb = util.usb_open(args.device)

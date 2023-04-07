@@ -78,8 +78,8 @@ def read_with_retry(usb, args, t, decoder):
         print(s)
         if dat.nr_missing() == 0:
             break
-        if (retry % args.retries) == 0:
-            if seek_retry > args.seek_retries:
+        if args.retries == 0 or (retry % args.retries) == 0:
+            if args.retries == 0 or seek_retry > args.seek_retries:
                 print("T%u.%u: Giving up: %d sectors missing"
                       % (cyl, head, dat.nr_missing()))
                 break
@@ -184,7 +184,7 @@ def main(argv):
                         help="drive to read")
     parser.add_argument("--diskdefs", help="disk definitions file")
     parser.add_argument("--format", help="disk format (output is converted unless --raw)")
-    parser.add_argument("--revs", type=int, metavar="N",
+    parser.add_argument("--revs", type=util.min_int(1), metavar="N",
                         help="number of revolutions to read per track")
     parser.add_argument("--tracks", type=util.TrackSet, metavar="TSPEC",
                         help="which tracks to read")
@@ -194,9 +194,10 @@ def main(argv):
                         help="fake index pulses at SPEED")
     parser.add_argument("--adjust-speed", type=util.period, metavar="SPEED",
                         help="scale track data to effective drive SPEED")
-    parser.add_argument("--retries", type=int, default=3, metavar="N",
+    parser.add_argument("--retries", type=util.uint, default=3, metavar="N",
                         help="number of retries per seek-retry")
-    parser.add_argument("--seek-retries", type=int, default=0, metavar="N",
+    parser.add_argument("--seek-retries", type=util.uint, default=0,
+                        metavar="N",
                         help="number of seek retries")
     parser.add_argument("-n", "--no-clobber", action="store_true",
                         help="do not overwrite an existing file")

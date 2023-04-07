@@ -41,11 +41,11 @@ def main(argv):
     parser.add_argument("--device", help="device name (COM/serial port)")
     parser.add_argument("--drive", type=util.drive_letter, default='A',
                         help="drive to read")
-    parser.add_argument("--cyls", type=int, default=80, metavar="N",
+    parser.add_argument("--cyls", type=util.uint, default=80, metavar="N",
                         help="number of drive cylinders")
-    parser.add_argument("--passes", type=int, default=3, metavar="N",
+    parser.add_argument("--passes", type=util.uint, default=3, metavar="N",
                         help="number of passes across the cleaning disk")
-    parser.add_argument("--linger", type=int, default=100, metavar="N",
+    parser.add_argument("--linger", type=util.uint, default=100, metavar="N",
                         help="linger time per step, milliseconds")
     parser.description = description
     parser.prog += ' ' + argv[1]

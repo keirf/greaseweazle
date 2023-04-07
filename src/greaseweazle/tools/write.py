@@ -190,7 +190,7 @@ def main(argv):
                         help="fake index pulses at SPEED")
     parser.add_argument("--no-verify", action="store_true",
                         help="disable verify")
-    parser.add_argument("--retries", type=int, default=3, metavar="N",
+    parser.add_argument("--retries", type=util.uint, default=3, metavar="N",
                         help="number of retries on verify failure")
     parser.add_argument("--precomp", type=PrecompSpec,
                         help="write precompensation")

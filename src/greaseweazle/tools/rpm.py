@@ -46,7 +46,7 @@ def main(argv):
     parser.add_argument("--device", help="greaseweazle device name")
     parser.add_argument("--drive", type=util.drive_letter, default='A',
                         help="drive to read")
-    parser.add_argument("--nr", type=int, default=1, metavar="N",
+    parser.add_argument("--nr", type=util.uint, default=1, metavar="N",
                         help="number of iterations")
     parser.description = description
     parser.prog += ' ' + argv[1]

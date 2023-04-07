@@ -24,7 +24,7 @@ def pin_set(argv):
 
     parser = util.ArgumentParser(usage='%(prog)s [options] pin level')
     parser.add_argument("--device", help="device name (COM/serial port)")
-    parser.add_argument("pin", type=int, help="pin number")
+    parser.add_argument("pin", type=util.uint, help="pin number")
     parser.add_argument("level", type=level, help="pin level (H,L)")
     parser.description = description
     parser.prog += ' pin set'
@@ -53,7 +53,7 @@ def pin_get(argv):
     parser.add_argument("--device", help="device name (COM/serial port)")
     parser.add_argument("--drive", type=util.drive_letter, default='A',
                         help="drive to read")
-    parser.add_argument("pin", type=int, help="pin number")
+    parser.add_argument("pin", type=util.uint, help="pin number")
     parser.description = description
     parser.prog += ' pin get'
     args = parser.parse_args(argv[3:])

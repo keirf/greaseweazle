@@ -35,7 +35,7 @@ def main(argv):
                         help="allow extreme cylinders with no prompt")
     parser.add_argument("--motor-on", action="store_true",
                         help="seek with drive motor activated")
-    parser.add_argument("cylinder", type=int, help="cylinder to seek")
+    parser.add_argument("cylinder", type=util.uint, help="cylinder to seek")
     parser.description = description
     parser.prog += ' ' + argv[1]
     args = parser.parse_args(argv[2:])

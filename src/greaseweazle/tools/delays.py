@@ -18,15 +18,15 @@ def main(argv):
 
     parser = util.ArgumentParser(usage='%(prog)s [options]')
     parser.add_argument("--device", help="device name (COM/serial port)")
-    parser.add_argument("--select", type=int, metavar="N",
+    parser.add_argument("--select", type=util.uint, metavar="N",
                         help="delay after drive select (usecs)")
-    parser.add_argument("--step", type=int, metavar="N",
+    parser.add_argument("--step", type=util.uint, metavar="N",
                         help="delay between head steps (usecs)")
-    parser.add_argument("--settle", type=int, metavar="N",
+    parser.add_argument("--settle", type=util.uint, metavar="N",
                         help="settle delay after seek (msecs)")
-    parser.add_argument("--motor", type=int, metavar="N",
+    parser.add_argument("--motor", type=util.uint, metavar="N",
                         help="delay after motor on (msecs)")
-    parser.add_argument("--watchdog", type=int, metavar="N",
+    parser.add_argument("--watchdog", type=util.uint, metavar="N",
                         help="quiescent time until drives reset (msecs)")
     parser.description = description
     parser.prog += ' ' + argv[1]
