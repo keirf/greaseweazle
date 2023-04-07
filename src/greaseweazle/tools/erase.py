@@ -11,6 +11,7 @@ description = "Erase a disk."
 
 import sys
 
+from greaseweazle import error
 from greaseweazle.tools import util
 from greaseweazle import usb as USB
 
@@ -25,14 +26,17 @@ def erase(usb, args):
 
     for t in args.tracks:
         cyl, head = t.cyl, t.head
-        print("T%u.%u: Erasing Track" % (cyl, head))
         usb.seek(t.physical_cyl, t.physical_head)
-        if args.hfreq:
-            usb.write_track(flux_list = [ round(drive_ticks * 1.1) ],
-                            cue_at_index = False,
-                            terminate_at_index = False)
-        else:
-            usb.erase_track(drive_ticks * 1.1)
+        for rev in range(args.revs):
+            print("T%u.%u: Erasing Track (Pass %u/%u)"
+                  % (cyl, head, rev+1, args.revs))
+            usb.seek(t.physical_cyl, t.physical_head)
+            if args.hfreq:
+                usb.write_track(flux_list = [ round(drive_ticks * 1.1) ],
+                                cue_at_index = False,
+                                terminate_at_index = False)
+            else:
+                usb.erase_track(drive_ticks * 1.1)
 
 
 def main(argv):
@@ -44,6 +48,8 @@ def main(argv):
     parser.add_argument("--device", help="device name (COM/serial port)")
     parser.add_argument("--drive", type=util.drive_letter, default='A',
                         help="drive to read")
+    parser.add_argument("--revs", type=int, metavar="N", default=1,
+                        help="number of revolutions to erase per track")
     parser.add_argument("--tracks", type=util.TrackSet, metavar="TSPEC",
                         help="which tracks to erase")
     parser.add_argument("--hfreq", action="store_true",
@@ -54,6 +60,8 @@ def main(argv):
     parser.prog += ' ' + argv[1]
     args = parser.parse_args(argv[2:])
 
+    error.check(args.revs > 0, '--revs: must be greater than zero')
+
     try:
         usb = util.usb_open(args.device)
         tracks = util.TrackSet('c=0-81:h=0-1')
@@ -62,8 +70,8 @@ def main(argv):
         args.tracks = tracks
         print("Erasing %s" % (args.tracks))
         util.with_drive_selected(erase, usb, args)
-    except USB.CmdError as error:
-        print("Command Failed: %s" % error)
+    except USB.CmdError as err:
+        print("Command Failed: %s" % err)
 
 
 if __name__ == "__main__":

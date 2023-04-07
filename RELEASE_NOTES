@@ -3,6 +3,8 @@
 ** Keir Fraser <keir.xen@gmail.com>
 ************************************
 
+** v1.10 - 1 March 2023
+
 ** v1.9 - 1 March 2023
  - HFE: Support reading and writing HFEv3 image files
    - For example: gw convert Game.ipf Game.hfe::version=3
