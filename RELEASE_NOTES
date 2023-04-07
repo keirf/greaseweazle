@@ -3,7 +3,14 @@
 ** Keir Fraser <keir.xen@gmail.com>
 ************************************
 
-** v1.10 - 1 March 2023
+** v1.10 - 7 April 2023
+ - New diskdef "ibm.160"
+ - gw erase: New option --revs=N
+ - gw read: Fix --retries=0
+ - MacOS: Explicitly search for CAPS library under /Library/Frameworks
+ - gw: Minor fixes to flux-to-bitcell conversion
+ - gw: Disallow abbreviated long option names
+ - SCP: Fix footer metadata format
 
 ** v1.9 - 1 March 2023
  - HFE: Support reading and writing HFEv3 image files
