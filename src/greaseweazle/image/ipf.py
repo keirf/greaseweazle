@@ -305,6 +305,8 @@ def open_libcaps():
     for name in _names:
         names.append(name)
         names.append(os.path.join(path, name))
+        if platform.system() == "Darwin":
+            names.append(os.path.join('/Library/Frameworks', name))
 
     # Walk the search list, trying to open the CAPS library.
     for name in names:
