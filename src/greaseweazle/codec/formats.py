@@ -7,6 +7,7 @@
 
 import os.path, re
 import importlib.resources
+import itertools as it
 from copy import copy
 
 from greaseweazle import error
@@ -203,11 +204,15 @@ def get_format(name, cfg=None):
 
 
 def print_formats(cfg=None):
-    formats = []
+    columns, sep, formats = 80, 2, []
     lines, _ = get_cfg_lines(cfg)
     for l in lines:
         disk_match = re.match(r'\s*disk\s+([\w,.-]+)', l)
         if disk_match:
-            formats.append('  ' + disk_match.group(1))
+            formats.append(disk_match.group(1))
     formats.sort()
-    return '\n'.join(filter(None, formats))
+    max_len = max(len(name) for name in formats) + sep
+    per_row = max(1, columns // max_len)
+    return '\n'.join(map(lambda row: (f'{{:{max_len}}}'*per_row).format(*row),
+                         it.zip_longest(*[iter(formats)]*per_row,
+                                        fillvalue='')))
