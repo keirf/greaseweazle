@@ -31,8 +31,9 @@ def open_input_image(args, image_class):
 def open_output_image(args, image_class):
     image = image_class.to_file(args.out_file, args.fmt_cls, args.no_clobber)
     for opt, val in args.out_file_opts.items():
-        error.check(hasattr(image, 'opts') and hasattr(image.opts, opt),
-                    "%s: Invalid file option: %s" % (args.out_file, opt))
+        error.check(hasattr(image, 'opts') and opt in image.opts.settings,
+                    "%s: Invalid file option: %s\n" % (args.out_file, opt)
+                    + 'Valid options: ' + ', '.join(image.opts.settings))
         setattr(image.opts, opt, val)
     return image
 

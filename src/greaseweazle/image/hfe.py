@@ -12,18 +12,69 @@ import struct
 import itertools as it
 
 from greaseweazle import error
+from greaseweazle.tools import util
 from greaseweazle.codec.ibm import ibm
 from greaseweazle.track import MasterTrack, RawTrack
 from bitarray import bitarray
 from .image import Image
 
+InterfaceMode = {
+    'IBMPC_DD':             0x00,
+    'IBMPC_HD':             0x01,
+    'ATARIST_DD':           0x02,
+    'ATARIST_HD':           0x03,
+    'AMIGA_DD':             0x04,
+    'AMIGA_HD':             0x05,
+    'CPC_DD':               0x06,
+    'GENERIC_SHUGART_DD':   0x07,
+    'IBMPC_ED':             0x08,
+    'MSX2_DD':              0x09,
+    'C64_DD':               0x0A,
+    'EMU_SHUGART':          0x0B,
+    'S950_DD':              0x0C,
+    'S950_HD':              0x0D,
+    'S950_DD_HD':           0x0E,
+    'IBMPC_DD_HD':          0x0F,
+    'QUICKDISK':            0x10,
+    'UNKNOWN':              0xFF
+}
+
+EncodingType = {
+    'ISOIBM_MFM':           0x00,
+    'AMIGA_MFM':            0x01,
+    'ISOIBM_FM':            0x02,
+    'EMU_FM':               0x03,
+    'TYCOM_FM':             0x04,
+    'MEMBRAIN_MFM':         0x05,
+    'APPLEII_GCR1':         0x06,
+    'APPLEII_GCR2':         0x07,
+    'APPLEII_HDDD_A2_GCR1': 0x08,
+    'APPLEII_HDDD_A2_GCR2': 0x09,
+    'ARBURGDAT':            0x0A,
+    'ARBURGSYS':            0x0B,
+    'AED6200P_MFM':         0x0C,
+    'NORTHSTAR_HS_MFM':     0x0D,
+    'HEATHKIT_HS_FM':       0x0E,
+    'DEC_RX02_M2FM':        0x0F,
+    'APPLEMAC_GCR':         0x10,
+    'QD_MO5':               0x11,
+    'C64_GCR':              0x12,
+    'VICTOR9K_GCR':         0x13,
+    'MICRALN_HS_FM':        0x14,
+    'UNKNOWN':              0xFF
+}
+
 class HFEOpts:
     """bitrate: Bitrate of new HFE image file.
     """
+
+    settings = [ 'bitrate', 'version', 'interface', 'encoding' ]
     
     def __init__(self) -> None:
         self._bitrate: Optional[int] = None
         self._version = 1
+        self._interface = 0xff
+        self._encoding = 0xff
 
     @property
     def bitrate(self) -> Optional[int]:
@@ -49,6 +100,37 @@ class HFEOpts:
         except ValueError:
             raise error.Fatal("HFE: Invalid version: '%s'" % version)
 
+    @property
+    def interface(self):
+        return self._interface
+    @interface.setter
+    def interface(self, mode):
+        try:
+            self._interface = InterfaceMode[mode.upper()]
+        except KeyError:
+            try:
+                self._interface = int(mode, 0)
+            except ValueError:
+                l = [ x.lower() for x in InterfaceMode.keys() ]
+                l.sort()
+                raise error.Fatal("Bad HFE interface mode: '%s'\n" % mode
+                                  + 'Valid modes:\n' + util.columnify(l))
+
+    @property
+    def encoding(self):
+        return self._encoding
+    @encoding.setter
+    def encoding(self, enc):
+        try:
+            self._encoding = EncodingType[enc.upper()]
+        except KeyError:
+            try:
+                self._encoding = int(enc, 0)
+            except ValueError:
+                l = [ x.lower() for x in EncodingType.keys() ]
+                l.sort()
+                raise error.Fatal("Bad HFE encoding type: '%s'\n" % enc
+                                  +  'Valid types:\n' + util.columnify(l))
 
 class HFETrack:
     def __init__(self, track: MasterTrack) -> None:
@@ -231,10 +313,10 @@ class HFE(Image):
                              0,
                              n_cyl,
                              n_side,
-                             0xff, # unknown encoding
+                             self.opts.encoding,
                              self.opts.bitrate,
                              0,    # rpm (unused)
-                             0xff, # unknown interface
+                             self.opts.interface,
                              1,    # rsvd
                              1)    # track list offset
 
@@ -548,10 +630,10 @@ def hfev3_get_image(hfe: HFE) -> bytes:
                          0,
                          n_cyl,
                          n_side,
-                         0xff, # unknown encoding
+                         hfe.opts.encoding,
                          hfe.opts.bitrate,
                          0,    # rpm (unused)
-                         0xff, # unknown interface
+                         hfe.opts.interface,
                          1,    # rsvd
                          1)    # track list offset
 

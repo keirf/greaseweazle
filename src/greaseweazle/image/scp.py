@@ -13,6 +13,7 @@ from enum import IntFlag
 from greaseweazle import __version__
 from greaseweazle import error
 from greaseweazle.flux import Flux
+from greaseweazle.tools import util
 from .image import Image
 
 #  SCP image specification can be found at Jim Drew's site:
@@ -72,6 +73,8 @@ class SCPOpts:
     SCP image.
     """
 
+    settings = [ 'disktype', 'legacy_ss' ]
+
     def __init__(self):
         self.legacy_ss = False
         self._disktype = 0x80 # Other
@@ -87,7 +90,10 @@ class SCPOpts:
             try:
                 self._disktype = int(disktype, 0)
             except ValueError:
-                raise error.Fatal("Bad SCP disktype: '%s'" % disktype)
+                l = [ x.lower() for x in DiskType.keys() ]
+                l.sort()
+                raise error.Fatal("Bad SCP disktype: '%s'\n" % disktype
+                                  + 'Valid types:\n' + util.columnify(l))
 
 
 class SCPTrack:

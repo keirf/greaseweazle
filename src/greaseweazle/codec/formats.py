@@ -7,7 +7,6 @@
 
 import os.path, re
 import importlib.resources
-import itertools as it
 from copy import copy
 
 from greaseweazle import error
@@ -211,8 +210,4 @@ def print_formats(cfg=None):
         if disk_match:
             formats.append(disk_match.group(1))
     formats.sort()
-    max_len = max(len(name) for name in formats) + sep
-    per_row = max(1, columns // max_len)
-    return '\n'.join(map(lambda row: (f'{{:{max_len}}}'*per_row).format(*row),
-                         it.zip_longest(*[iter(formats)]*per_row,
-                                        fillvalue='')))
+    return util.columnify(formats)

@@ -11,9 +11,18 @@ import argparse, os, sys, serial, struct, time, re, platform
 import importlib
 import serial.tools.list_ports
 from collections import OrderedDict
+import itertools as it
 
 from greaseweazle import error
 from greaseweazle import usb as USB
+
+
+def columnify(strings, columns=80, sep=2):
+    max_len = max(len(s) for s in strings) + sep
+    per_row = max(1, columns // max_len)
+    return '\n'.join(map(lambda row: (f'{{:{max_len}}}'*per_row).format(*row),
+                         it.zip_longest(*[iter(strings)]*per_row,
+                                        fillvalue='')))
 
 
 class CmdlineHelpFormatter(argparse.ArgumentDefaultsHelpFormatter,
@@ -223,7 +232,7 @@ def split_opts(seq):
             try:
                 opt, val = y.split('=')
             except ValueError:
-                opt, val = y, True
+                opt, val = y, 'yes'
             if opt:
                 opts[opt] = val
     return name, opts
