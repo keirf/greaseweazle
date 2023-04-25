@@ -245,7 +245,7 @@ class HFE(Image):
                 else:
                     weak.append((s, n))
             if is_fm: # FM data is recorded to HFE at double rate
-                double_bytes = ibm.encode(bits.tobytes())
+                double_bytes = ibm.doubler(bits.tobytes())
                 double_bits = bitarray(endian='big')
                 double_bits.frombytes(double_bytes)
                 bits = double_bits[:2*len(bits)]

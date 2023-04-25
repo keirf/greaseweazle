@@ -89,7 +89,7 @@ def get_cfg_lines(cfg):
 def mk_track_format(format_name):
     if format_name in ['amiga.amigados']:
         return amigados.AmigaDOSTrackFormat(format_name)
-    if format_name in ['ibm.mfm','ibm.fm']:
+    if format_name in ['ibm.mfm','ibm.fm','dec.rx02']:
         return ibm.IBMTrackFormat(format_name)
     raise error.Fatal('unrecognised format name: %s' % format_name)
 

@@ -24,4 +24,10 @@ $GW convert a.adf a.scp
 $GW convert a.scp b.adf
 diff -u a.adf b.adf
 
+dd if=/dev/urandom of=rx02.img bs=256 count=2002
+$GW convert --format=dec.rx02 rx02.img rx02_a.scp
+$GW convert --format=dec.rx02 rx02_a.scp rx02_a.img 2>&1 | tee rx02.log
+diff -u rx02.img rx02_a.img
+grep Unknown rx02.log && exit 1
+
 popd

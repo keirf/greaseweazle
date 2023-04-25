@@ -6,7 +6,7 @@
 # See the file COPYING for more details, or visit <http://unlicense.org>.
 
 from __future__ import annotations
-from typing import Any, List, Optional, Union
+from typing import Any, List, Optional, Union, Tuple
 
 import re
 import copy, heapq, struct, functools
@@ -77,6 +77,7 @@ def encode(dat):
     for x in dat:
         out += struct.pack('>H', encode_list[x])
     return bytes(out)
+doubler = encode
 
 decode_list = bytearray()
 for x in range(0x5555+1):
@@ -123,10 +124,15 @@ class Mark:
     IAM  = 0xfc
     IDAM = 0xfe
     DAM  = 0xfb
+    DAM_DEC_MMFM = 0xfd
     DDAM = 0xf8
+    DDAM_DEC_MMFM = 0xf9
 
 class Mode(Enum):
-    FM, MFM = range(2)
+    FM, MFM, DEC_RX02 = range(3)
+    def __str__(self):
+        NAMES = [ 'IBM FM', 'IBM MFM', 'DEC RX02' ]
+        return f'{NAMES[self.value]}'
 
 class TrackArea:
     def __init__(self, start, end, crc=None):
@@ -201,6 +207,33 @@ class IAM(TrackArea):
         return IAM(self.start, self.end)
 
 
+class DEC_MMFM:
+    def __init__(self):
+        # Encode: 011110 -> 01000100010
+        self.encode_search = bitarray('011110', endian='big')
+        self.encode_replace = bitarray('01000100010', endian='big')
+        # Decode: DCD=000 -> 11
+        self.decode_search = bitarray('000', endian='big')
+        self.decode_replace = bitarray('101', endian='big')
+        sync_prefix = bitarray(endian='big')
+        sync_prefix.frombytes(doubler(b'\xaa\xaa' + sync(0xf8)))
+        self.sync_prefix = sync_prefix[:len(fm_sync_prefix)*2]
+    def encode(self, pre: bytes) -> bytes:
+        pre_bits = bitarray(endian='big')
+        pre_bits.frombytes(pre)
+        post_bits = bitarray(endian='big')
+        post_bits.frombytes(mfm_encode(encode(pre)))
+        for x in pre_bits.itersearch(self.encode_search):
+            post_bits[x*2+1:x*2+12] = self.encode_replace
+        return post_bits.tobytes()
+    def decode(self, bits: bitarray) -> bytes:
+        for x in bits.itersearch(self.decode_search):
+            if x&1 != 0: # Only matches starting on a data bit
+                bits[x:x+3] = self.decode_replace
+        return decode(bits.tobytes())
+
+dec_mmfm = DEC_MMFM()
+
 class IBMTrack:
 
     # Subclasses must define these
@@ -212,7 +245,7 @@ class IBMTrack:
         self.sectors: List[Sector] = []
         self.iams: List[IAM] = []
         self.mode = mode
-        if mode is Mode.FM:
+        if mode is Mode.FM or mode is Mode.DEC_RX02:
             self.gap_presync = 6
             self.gapbyte = 0xff
         elif mode is Mode.MFM:
@@ -223,7 +256,7 @@ class IBMTrack:
 
     def summary_string(self) -> str:
         nsec, nbad = len(self.sectors), self.nr_missing()
-        s = "IBM %s (%d/%d sectors)" % (self.mode.name, nsec - nbad, nsec)
+        s = "%s (%d/%d sectors)" % (str(self.mode), nsec - nbad, nsec)
         return s
 
     def has_sec(self, sec_id):
@@ -265,7 +298,7 @@ class IBMTrack:
 
         return t
 
-    def fm_raw_track(self) -> bytes:
+    def fm_raw_track(self, mmfm_areas=None) -> bytes:
 
         areas = heapq.merge(self.iams, self.sectors, key=lambda x:x.start)
         t = bytes()
@@ -288,16 +321,27 @@ class IBMTrack:
                 t += encode(bytes(self.gap_presync))
                 dam = bytes([a.dam.mark]) + a.dam.data
                 dam += struct.pack('>H', crc16.new(dam).crcValue)
-                t += sync(dam[0]) + encode(dam[1:])
+                t += sync(dam[0])
+                if ((dam[0] & 0xfb) == Mark.DDAM_DEC_MMFM
+                    and mmfm_areas is not None):
+                    mmfm_areas.append((dec_mmfm.encode(dam[1:]), len(t)))
+                    t += encode(bytes([self.gapbyte] * (128+2)))
+                else:
+                    t += encode(dam[1:])
 
         return t
 
     def raw_track(self) -> MasterTrack:
 
+        t: Union[bytes, bitarray]
+
         if self.mode is Mode.FM:
             t = self.fm_raw_track()
-        else:
+        elif self.mode is Mode.MFM:
             t = self.mfm_raw_track()
+        elif self.mode is Mode.DEC_RX02:
+            mmfm_areas: List[Tuple[bytes,int]] = list()
+            t = self.fm_raw_track(mmfm_areas)
 
         # Add the pre-index gap.
         tlen = int((self.time_per_rev / self.clock) // 16)
@@ -306,8 +350,20 @@ class IBMTrack:
 
         if self.mode is Mode.FM:
             t = fm_encode(t)
-        else:
+        elif self.mode is Mode.MFM:
             t = mfm_encode(t)
+        elif self.mode is Mode.DEC_RX02:
+            # Insert the MMFM areas into the doubled-rate FM track
+            b = bytearray(doubler(fm_encode(t)))
+            for a,o in mmfm_areas:
+                b[2*o:2*(o+256+2)] = a
+            # Insert the extra clock at the start of each MMFM area
+            bits = bitarray(endian='big')
+            bits.frombytes(b)
+            for _,o in reversed(mmfm_areas):
+                bits.insert(16*o, 0)
+            # We pass a bitarray to MasterTrack()
+            t = bits
 
         track = MasterTrack(
             bits = t,
@@ -350,7 +406,7 @@ class IBMTrackRaw(IBMTrack):
                     areas.append(idam)
                 idam = IDAM(s, e, crc, c=c, h=h, r=r, n=n)
             elif mark == Mark.DAM or mark == Mark.DDAM:
-                if idam is None or idam.end - offs > 1000:
+                if idam is None or offs - idam.end > 1000:
                     areas.append(DAM(offs, offs+4*16, 0xffff, mark=mark))
                 else:
                     sz = 128 << idam.n
@@ -363,7 +419,7 @@ class IBMTrackRaw(IBMTrack):
                     areas.append(Sector(idam, dam))
                 idam = None
             else:
-                pass #print("Unknown mark %02x" % mark)
+                print("Unknown mark %02x" % mark)
 
         if idam is not None:
             areas.append(idam)
@@ -385,11 +441,19 @@ class IBMTrackRaw(IBMTrack):
         return areas
 
     @staticmethod
-    def fm_decode_raw(raw: RawTrack) -> List[TrackArea]:
+    def fm_decode_raw(raw: RawTrack,
+                      mmfm_raw: Optional[RawTrack] = None) -> List[TrackArea]:
 
-        bits, _ = raw.get_all_data()
+        bits, times = raw.get_all_data()
         areas: List[TrackArea] = []
         idam = None
+
+        if mmfm_raw is not None:
+            mmfm_bits, mmfm_times = mmfm_raw.get_all_data()
+            mmfm_iter = mmfm_bits.itersearch(dec_mmfm.sync_prefix)
+            mmfm_offs = next(mmfm_iter, None)
+            fm_time, prev_fm_offs = 0.0, 0
+            mmfm_time, prev_mmfm_offs = 0.0, 0
 
         ## 1. Calculate offsets within dump
         
@@ -398,6 +462,24 @@ class IBMTrackRaw(IBMTrack):
             areas.append(IAM(offs, offs+1*16))
 
         for offs in bits.itersearch(fm_sync_prefix):
+
+            # DEC MMFM track: Ensure this looks like an FM mark even at
+            # double rate. This also finds the equivalent point in the
+            # double-rate bitstream.
+            if mmfm_raw is not None:
+                fm_time += sum(times[prev_fm_offs:offs])
+                prev_fm_offs = offs
+                while mmfm_offs is not None:
+                    mmfm_time += sum(mmfm_times[prev_mmfm_offs:mmfm_offs])
+                    prev_mmfm_offs = mmfm_offs
+                    delta = fm_time - mmfm_time
+                    if delta < 1e-5:
+                        break
+                    mmfm_offs = next(mmfm_iter, None)
+                # We require a match within 10us in the double-rate bitstream.
+                if mmfm_offs is None or abs(delta) > 1e-5:
+                    continue
+
             offs += 16
             if len(bits) < offs+1*16:
                 continue
@@ -415,21 +497,30 @@ class IBMTrackRaw(IBMTrack):
                 if idam is not None:
                     areas.append(idam)
                 idam = IDAM(s, e, crc, c=c, h=h, r=r, n=n)
-            elif mark == Mark.DAM or mark == Mark.DDAM:
-                if idam is None or idam.end - offs > 1000:
+            elif (mark == Mark.DAM or mark == Mark.DDAM
+                  or ((mark & 0xfb) == Mark.DDAM_DEC_MMFM
+                      and mmfm_raw is not None)):
+                if idam is None or offs - idam.end > 1000:
                     areas.append(DAM(offs, offs+4*16, 0xffff, mark=mark))
-                else:
-                    sz = 128 << idam.n
-                    s, e = offs, offs+(1+sz+2)*16
+                    continue
+                sz = 128 << idam.n
+                s, e = offs, offs+(1+sz+2)*16
+                if mark == Mark.DAM or mark == Mark.DDAM:
                     if len(bits) < e:
                         continue
                     b = decode(bits[s:e].tobytes())
-                    crc = crc16.new(b).crcValue
-                    dam = DAM(s, e, crc, mark=mark, data=b[1:-2])
-                    areas.append(Sector(idam, dam))
+                else:
+                    assert mmfm_offs is not None
+                    ds, de = mmfm_offs+64+1, mmfm_offs+64+1+(sz*2+2)*16
+                    if len(mmfm_bits) < de:
+                        continue
+                    b = bytes([mark]) + dec_mmfm.decode(mmfm_bits[ds:de])
+                crc = crc16.new(b).crcValue
+                dam = DAM(s, e, crc, mark=mark, data=b[1:-2])
+                areas.append(Sector(idam, dam))
                 idam = None
             else:
-                pass #print("Unknown mark %02x" % mark)
+                print("Unknown mark %02x" % mark)
 
         if idam is not None:
             areas.append(idam)
@@ -459,8 +550,12 @@ class IBMTrackRaw(IBMTrack):
 
         if self.mode is Mode.FM:
             areas = self.fm_decode_raw(raw)
-        else:
+        elif self.mode is Mode.MFM:
             areas = self.mfm_decode_raw(raw)
+        elif self.mode is Mode.DEC_RX02:
+            mmfm_raw = RawTrack(time_per_rev = self.time_per_rev,
+                                clock = self.clock/2, data = flux, pll = pll)
+            areas = self.fm_decode_raw(raw, mmfm_raw)
 
         # Add to the deduped lists
         a: Optional[TrackArea]
@@ -512,6 +607,7 @@ class IBMTrackFormatted(IBMTrack):
                     if r.dam.crc == 0 and s.dam.crc != 0:
                         s.dam.crc = s.crc = 0
                         s.dam.data = r.dam.data
+                        s.dam.mark = r.dam.mark
             if not matched:
                 mismatches.add((r.idam.c, r.idam.h, r.idam.r, r.idam.n))
         for m in mismatches:
@@ -524,13 +620,13 @@ class IBMTrackFormatted(IBMTrack):
         if self.img_bps is not None:
             totsize = len(self.sectors) * self.img_bps
         else:
-            totsize = functools.reduce(lambda x, y: x + (128<<y.idam.n),
+            totsize = functools.reduce(lambda x, y: x + len(y.dam.data),
                                        self.sectors, 0)
         if len(tdat) < totsize:
             tdat += bytes(totsize - len(tdat))
         for s in self.sectors:
             s.crc = s.idam.crc = s.dam.crc = 0
-            size = 128 << s.idam.n
+            size = len(s.dam.data)
             s.dam.data = tdat[pos:pos+size]
             if self.img_bps is not None:
                 pos += self.img_bps
@@ -570,11 +666,14 @@ class IBMTrackFormatted(IBMTrack):
         def sec_n(i):
             return config.sz[i] if i < len(config.sz) else config.sz[-1]
 
-        if config.format_name == 'ibm.mfm':
-            mode, gaps = Mode.MFM, MFMGaps
+        if config.format_name == 'dec.rx02':
+            mode, gaps, mark_dam = Mode.DEC_RX02, FMGaps, Mark.DAM_DEC_MMFM
+            synclen = 1 # Mark
+        elif config.format_name == 'ibm.mfm':
+            mode, gaps, mark_dam = Mode.MFM, MFMGaps, Mark.DAM
             synclen = 4 # A1 A1 A1 Mark
-        else:
-            mode, gaps = Mode.FM, FMGaps
+        elif config.format_name == 'ibm.fm':
+            mode, gaps, mark_dam = Mode.FM, FMGaps, Mark.DAM
             synclen = 1 # Mark
 
         t = cls(cyl, head, mode)
@@ -656,8 +755,9 @@ class IBMTrackFormatted(IBMTrack):
                         c = cyl, h = h, r= id0+sec, n = sec_n(sec))
             pos += synclen + 4 + 2 + gap2 + t.gap_presync
             size = 128 << idam.n
+            datsz = size*2 if mark_dam == Mark.DAM_DEC_MMFM else size
             dam = DAM(pos*16, (pos+synclen+size+2)*16, 0xffff,
-                      mark=Mark.DAM, data=b'-=[BAD SECTOR]=-'*(size//16))
+                      mark=mark_dam, data=b'-=[BAD SECTOR]=-'*(datsz//16))
             t.sectors.append(Sector(idam, dam))
             pos += synclen + size + 2 + gap3
 
