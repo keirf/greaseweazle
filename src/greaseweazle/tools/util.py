@@ -239,7 +239,8 @@ def split_opts(seq):
 
 
 image_types = OrderedDict(
-    { '.adf': 'ADF',
+    { '.a2r': 'A2R',
+      '.adf': 'ADF',
       '.ads': ('ADS','acorn'),
       '.adm': ('ADM','acorn'),
       '.adl': ('ADL','acorn'),
