@@ -124,9 +124,12 @@ class Mark:
     IAM  = 0xfc
     IDAM = 0xfe
     DAM  = 0xfb
-    DAM_DEC_MMFM = 0xfd
     DDAM = 0xf8
+    # DEC RX02
+    DAM_DEC_MMFM = 0xfd
     DDAM_DEC_MMFM = 0xf9
+    # TRS-80
+    DAM_TRS80_DIR = 0xfa
 
 class Mode(Enum):
     FM, MFM, DEC_RX02 = range(3)
@@ -498,6 +501,7 @@ class IBMTrackRaw(IBMTrack):
                     areas.append(idam)
                 idam = IDAM(s, e, crc, c=c, h=h, r=r, n=n)
             elif (mark == Mark.DAM or mark == Mark.DDAM
+                  or mark == Mark.DAM_TRS80_DIR
                   or ((mark & 0xfb) == Mark.DDAM_DEC_MMFM
                       and mmfm_raw is not None)):
                 if idam is None or offs - idam.end > 1000:
@@ -505,7 +509,7 @@ class IBMTrackRaw(IBMTrack):
                     continue
                 sz = 128 << idam.n
                 s, e = offs, offs+(1+sz+2)*16
-                if mark == Mark.DAM or mark == Mark.DDAM:
+                if (mark & 0xfb) != Mark.DDAM_DEC_MMFM:
                     if len(bits) < e:
                         continue
                     b = decode(bits[s:e].tobytes())
