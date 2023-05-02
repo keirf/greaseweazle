@@ -13,6 +13,18 @@ def flux_to_bitcells(bit_array, time_array, revolutions,
 
 def decode_flux(dat: bytes) -> Tuple[List[float], List[float]]:
     ...
+
+def decode_mac_gcr(dat: bytes) -> bytes:
+    ...
+
+def encode_mac_gcr(dat: bytes) -> bytes:
+    ...
+
+def decode_mac_sector(dat: bytes) -> Tuple[bytes, int]:
+    ...
+
+def encode_mac_sector(dat: bytes) -> bytes:
+    ...
     
 # Local variables:
 # python-indent: 4

@@ -12,6 +12,7 @@ from copy import copy
 from greaseweazle import error
 from greaseweazle.codec.ibm import ibm
 from greaseweazle.codec.amiga import amigados
+from greaseweazle.codec.macintosh import mac_gcr
 from greaseweazle.tools import util
 
 class DiskFormat:
@@ -91,6 +92,8 @@ def mk_track_format(format_name):
         return amigados.AmigaDOSTrackFormat(format_name)
     if format_name in ['ibm.mfm','ibm.fm','dec.rx02']:
         return ibm.IBMTrackFormat(format_name)
+    if format_name in ['mac.gcr']:
+        return mac_gcr.MacGCRTrackFormat(format_name)
     raise error.Fatal('unrecognised format name: %s' % format_name)
 
 

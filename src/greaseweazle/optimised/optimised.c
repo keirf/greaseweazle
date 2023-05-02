@@ -3,6 +3,7 @@
 #include "Python.h"
 #include <stdio.h>
 #include <stdint.h>
+#include "mac.h"
 
 #define FLUXOP_INDEX   1
 #define FLUXOP_SPACE   2
@@ -245,10 +246,108 @@ oos:
     goto out;
 }
 
+static PyObject *
+py_decode_mac_gcr(PyObject *self, PyObject *args)
+{
+    Py_buffer in;
+    PyObject *out = NULL;
+
+    if (!PyArg_ParseTuple(args, "y*", &in))
+        return NULL;
+
+    out = PyBytes_FromStringAndSize(NULL, in.len);
+    if (out == NULL)
+        goto fail;
+
+    gcr_decode_bytes((const uint8_t *)in.buf,
+                     (uint8_t *)PyBytes_AsString(out),
+                     in.len);
+
+fail:
+    PyBuffer_Release(&in);
+    return out;
+}
+
+static PyObject *
+py_encode_mac_gcr(PyObject *self, PyObject *args)
+{
+    Py_buffer in;
+    PyObject *out = NULL;
+
+    if (!PyArg_ParseTuple(args, "y*", &in))
+        return NULL;
+
+    out = PyBytes_FromStringAndSize(NULL, in.len);
+    if (out == NULL)
+        goto fail;
+
+    gcr_encode_bytes((const uint8_t *)in.buf,
+                     (uint8_t *)PyBytes_AsString(out),
+                     in.len);
+
+fail:
+    PyBuffer_Release(&in);
+    return out;
+}
+
+static PyObject *
+py_decode_mac_sector(PyObject *self, PyObject *args)
+{
+    Py_buffer in;
+    PyObject *out;
+    int status;
+    PyObject *res = NULL;
+
+    if (!PyArg_ParseTuple(args, "y*", &in))
+        return NULL;
+    if (in.len < MAC_ENCODED_SECTOR_LENGTH)
+        goto fail;
+
+    out = PyBytes_FromStringAndSize(NULL, MAC_SECTOR_LENGTH);
+    if (out == NULL)
+        goto fail;
+
+    status = decode_mac_sector((const uint8_t *)in.buf,
+                                (uint8_t *)PyBytes_AsString(out));
+
+    res = Py_BuildValue("Oi", out, status);
+
+    Py_DECREF(out);
+fail:
+    PyBuffer_Release(&in);
+    return res;
+}
+
+static PyObject *
+py_encode_mac_sector(PyObject *self, PyObject *args)
+{
+    Py_buffer in;
+    PyObject *out = NULL;
+
+    if (!PyArg_ParseTuple(args, "y*", &in))
+        return NULL;
+    if (in.len < MAC_SECTOR_LENGTH)
+        goto fail;
+
+    out = PyBytes_FromStringAndSize(NULL, MAC_ENCODED_SECTOR_LENGTH);
+    if (out == NULL)
+        goto fail;
+
+    encode_mac_sector((const uint8_t *)in.buf,
+                      (uint8_t *)PyBytes_AsString(out));
+
+fail:
+    PyBuffer_Release(&in);
+    return out;
+}
 
 static PyMethodDef modulefuncs[] = {
     { "flux_to_bitcells", flux_to_bitcells, METH_VARARGS, NULL },
     { "decode_flux", decode_flux, METH_VARARGS, NULL },
+    { "decode_mac_gcr", py_decode_mac_gcr, METH_VARARGS, NULL },
+    { "encode_mac_gcr", py_encode_mac_gcr, METH_VARARGS, NULL },
+    { "decode_mac_sector", py_decode_mac_sector, METH_VARARGS, NULL },
+    { "encode_mac_sector", py_encode_mac_sector, METH_VARARGS, NULL },
     { NULL }
 };
 

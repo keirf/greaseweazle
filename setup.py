@@ -27,7 +27,8 @@ setup(name = 'greaseweazle',
       package_data = { 'greaseweazle.data': ['*.cfg'] },
       ext_modules = [
           Extension('greaseweazle.optimised.optimised',
-                    sources = ['src/greaseweazle/optimised/optimised.c'],
+                    sources = ['src/greaseweazle/optimised/optimised.c',
+                               'src/greaseweazle/optimised/mac.c'],
                     extra_compile_args = extra_compile_args)
       ],
       entry_points= {
