@@ -5,6 +5,8 @@
 # This is free and unencumbered software released into the public domain.
 # See the file COPYING for more details, or visit <http://unlicense.org>.
 
+from typing import Any, List, Tuple, Union
+
 import struct
 import itertools as it
 from enum import Enum
@@ -219,7 +221,7 @@ class Unit:
 
     ## reset:
     ## Resets communications with Greaseweazle.
-    def reset(self):
+    def reset(self) -> None:
         self.ser.reset_output_buffer()
         self.ser.baudrate = ControlCmd.ClearComms
         self.ser.baudrate = ControlCmd.Normal
@@ -231,7 +233,7 @@ class Unit:
     ## _send_cmd:
     ## Send given command byte sequence to Greaseweazle.
     ## Raise a CmdError if command fails.
-    def _send_cmd(self, cmd):
+    def _send_cmd(self, cmd) -> None:
         self.ser.write(cmd)
         (c,r) = struct.unpack("2B", self.ser.read(2))
         error.check(c == cmd[0], "Command returned garbage (%02x != %02x)"
@@ -240,14 +242,14 @@ class Unit:
             raise CmdError(cmd, r)
 
 
-    def get_current_drive_info(self):
+    def get_current_drive_info(self) -> DriveInfo:
         self._send_cmd(struct.pack("3B", Cmd.GetInfo, 3, GetInfo.CurrentDrive))
         return DriveInfo(self.ser.read(32))
 
 
     ## seek:
     ## Seek the selected drive's heads to the specified track (cyl, head).
-    def seek(self, cyl, head):
+    def seek(self, cyl, head) -> None:
         self._send_cmd(struct.pack("2Bb", Cmd.Seek, 3, cyl))
         trk0 = not self.get_pin(26)
         if cyl == 0 and not trk0:
@@ -273,19 +275,19 @@ class Unit:
 
     ## set_bus_type:
     ## Set the floppy bus type.
-    def set_bus_type(self, type):
+    def set_bus_type(self, type) -> None:
         self._send_cmd(struct.pack("3B", Cmd.SetBusType, 3, type))
 
 
     ## set_pin:
     ## Set a pin level.
-    def set_pin(self, pin, level):
+    def set_pin(self, pin, level) -> None:
         self._send_cmd(struct.pack("4B", Cmd.SetPin, 4, pin, int(level)))
 
 
     ## get_pin:
     ## Get a pin level.
-    def get_pin(self, pin):
+    def get_pin(self, pin) -> bool:
         self._send_cmd(struct.pack("3B", Cmd.GetPin, 3, pin))
         v, = struct.unpack("B", self.ser.read(1))
         return bool(v)
@@ -293,31 +295,31 @@ class Unit:
 
     ## power_on_reset:
     ## Re-initialise to power-on defaults.
-    def power_on_reset(self):
+    def power_on_reset(self) -> None:
         self._send_cmd(struct.pack("2B", Cmd.Reset, 2))
 
 
     ## drive_select:
     ## Select the specified drive unit.
-    def drive_select(self, unit):
+    def drive_select(self, unit) -> None:
         self._send_cmd(struct.pack("3B", Cmd.Select, 3, unit))
 
 
     ## drive_deselect:
     ## Deselect currently-selected drive unit (if any).
-    def drive_deselect(self):
+    def drive_deselect(self) -> None:
         self._send_cmd(struct.pack("2B", Cmd.Deselect, 2))
 
 
     ## drive_motor:
     ## Turn the specified drive's motor on/off.
-    def drive_motor(self, unit, state):
+    def drive_motor(self, unit, state) -> None:
         self._send_cmd(struct.pack("4B", Cmd.Motor, 4, unit, int(state)))
 
 
     ## switch_fw_mode:
     ## Switch between bootloader and main firmware.
-    def switch_fw_mode(self, mode):
+    def switch_fw_mode(self, mode) -> None:
         self._send_cmd(struct.pack("3B", Cmd.SwitchFwMode, 3, int(mode)))
 
 
@@ -332,7 +334,7 @@ class Unit:
 
     ## update_bootloader:
     ## Update Greaseweazle with the given new bootloader.
-    def update_bootloader(self, dat):
+    def update_bootloader(self, dat) -> int:
         self._send_cmd(struct.pack("<2B2I", Cmd.Update, 10,
                                    len(dat), 0xdeafbee3))
         self.ser.write(dat)
@@ -342,8 +344,9 @@ class Unit:
 
     ## _decode_flux:
     ## Decode the Greaseweazle data stream into a list of flux samples.
-    def _decode_flux(self, dat):
-        flux, index = [], []
+    def _decode_flux(self, dat: bytes) -> Tuple[List[float], List[float]]:
+        flux: List[float] = []
+        index: List[float] = []
         assert dat[-1] == 0
         dat_i = it.islice(dat, 0, len(dat)-1)
         ticks, ticks_since_index = 0, 0
@@ -384,7 +387,7 @@ class Unit:
 
     ## _encode_flux:
     ## Convert the given flux timings into an encoded data stream.
-    def _encode_flux(self, flux):
+    def _encode_flux(self, flux: List[int]) -> bytes:
         nfa_thresh = round(150e-6 * self.sample_freq)  # 150us
         nfa_period = round(1.25e-6 * self.sample_freq) # 1.25us
         dat = bytearray()
@@ -426,7 +429,7 @@ class Unit:
 
     ## _read_track:
     ## Private helper which issues command requests to Greaseweazle.
-    def _read_track(self, revs, ticks):
+    def _read_track(self, revs, ticks) -> bytes:
 
         # Request and read all flux timings for this track.
         dat = bytearray()
@@ -446,7 +449,7 @@ class Unit:
 
     ## read_track:
     ## Read and decode flux and index timings for the current track.
-    def read_track(self, revs, ticks=0, nr_retries=5):
+    def read_track(self, revs, ticks=0, nr_retries=5) -> Flux:
 
         retry = 0
         while True:
@@ -475,7 +478,7 @@ class Unit:
     ## write_track:
     ## Write the given flux stream to the current track via Greaseweazle.
     def write_track(self, flux_list, terminate_at_index,
-                    cue_at_index=True, nr_retries=5):
+                    cue_at_index=True, nr_retries=5) -> None:
 
         # Create encoded data stream.
         dat = self._encode_flux(flux_list)
@@ -503,7 +506,7 @@ class Unit:
 
     ## erase_track:
     ## Erase the current track via Greaseweazle.
-    def erase_track(self, ticks):
+    def erase_track(self, ticks) -> None:
         self._send_cmd(struct.pack("<2BI", Cmd.EraseFlux, 6, int(ticks)))
         self.ser.read(1) # Sync with Greaseweazle
         self._send_cmd(struct.pack("2B", Cmd.GetFluxStatus, 2))
@@ -511,13 +514,13 @@ class Unit:
 
     ## source_bytes:
     ## Command Greaseweazle to source 'nr' garbage bytes.
-    def source_bytes(self, nr, seed):
+    def source_bytes(self, nr, seed) -> bytes:
         self._send_cmd(struct.pack("<2B2I", Cmd.SourceBytes, 10, nr, seed))
         return self.ser.read(nr)
 
     ## sink_bytes:
     ## Command Greaseweazle to sink given data buffer.
-    def sink_bytes(self, dat, seed):
+    def sink_bytes(self, dat, seed) -> int:
         self._send_cmd(struct.pack("<2BII", Cmd.SinkBytes, 10, len(dat), seed))
         self.ser.write(dat)
         (ack,) = struct.unpack("B", self.ser.read(1))
@@ -526,7 +529,7 @@ class Unit:
 
     ## bw_stats:
     ## Get min/max bandwidth for previous source/sink command. Mbps (float).
-    def bw_stats(self):
+    def bw_stats(self) -> Tuple[float, float]:
         self._send_cmd(struct.pack("3B", Cmd.GetInfo, 3,
                                    GetInfo.BandwidthStats))
         min_bytes, min_usecs, max_bytes, max_usecs = struct.unpack(

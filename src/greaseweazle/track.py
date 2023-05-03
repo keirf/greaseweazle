@@ -319,7 +319,7 @@ class RawTrack:
         flux_iter = it.chain(flux.list, [tail])
 
         try:
-            optimised.flux_to_bitcells( # type: ignore[attr-defined]
+            optimised.flux_to_bitcells(
                 self.bitarray, self.timearray, self.revolutions,
                 index_iter, flux_iter,
                 freq, clock, clock_min, clock_max,
