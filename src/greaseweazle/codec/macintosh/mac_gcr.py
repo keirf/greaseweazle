@@ -22,7 +22,7 @@ from greaseweazle.codec.ibm import ibm
 from greaseweazle.track import MasterTrack, RawTrack
 from greaseweazle.flux import Flux
 
-default_revs = 1.1
+default_revs = 1.3
 
 self_sync_bytes = b'\xff\x3f\xcf\xf3\xfc\xff'
 sector_sync_bytes = b'\xd5\xaa\x96' # 1101 0101 1010 1010 1001 0110
@@ -124,6 +124,9 @@ class MacGCR:
                 print('T%d.%d: Ignoring unexpected sector '
                       'C:%d H:%d R:%d F:0x%x'
                       % (self.cyl, self.head, cyl, side, sec_id, fmt))
+                continue
+            if self.exists(sec_id):
+                continue
 
             # Find data
             offs += 5*8
@@ -183,6 +186,7 @@ class MacGCR:
 
     def verify_track(self, flux):
         readback_track = self.__class__(self.cyl, self.head, self.config)
+        readback_track.decode_raw(flux)
         return (readback_track.nr_missing() == 0
                 and self.sector == readback_track.sector)
 
