@@ -3,6 +3,16 @@
 ** Keir Fraser <keir.xen@gmail.com>
 ************************************
 
+** v1.11 - 4 May 2023
+ - New disk formats:
+   - Macintosh GCR: mac.400, mac.800
+   - DEC: dec.rx01, dec.rx02
+   - MSX: msx.1d, msx.1dd, msx.2d, msx.2dd
+   - Osborne 1: occ1.sd, occ1.dd
+ - HFE: Support interface= and encoding= header bytes
+ - TRS-80: Support FA DAM mark for directory sectors
+ - Applesauce: Support decoding *.a2r Applesauce image files
+ 
 ** v1.10 - 7 April 2023
  - New diskdef "ibm.160"
  - gw erase: New option --revs=N
