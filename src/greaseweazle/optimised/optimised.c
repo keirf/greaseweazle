@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include "mac.h"
+#include "c64.h"
 
 #define FLUXOP_INDEX   1
 #define FLUXOP_SPACE   2
@@ -341,6 +342,60 @@ fail:
     return out;
 }
 
+static PyObject *
+py_decode_c64_gcr(PyObject *self, PyObject *args)
+{
+    Py_buffer in;
+    PyObject *out = NULL;
+    int out_len;
+
+    if (!PyArg_ParseTuple(args, "y*", &in))
+        return NULL;
+
+    if (in.len % 5)
+        return NULL;
+    out_len = (in.len / 5) * 4;
+
+    out = PyBytes_FromStringAndSize(NULL, out_len);
+    if (out == NULL)
+        goto fail;
+
+    decode_c64_gcr((const uint8_t *)in.buf,
+                     (uint8_t *)PyBytes_AsString(out),
+                     out_len);
+
+fail:
+    PyBuffer_Release(&in);
+    return out;
+}
+
+static PyObject *
+py_encode_c64_gcr(PyObject *self, PyObject *args)
+{
+    Py_buffer in;
+    PyObject *out = NULL;
+    int out_len;
+
+    if (!PyArg_ParseTuple(args, "y*", &in))
+        return NULL;
+
+    if (in.len % 4)
+        return NULL;
+    out_len = (in.len / 4) * 5;
+
+    out = PyBytes_FromStringAndSize(NULL, out_len);
+    if (out == NULL)
+        goto fail;
+
+    encode_c64_gcr((const uint8_t *)in.buf,
+                     (uint8_t *)PyBytes_AsString(out),
+                     in.len);
+
+fail:
+    PyBuffer_Release(&in);
+    return out;
+}
+
 static PyMethodDef modulefuncs[] = {
     { "flux_to_bitcells", flux_to_bitcells, METH_VARARGS, NULL },
     { "decode_flux", decode_flux, METH_VARARGS, NULL },
@@ -348,6 +403,8 @@ static PyMethodDef modulefuncs[] = {
     { "encode_mac_gcr", py_encode_mac_gcr, METH_VARARGS, NULL },
     { "decode_mac_sector", py_decode_mac_sector, METH_VARARGS, NULL },
     { "encode_mac_sector", py_encode_mac_sector, METH_VARARGS, NULL },
+    { "decode_c64_gcr", py_decode_c64_gcr, METH_VARARGS, NULL },
+    { "encode_c64_gcr", py_encode_c64_gcr, METH_VARARGS, NULL },
     { NULL }
 };
 

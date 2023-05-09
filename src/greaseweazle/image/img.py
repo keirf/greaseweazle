@@ -13,7 +13,8 @@ from .image import Image
 class IMG(Image):
 
     sides_swapped = False
-    
+    min_cyls: Optional[int] = None
+
     def __init__(self, name: str, fmt, noclobber=False):
         self.to_track: Dict[Tuple[int,int],Any] = dict()
         error.check(fmt is not None, """\
@@ -65,8 +66,22 @@ Sector image requires a disk format to be specified""")
 
         tdat = bytearray()
 
+        # If min_cyls is specified, only emit extra cylinders if there is
+        # valid data.
+        max_cyl = None
+        if self.min_cyls is not None:
+            max_cyl = self.min_cyls - 1
+            for t in self.fmt.tracks:
+                cyl, head = t.cyl, t.head
+                if cyl > max_cyl and (cyl,head) in self.to_track:
+                    track = self.to_track[cyl,head]
+                    if track.nr_missing() < track.nsec:
+                        max_cyl = cyl
+
         for t in self.fmt.tracks:
             cyl, head = t.cyl, t.head
+            if max_cyl is not None and cyl > max_cyl:
+                break
             if self.sides_swapped:
                 head ^= 1
             if (cyl,head) in self.to_track:

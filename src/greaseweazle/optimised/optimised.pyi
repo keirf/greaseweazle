@@ -26,6 +26,12 @@ def decode_mac_sector(dat: bytes) -> Tuple[bytes, int]:
 def encode_mac_sector(dat: bytes) -> bytes:
     ...
     
+def decode_c64_gcr(dat: bytes) -> bytes:
+    ...
+
+def encode_c64_gcr(dat: bytes) -> bytes:
+    ...
+
 # Local variables:
 # python-indent: 4
 # End:
