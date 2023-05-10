@@ -266,15 +266,10 @@ class HFE(Image):
         self.to_track[cyl,side] = HFETrack(mt)
 
 
-    def get_image(self) -> bytes:
+    def hfev1_get_image(self) -> bytes:
 
-        # Empty disk may have no bitrate
-        if self.opts.bitrate is None:
-            assert not self.to_track
-            self.opts.bitrate = 250
-
-        if self.opts.version == 3:
-            return hfev3_get_image(self)
+        assert self.opts.version == 1
+        assert self.opts.bitrate is not None
 
         n_side = 1
         n_cyl = max(self.to_track.keys(), default=(0,), key=lambda x:x[0])[0]
@@ -325,6 +320,26 @@ class HFE(Image):
         tlut += bytes([0xff] * (0x200 - len(tlut)))
 
         return header + tlut + tdat
+
+
+    def get_image(self) -> bytes:
+
+        # Empty disk may have no bitrate
+        if self.opts.bitrate is None:
+            assert not self.to_track
+            self.opts.bitrate = 250
+
+        if self.opts.version == 3:
+            return hfev3_get_image(self)
+
+        try:
+            return self.hfev1_get_image()
+        except struct.error as e:
+            raise error.Fatal(
+                '''\
+                HFE: Track too long to fit in image!
+                Are you trying to create an ED-rate image?
+                If so: You can't. Use another image format.''')
 
 
 ###
