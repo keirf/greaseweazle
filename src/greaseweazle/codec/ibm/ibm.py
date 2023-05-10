@@ -709,10 +709,11 @@ class IBMTrackFormatted(IBMTrack):
             # FM: 0 = Micro-diskette (125kbps), 1 = 8-inch disk (250kbps)
             # MFM: 1 = DD (250kbps), 2 = HD (500kbps), 3 = ED (1000kbps)
             for i in (range(2),range(1,4))[mode is Mode.MFM]:
-                maxlen = ((50000*300//rpm) << i) + 5000
+                maxlen = (50000*300//rpm) << i
+                maxlen += maxlen * 3 // 100 # Allow a few percent overage
                 if tracklen < maxlen:
                     break
-            rate = 125 << i # 125kbps or 250kbps
+            rate = 125 << i
 
         if mode is Mode.MFM and config.gap2 is None and rate >= 1000:
             # At ED rate the default GAP2 is 41 bytes.
@@ -722,12 +723,26 @@ class IBMTrackFormatted(IBMTrack):
 
         tracklen_bc = rate * 400 * 300 // rpm
 
+        # Calculate a sensible gap3 value if none is manually specified
         if nsec != 0 and config.gap3 is None:
             space = max(0, tracklen_bc - tracklen)
             no = sec_n(0)
             gap3 = min(space // (16*nsec), gaps.gap3[no])
             dam_sz_post += gap3
             tracklen += 16 * nsec * gap3
+
+        # Allow for at least 1% pre-index gap, including final gap3
+        pre_index_sz = tracklen_bc // 100
+        if nsec != 0:
+            pre_index_sz = max(0, pre_index_sz - gap3 * 16)
+        tracklen += pre_index_sz
+
+        # Steal some post-index gap if there is insufficient pre-index gap
+        if tracklen > tracklen_bc and config.gap4a is None:
+            new_gap4a = gap4a // 2
+            idx_sz -= gap4a - new_gap4a
+            tracklen -= gap4a - new_gap4a
+            gap4a = new_gap4a
 
         tracklen_bc = max(tracklen_bc, tracklen)
 
