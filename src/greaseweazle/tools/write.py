@@ -87,6 +87,9 @@ def write_from_image(usb, args, image):
         # Encode the flux times for Greaseweazle, and write them out.
         verified = False
         for retry in range(args.retries+1):
+            if args.pre_erase:
+                print("T%u.%u: Erasing Track" % (cyl, head))
+                usb.erase_track(drive_ticks_per_rev * 1.1)
             s = "T%u.%u: Writing Track" % (cyl, head)
             if retry != 0:
                 s += " (Verify Failure: Retry #%u)" % retry
@@ -184,6 +187,8 @@ def main(argv):
     parser.add_argument("--format", help="disk format")
     parser.add_argument("--tracks", type=util.TrackSet, metavar="TSPEC",
                         help="which tracks to write")
+    parser.add_argument("--pre-erase", action="store_true",
+                        help="erase tracks before writing (default: no)")
     parser.add_argument("--erase-empty", action="store_true",
                         help="erase empty tracks (default: skip)")
     parser.add_argument("--fake-index", type=util.period, metavar="SPEED",
