@@ -10,6 +10,7 @@ import importlib.resources
 from copy import copy
 
 from greaseweazle import error
+from greaseweazle.codec import bitcell
 from greaseweazle.codec.ibm import ibm
 from greaseweazle.codec.amiga import amigados
 from greaseweazle.codec.macintosh import mac_gcr
@@ -97,6 +98,8 @@ def mk_track_format(format_name):
         return mac_gcr.MacGCRTrackFormat(format_name)
     if format_name in ['c64.gcr']:
         return c64_gcr.C64GCRTrackFormat(format_name)
+    if format_name in ['bitcell']:
+        return bitcell.BitcellTrackFormat(format_name)
     raise error.Fatal('unrecognised format name: %s' % format_name)
 
 

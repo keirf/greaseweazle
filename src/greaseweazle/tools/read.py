@@ -103,6 +103,9 @@ def read_with_retry(usb, args, t, decoder):
 def print_summary(args, summary):
     if not summary:
         return
+    nsec = max((summary[x].nsec for x in summary), default = None)
+    if nsec is None or nsec == 0:
+        return
     s = 'Cyl-> '
     p = -1
     for c in args.tracks.cyls:
