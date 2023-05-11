@@ -591,6 +591,7 @@ class IBMTrackFormatted(IBMTrack):
         super().__init__(cyl, head, mode)
         self.img_bps: Optional[int] = None
         self.raw = IBMTrackRaw(cyl, head, mode)
+        self.oversized = False
 
     def decode_raw(self, track, pll=None) -> None:
         self.raw.clock = self.clock
@@ -747,6 +748,10 @@ class IBMTrackFormatted(IBMTrack):
             tracklen -= gap4a - new_gap4a
             gap4a = new_gap4a
 
+        if tracklen > tracklen_bc * 105//100:
+            t.oversized = True
+            print('T%d.%d: IBM: WARNING: Track is %.2f%% too long'
+                  % (cyl, head, 100.0*tracklen/tracklen_bc))
         tracklen_bc = max(tracklen_bc, tracklen)
 
         t.time_per_rev = 60 / rpm
