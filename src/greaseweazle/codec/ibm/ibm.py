@@ -666,7 +666,8 @@ class IBMTrackFormatted(IBMTrack):
         return self.sectors == readback_track.sectors
 
     @classmethod
-    def from_config(cls, config: IBMTrackFormat, cyl: int, head: int):
+    def from_config(cls, config: IBMTrackFormat, cyl: int, head: int,
+                    warn_on_oversize = True):
 
         def sec_n(i):
             return config.sz[i] if i < len(config.sz) else config.sz[-1]
@@ -750,8 +751,9 @@ class IBMTrackFormatted(IBMTrack):
 
         if tracklen > tracklen_bc * 105//100:
             t.oversized = True
-            print('T%d.%d: IBM: WARNING: Track is %.2f%% too long'
-                  % (cyl, head, 100.0*tracklen/tracklen_bc))
+            if warn_on_oversize:
+                print('T%d.%d: IBM: WARNING: Track is %.2f%% too long'
+                      % (cyl, head, 100.0*tracklen/tracklen_bc))
         tracklen_bc = max(tracklen_bc, tracklen)
 
         t.time_per_rev = 60 / rpm

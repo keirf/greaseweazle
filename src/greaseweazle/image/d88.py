@@ -111,20 +111,22 @@ class D88(Image):
                 track.secs = len(secs)
                 track.sz = [x[3] for x in secs]
                 track.finalise()
-                t = track.mk_track(cyl, head)
+                t = ibm.IBMTrackFormatted.from_config(
+                    track, cyl, head, warn_on_oversize = False)
 
-                # If the track is oversized, remove duplicate sectors, if any
+                # If the track is oversized, remove duplicate sectors, and
+                # re-generate the track layout with oversize warning enabled.
                 if t.oversized:
                     new_secs = d88.remove_duplicate_sectors(secs)
                     ndups = len(secs) - len(new_secs)
                     if ndups != 0:
                         print('T%d.%d: D88: Removed %d duplicate sectors '
                               'from oversized track' % (cyl, head, ndups))
-                        # Generate the de-duplicated track layout
-                        secs = new_secs
-                        track.secs = len(secs)
-                        track.sz = [x[3] for x in secs]
-                        t = track.mk_track(cyl, head)
+                    secs = new_secs
+                    track.secs = len(secs)
+                    track.sz = [x[3] for x in secs]
+                    t = ibm.IBMTrackFormatted.from_config(
+                        track, cyl, head, warn_on_oversize = True)
 
                 for nr,s in enumerate(t.sectors):
                     c,h,r,n,data = secs[nr]
