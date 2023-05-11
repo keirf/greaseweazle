@@ -22,6 +22,19 @@ class D88(Image):
         self.to_track: Dict[Tuple[int,int],ibm.IBMTrackFormatted] = dict()
         self.filename = name
 
+    @staticmethod
+    def remove_duplicate_sectors(secs) ->  List[Tuple[int,int,int,int,bytes]]:
+        new_secs: List[Tuple[int,int,int,int,bytes]] = []
+        for s in secs:
+            dup = False
+            for t in new_secs:
+                if s == t:
+                    dup = True
+                    break
+            if not dup:
+                new_secs.append(s)
+        return new_secs
+
     @classmethod
     def from_file(cls, name: str) -> Image:
 
@@ -99,6 +112,19 @@ class D88(Image):
                 track.sz = [x[3] for x in secs]
                 track.finalise()
                 t = track.mk_track(cyl, head)
+
+                # If the track is oversized, remove duplicate sectors, if any
+                if t.oversized:
+                    new_secs = d88.remove_duplicate_sectors(secs)
+                    ndups = len(secs) - len(new_secs)
+                    if ndups != 0:
+                        print('T%d.%d: D88: Removed %d duplicate sectors '
+                              'from oversized track' % (cyl, head, ndups))
+                        # Generate the de-duplicated track layout
+                        secs = new_secs
+                        track.secs = len(secs)
+                        track.sz = [x[3] for x in secs]
+                        t = track.mk_track(cyl, head)
 
                 for nr,s in enumerate(t.sectors):
                     c,h,r,n,data = secs[nr]
