@@ -684,6 +684,9 @@ class IBMTrackFormatted(IBMTrack):
         t.nsec = nsec = config.secs
         t.img_bps = config.img_bps
 
+        if config.gapbyte is not None:
+            t.gapbyte = config.gapbyte
+
         if config.iam:
             gap1 = gaps.gap1 if config.gap1 is None else config.gap1
         else:
@@ -799,6 +802,7 @@ class IBMTrackFormat:
         self.gap2: Optional[int] = None
         self.gap3: Optional[int] = None
         self.gap4a: Optional[int] = None
+        self.gapbyte: Optional[int] = None
         self.iam = True
         self.rate = 0
         self.img_bps: Optional[int] = None
@@ -830,14 +834,14 @@ class IBMTrackFormat:
             error.check(1 <= n <= 255, '%s out of range' % key)
             self.interleave = n
         elif key in ['id', 'cskew', 'hskew']:
-            n = int(val)
+            n = int(val, base=0)
             error.check(0 <= n <= 255, '%s out of range' % key)
             setattr(self, key, n)
-        elif key in ['gap1', 'gap2', 'gap3', 'gap4a', 'h']:
+        elif key in ['gap1', 'gap2', 'gap3', 'gap4a', 'gapbyte', 'h']:
             if val == 'auto':
                 n = None
             else:
-                n = int(val)
+                n = int(val, base=0)
                 error.check(0 <= n <= 255, '%s out of range' % key)
             setattr(self, key, n)
         elif key == 'iam':
