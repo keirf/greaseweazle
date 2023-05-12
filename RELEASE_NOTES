@@ -3,6 +3,18 @@
 ** Keir Fraser <keir.xen@gmail.com>
 ************************************
 
+** v1.12 - 12 May 2023
+ - New disk formats:
+   - Commodore 1541 (C64) GCR: commodore.1541
+   - IBM: ibm.320
+   - Dragon32, Dragon64: dragon.*
+   - Tandy CoCo: coco.*
+ - New image format: D64 (C64 CBMDOS GCR disks)
+ - ibm: Improve layout of very full tracks
+ - ibm: Warn on oversize tracks (data too large to fit)
+ - ibm: Allow gapbyte value to be specified in diskdef
+ - d88: Remove duplicate sectors from oversize tracks
+
 ** v1.11 - 4 May 2023
  - New disk formats:
    - Macintosh GCR: mac.400, mac.800
