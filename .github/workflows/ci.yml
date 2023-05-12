@@ -8,7 +8,7 @@ name: CI
 jobs:
 
   test-ubuntu:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
 
     - uses: actions/checkout@v3
@@ -29,7 +29,7 @@ jobs:
         bash scripts/tests/test.sh
 
   build-ubuntu:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
 
     - uses: actions/checkout@v3
@@ -94,7 +94,7 @@ jobs:
 
   finalise:
     needs: [build-ubuntu, build-windows]
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
 
     - uses: actions/checkout@v3
