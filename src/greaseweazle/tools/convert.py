@@ -38,43 +38,58 @@ def open_output_image(args, image_class):
     return image
 
 
+class TrackIdentity:
+    def __init__(self, ts, cyl, head):
+        self.cyl, self.head = cyl, head
+        self.physical_cyl, self.physical_head = ts.ch_to_pch(cyl, head)
+
+
+def process_input_track(args, t, in_image, decoder):
+
+    cyl, head = t.cyl, t.head
+
+    track = in_image.get_track(t.physical_cyl, t.physical_head)
+    if track is None:
+        return None
+
+    if args.adjust_speed is not None:
+        track.scale(args.adjust_speed / track.time_per_rev)
+
+    if decoder is None or not args.raw_image_class:
+        dat = track
+        print("T%u.%u: %s" % (cyl, head, track.summary_string()))
+    else:
+        dat = decoder(cyl, head, track)
+        if dat is None:
+            print("T%u.%u: WARNING: out of range for format '%s': Track "
+                  "skipped" % (cyl, head, args.format))
+            return None
+        for pll in plls[1:]:
+            if dat.nr_missing() == 0:
+                break
+            dat.decode_raw(track, pll)
+        print("T%u.%u: %s from %s" % (cyl, head, dat.summary_string(),
+                                      track.summary_string()))
+
+    return dat
+
+
 def convert(args, in_image, out_image, decoder=None):
 
     summary = dict()
 
-    for t in args.tracks:
-
-        cyl, head = t.cyl, t.head
-
-        track = in_image.get_track(t.physical_cyl, t.physical_head)
-        if track is None:
-            continue
-
-        if args.adjust_speed is not None:
-            track.scale(args.adjust_speed / track.time_per_rev)
-
-        if decoder is None or not args.raw_image_class:
-            dat = track
-            print("T%u.%u: %s" % (cyl, head, track.summary_string()))
-        else:
-            dat = decoder(cyl, head, track)
-            if dat is None:
-                print("T%u.%u: WARNING: out of range for format '%s': Track "
-                      "skipped" % (cyl, head, args.format))
-                continue
-            for pll in plls[1:]:
-                if dat.nr_missing() == 0:
-                    break
-                dat.decode_raw(track, pll)
-            print("T%u.%u: %s from %s" % (cyl, head, dat.summary_string(),
-                                          track.summary_string()))
-        summary[cyl,head] = dat
-
     for t in args.out_tracks:
         cyl, head = t.cyl, t.head
-        if (cyl, head) not in summary:
+        if (cyl, head) in summary:
+            dat = summary[cyl, head]
+        elif (cyl, head) in args.tracks:
+            dat = process_input_track(
+                args, TrackIdentity(args.tracks, cyl, head), in_image, decoder)
+            if dat is None:
+                continue
+            summary[cyl,head] = dat
+        else:
             continue
-        dat = summary[cyl,head]
         out_image.emit_track(t.physical_cyl, t.physical_head, dat)
 
     if decoder is not None:

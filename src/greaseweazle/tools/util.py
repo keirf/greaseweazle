@@ -138,9 +138,7 @@ class TrackSet:
             l = []
             for c in ts.cyls:
                 for h in ts.heads:
-                    pc = c//-ts.step if ts.step < 0 else c*ts.step
-                    pc += ts.h_off[h]
-                    ph = 1-h if ts.hswap else h
+                    pc, ph = ts.ch_to_pch(c, h)
                     l.append((pc, ph, c, h))
             l.sort()
             self.l = iter(l)
@@ -157,6 +155,12 @@ class TrackSet:
         self.hswap = False
         self.trackspec = ''
         self.update_from_trackspec(trackspec)
+
+    def ch_to_pch(self, c, h):
+        pc = c//-self.step if self.step < 0 else c*self.step
+        pc += self.h_off[h]
+        ph = 1-h if self.hswap else h
+        return pc, ph
 
     def update_from_trackspec(self, trackspec):
         """Update a TrackSet based on a trackspec."""
@@ -222,6 +226,10 @@ class TrackSet:
 
     def __iter__(self):
         return self.TrackIter(self)
+
+    def __contains__(self, key):
+        c, h = key
+        return c in self.cyls and h in self.heads
 
 def split_opts(seq):
     """Splits a name from its list of options."""
