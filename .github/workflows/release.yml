@@ -37,7 +37,7 @@ jobs:
         name: greaseweazle.ci.${{ steps.vars.outputs.ver }}
         path: greaseweazle-${{ steps.vars.outputs.ver }}.zip
 
-  build-windows:
+  build-win32:
     runs-on: windows-2019
     steps:
 
@@ -48,7 +48,7 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: 3.11
+        python-version: 3.8
         architecture: x86
 
     - name: Dependency packages (pip)
@@ -63,16 +63,56 @@ jobs:
         echo "ver=$(make version)" >> $GITHUB_OUTPUT
 
     - name: Build dist
-      run: make windist
+      shell: bash
+      run: |
+        make windist
+        mv greaseweazle-${{ steps.vars.outputs.ver }}-win.zip greaseweazle-${{ steps.vars.outputs.ver }}-win32.zip
 
     - name: Upload artifacts
       uses: actions/upload-artifact@v3
       with:
         name: greaseweazle.ci.${{ steps.vars.outputs.ver }}
-        path: greaseweazle-${{ steps.vars.outputs.ver }}-win.zip
+        path: greaseweazle-${{ steps.vars.outputs.ver }}-win32.zip
+
+  build-win64:
+    runs-on: windows-2022
+    steps:
+
+    - uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: 3.11
+        architecture: x64
+
+    - name: Dependency packages (pip)
+      run: |
+        python -m pip install --upgrade pip setuptools==60.1.0 wheel
+        python -m pip install --user cx_Freeze setuptools_scm
+
+    - name: Set environment variables
+      id: vars
+      shell: bash
+      run: |
+        echo "ver=$(make version)" >> $GITHUB_OUTPUT
+
+    - name: Build dist
+      shell: bash
+      run: |
+        make windist
+        mv greaseweazle-${{ steps.vars.outputs.ver }}-win.zip greaseweazle-${{ steps.vars.outputs.ver }}-win64.zip
+
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: greaseweazle.ci.${{ steps.vars.outputs.ver }}
+        path: greaseweazle-${{ steps.vars.outputs.ver }}-win64.zip
 
   finalise:
-    needs: [build-ubuntu, build-windows]
+    needs: [build-ubuntu, build-win32, build-win64]
     runs-on: ubuntu-22.04
     steps:
 
@@ -98,16 +138,20 @@ jobs:
       with:
         name: greaseweazle.ci.${{ steps.vars.outputs.ver }}
 
-    - name: Remove 64-bit DLLS
+    - name: Fix up Win32 distribution
       run: |
         P=greaseweazle
         V=${{ steps.vars.outputs.ver }}
-        unzip $P-$V-win.zip
+        unzip $P-$V-win32.zip
         find $P-$V -name 'api-ms-*' | xargs rm -f
         find $P-$V/lib -name 'python*.dll' | xargs rm -f
         find $P-$V/lib -name 'vcruntime140.dll' | xargs rm -f
-        rm $P-$V-win.zip
-        zip -r $P-$V-win.zip $P-$V
+        wget https://github.com/keirf/$P/releases/download/v1.12/$P-1.12-win.zip
+        unzip $P-1.12-win.zip
+        cp $P-1.12/api-ms*.dll $P-$V/
+        cp $P-1.12/ucrtbase.dll $P-$V/
+        rm $P-$V-win32.zip
+        zip -r $P-$V-win32.zip $P-$V
 
     - name: Create Release
       id: create_release
@@ -119,5 +163,5 @@ jobs:
         body: "[**Release Notes:**](https://github.com/keirf/greaseweazle/blob/master/RELEASE_NOTES)"
         draft: false
         prerelease: false
-        artifacts: "greaseweazle-${{ steps.vars.outputs.ver }}-win.zip,greaseweazle-${{ steps.vars.outputs.ver }}.zip"
+        artifacts: "greaseweazle-${{ steps.vars.outputs.ver }}-win64.zip,greaseweazle-${{ steps.vars.outputs.ver }}-win32.zip,greaseweazle-${{ steps.vars.outputs.ver }}.zip"
         artifactContentType: application/zip
