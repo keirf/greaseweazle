@@ -278,10 +278,8 @@ image_types = OrderedDict(
 def get_image_class(name):
     _, ext = os.path.splitext(name)
     error.check(ext.lower() in image_types,
-                """\
-                %s: Unrecognised file suffix '%s'
-                Known suffixes: %s"""
-                % (name, ext, ', '.join(image_types)))
+                "%s: Unrecognised file suffix '%s'\nKnown suffixes:\n%s"
+                % (name, ext, columnify(image_types)))
     typespec = image_types[ext.lower()]
     if isinstance(typespec, tuple):
         typename, classname = typespec

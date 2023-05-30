@@ -177,7 +177,9 @@ def main(argv):
 
     epilog = (util.drive_desc + "\n"
               + util.speed_desc + "\n" + util.tspec_desc
-              + "\nFORMAT options:\n" + formats.print_formats())
+              + "\nFORMAT options:\n" + formats.print_formats()
+              + "\n\nSupported file suffixes:\n"
+              + util.columnify(util.image_types))
     parser = util.ArgumentParser(usage='%(prog)s [options] file',
                                  epilog=epilog)
     parser.add_argument("--device", help="device name (COM/serial port)")

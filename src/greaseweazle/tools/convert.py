@@ -100,7 +100,9 @@ def main(argv):
 
     epilog = (util.speed_desc + "\n" + util.tspec_desc
               + "\n" + util.pllspec_desc
-              + "\nFORMAT options:\n" + formats.print_formats())
+              + "\nFORMAT options:\n" + formats.print_formats()
+              + "\n\nSupported file suffixes:\n"
+              + util.columnify(util.image_types))
     parser = util.ArgumentParser(usage='%(prog)s [options] in_file out_file',
                                  epilog=epilog)
     parser.add_argument("--diskdefs", help="disk definitions file")
