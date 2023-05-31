@@ -13,6 +13,7 @@ from .image import Image
 class IMG(Image):
 
     sides_swapped = False
+    sequential = False
     min_cyls: Optional[int] = None
 
     def __init__(self, name: str, fmt, noclobber=False):
@@ -24,6 +25,19 @@ Sector image requires a disk format to be specified""")
         self.noclobber = noclobber
 
 
+    def track_list(self):
+        t, l = self.fmt.tracks, []
+        if self.sequential:
+            for h in t.heads:
+                for c in t.cyls:
+                    l.append((c,h))
+        else:
+            for c in t.cyls:
+                for h in t.heads:
+                    l.append((c,h))
+        return l
+
+
     @classmethod
     def from_file(cls, name: str, fmt) -> Image:
 
@@ -33,8 +47,7 @@ Sector image requires a disk format to be specified""")
         img = cls(name, fmt)
 
         pos = 0
-        for t in fmt.tracks:
-            cyl, head = t.cyl, t.head
+        for (cyl, head) in img.track_list():
             if img.sides_swapped:
                 head ^= 1
             track = fmt.mk_track(cyl, head)
@@ -71,15 +84,13 @@ Sector image requires a disk format to be specified""")
         max_cyl = None
         if self.min_cyls is not None:
             max_cyl = self.min_cyls - 1
-            for t in self.fmt.tracks:
-                cyl, head = t.cyl, t.head
+            for (cyl, head) in self.track_list():
                 if cyl > max_cyl and (cyl,head) in self.to_track:
                     track = self.to_track[cyl,head]
                     if track.nr_missing() < track.nsec:
                         max_cyl = cyl
 
-        for t in self.fmt.tracks:
-            cyl, head = t.cyl, t.head
+        for (cyl, head) in self.track_list():
             if max_cyl is not None and cyl > max_cyl:
                 break
             if self.sides_swapped:

@@ -42,11 +42,11 @@ class C64GCR:
         self.sector = [None] * self.nsec
         self.disk_id = None
         error.check(optimised.enabled,
-                    'Commodore 1541 GCR requires optimised C extension')
+                    'Commodore GCR requires optimised C extension')
 
     def summary_string(self) -> str:
         nsec, nbad = self.nsec, self.nr_missing()
-        s = "Commodore 1541 GCR (%d/%d sectors)" % (nsec - nbad, nsec)
+        s = "Commodore GCR (%d/%d sectors)" % (nsec - nbad, nsec)
         return s
 
     def set_disk_id(self, disk_id):
@@ -61,6 +61,10 @@ class C64GCR:
     def add(self, sec_id, data) -> None:
         assert not self.exists(sec_id)
         self.sector[sec_id] = data
+
+    # private
+    def tracknr(self) -> int:
+        return self.head*35 + self.cyl + 1
 
     def has_sec(self, sec_id) -> bool:
         return self.sector[sec_id] is not None
@@ -109,7 +113,7 @@ class C64GCR:
             if sum != 0:
                 continue
             sec_id, cyl, disk_id = struct.unpack('>2BH', hdr[2:6])
-            if (cyl != self.cyl+1 or sec_id >= self.nsec):
+            if (cyl != self.tracknr() or sec_id >= self.nsec):
                 print('T%d.%d: Ignoring unexpected sector C:%d S:%d ID:%04x'
                       % (self.cyl, self.head, cyl, sec_id, disk_id))
                 continue
@@ -156,7 +160,7 @@ class C64GCR:
             data = bad_sector if sector is None else sector
             # Header
             disk_id = self.disk_id if self.disk_id is not None else 0
-            hdr = struct.pack('>2BH', sec_id, self.cyl+1, disk_id)
+            hdr = struct.pack('>2BH', sec_id, self.tracknr(), disk_id)
             sum = 0
             for x in hdr:
                 sum ^= x
