@@ -16,7 +16,7 @@ from .image import Image
 class MSA(Image):
 
     def __init__(self, name: str, fmt=None, noclobber=False):
-        self.to_track: Dict[Tuple[int,int],ibm.IBMTrackFormatted] = dict()
+        self.to_track: Dict[Tuple[int,int],ibm.IBMTrack_Fixed] = dict()
         self.filename = name
         self.fmt = fmt
         self.noclobber = noclobber
@@ -62,7 +62,7 @@ class MSA(Image):
                     error.check(len(tdat) == spt*512,
                                 'MSA: Bad track compressed data')
 
-                track = ibm.IBMTrackFormat('ibm.mfm')
+                track = ibm.IBMTrack_Fixed_Config('ibm.mfm')
                 track.iam = False
                 track.rate = 250
                 track.rpm = 300
@@ -95,7 +95,7 @@ class MSA(Image):
         return cls(name, fmt, noclobber)
 
 
-    def get_track(self, cyl: int, side: int) -> Optional[ibm.IBMTrackFormatted]:
+    def get_track(self, cyl: int, side: int) -> Optional[ibm.IBMTrack_Fixed]:
         if (cyl,side) not in self.to_track:
             return None
         return self.to_track[cyl,side]
@@ -122,7 +122,7 @@ class MSA(Image):
                 error.check((c,h) in self.to_track,
                             f'MSA: Missing track {c}.{h} in output')
                 track = self.to_track[c,h]
-                error.check(issubclass(type(track), ibm.IBMTrackFormatted),
+                error.check(issubclass(type(track), ibm.IBMTrack_Fixed),
                             f'MSA: Track {c}.{h} is not an IBM track: '
                             'Maybe missing --format= option?')
                 tdat = track.get_img_track()

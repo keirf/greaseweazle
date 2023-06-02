@@ -147,8 +147,8 @@ class TrackArea:
         self.end -= delta
     def __eq__(self, x):
         return (isinstance(x, type(self))
-                and self.start == x.start
-                and self.end == x.end
+                and abs(self.start - x.start) < 1000
+                and abs(self.end - x.end) < 1000
                 and self.crc == x.crc)
 
 class IDAM(TrackArea):
@@ -256,6 +256,11 @@ class IBMTrack:
             self.gapbyte = 0x4e
         else:
             raise error.Fatal('Unrecognised IBM mode')
+        self.img_bps: Optional[int] = None
+
+    @property
+    def nsec(self) -> int:
+        return len(self.sectors)
 
     def summary_string(self) -> str:
         nsec, nbad = len(self.sectors), self.nr_missing()
@@ -270,6 +275,52 @@ class IBMTrack:
 
     def flux(self, *args, **kwargs):
         return self.raw_track().flux(*args, **kwargs)
+
+    def set_img_track(self, tdat: bytearray) -> int:
+        pos = 0
+        self.sectors.sort(key = lambda x: x.idam.r)
+        if self.img_bps is not None:
+            totsize = len(self.sectors) * self.img_bps
+        else:
+            totsize = functools.reduce(lambda x, y: x + len(y.dam.data),
+                                       self.sectors, 0)
+        if len(tdat) < totsize:
+            tdat += bytes(totsize - len(tdat))
+        for s in self.sectors:
+            s.crc = s.idam.crc = s.dam.crc = 0
+            size = len(s.dam.data)
+            s.dam.data = tdat[pos:pos+size]
+            if self.img_bps is not None:
+                pos += self.img_bps
+            else:
+                pos += size
+        self.sectors.sort(key = lambda x: x.start)
+        return totsize
+
+    def get_img_track(self) -> bytearray:
+        tdat = bytearray()
+        sectors = self.sectors.copy()
+        sectors.sort(key = lambda x: x.idam.r)
+        for s in sectors:
+            tdat += s.dam.data
+            if self.img_bps is not None:
+                tdat += bytes(self.img_bps - len(s.dam.data))
+        return tdat
+        
+    def verify_track(self, flux) -> bool:
+        readback_track = self.__class__(self.cyl, self.head, self.mode)
+        readback_track.clock = self.clock
+        readback_track.time_per_rev = self.time_per_rev
+        for iam in self.iams:
+            readback_track.iams.append(copy.copy(iam))
+        for sec in self.sectors:
+            idam, dam = copy.copy(sec.idam), copy.copy(sec.dam)
+            idam.crc, dam.crc = 0xffff, 0xffff
+            readback_track.sectors.append(Sector(idam, dam))
+        readback_track.decode_raw(flux)
+        if readback_track.nr_missing() != 0:
+            return False
+        return self.sectors == readback_track.sectors
 
     def mfm_raw_track(self) -> bytes:
 
@@ -374,8 +425,6 @@ class IBMTrack:
         track.verify = self
         track.verify_revs = default_revs
         return track
-
-class IBMTrackRaw(IBMTrack):
 
     @staticmethod
     def mfm_decode_raw(raw: RawTrack) -> List[TrackArea]:
@@ -545,12 +594,16 @@ class IBMTrackRaw(IBMTrack):
 
         return areas
 
-    def decode_raw(self, track, pll=None) -> None:
-        
-        flux = track.flux()
-        flux.cue_at_index()
-        raw = RawTrack(time_per_rev = self.time_per_rev,
-                       clock = self.clock, data = flux, pll = pll)
+    def decode_raw(self, track, pll=None, flux=None) -> None:
+
+        if flux is None:
+            flux = track.flux()
+            flux.cue_at_index()
+            raw = RawTrack(time_per_rev = self.time_per_rev,
+                           clock = self.clock, data = flux, pll = pll)
+        else:
+            assert issubclass(type(track), RawTrack)
+            raw = track
 
         if self.mode is Mode.FM:
             areas = self.fm_decode_raw(raw)
@@ -583,20 +636,17 @@ class IBMTrackRaw(IBMTrack):
         self.sectors.sort(key=lambda x:x.start)
 
 
-class IBMTrackFormatted(IBMTrack):
-
-    nsec: int
+class IBMTrack_Fixed(IBMTrack):
 
     def __init__(self, cyl: int, head: int, mode: Mode):
         super().__init__(cyl, head, mode)
-        self.img_bps: Optional[int] = None
-        self.raw = IBMTrackRaw(cyl, head, mode)
+        self.raw = IBMTrack(cyl, head, mode)
         self.oversized = False
 
-    def decode_raw(self, track, pll=None) -> None:
+    def decode_raw(self, track, pll=None, flux=None) -> None:
         self.raw.clock = self.clock
         self.raw.time_per_rev = self.time_per_rev
-        self.raw.decode_raw(track, pll)
+        self.raw.decode_raw(track, pll, flux)
         mismatches = set()
         for r in self.raw.sectors:
             if r.idam.crc != 0:
@@ -619,54 +669,8 @@ class IBMTrackFormatted(IBMTrack):
             print('T%d.%d: Ignoring unexpected sector C:%d H:%d R:%d N:%d'
                   % (self.cyl, self.head, *m))
 
-    def set_img_track(self, tdat: bytearray) -> int:
-        pos = 0
-        self.sectors.sort(key = lambda x: x.idam.r)
-        if self.img_bps is not None:
-            totsize = len(self.sectors) * self.img_bps
-        else:
-            totsize = functools.reduce(lambda x, y: x + len(y.dam.data),
-                                       self.sectors, 0)
-        if len(tdat) < totsize:
-            tdat += bytes(totsize - len(tdat))
-        for s in self.sectors:
-            s.crc = s.idam.crc = s.dam.crc = 0
-            size = len(s.dam.data)
-            s.dam.data = tdat[pos:pos+size]
-            if self.img_bps is not None:
-                pos += self.img_bps
-            else:
-                pos += size
-        self.sectors.sort(key = lambda x: x.start)
-        return totsize
-
-    def get_img_track(self) -> bytearray:
-        tdat = bytearray()
-        sectors = self.sectors.copy()
-        sectors.sort(key = lambda x: x.idam.r)
-        for s in sectors:
-            tdat += s.dam.data
-            if self.img_bps is not None:
-                tdat += bytes(self.img_bps - len(s.dam.data))
-        return tdat
-        
-    def verify_track(self, flux) -> bool:
-        readback_track = self.__class__(self.cyl, self.head, self.mode)
-        readback_track.clock = self.clock
-        readback_track.time_per_rev = self.time_per_rev
-        for iam in self.iams:
-            readback_track.iams.append(copy.copy(iam))
-        for sec in self.sectors:
-            idam, dam = copy.copy(sec.idam), copy.copy(sec.dam)
-            idam.crc, dam.crc = 0xffff, 0xffff
-            readback_track.sectors.append(Sector(idam, dam))
-        readback_track.decode_raw(flux)
-        if readback_track.nr_missing() != 0:
-            return False
-        return self.sectors == readback_track.sectors
-
     @classmethod
-    def from_config(cls, config: IBMTrackFormat, cyl: int, head: int,
+    def from_config(cls, config: IBMTrack_Fixed_Config, cyl: int, head: int,
                     warn_on_oversize = True):
 
         def sec_n(i):
@@ -683,7 +687,7 @@ class IBMTrackFormatted(IBMTrack):
             synclen = 1 # Mark
 
         t = cls(cyl, head, mode)
-        t.nsec = nsec = config.secs
+        nsec = config.secs
         t.img_bps = config.img_bps
 
         if config.gapbyte is not None:
@@ -792,7 +796,8 @@ class IBMTrackFormatted(IBMTrack):
 
         return t
 
-class IBMTrackFormat:
+
+class IBMTrack_Fixed_Config:
 
     default_revs = default_revs
 
@@ -877,8 +882,131 @@ class IBMTrackFormat:
                     'img_bps cannot be smaller than sector data size')
         self.finalised = True
 
-    def mk_track(self, cyl: int, head: int) -> IBMTrackFormatted:
-        return IBMTrackFormatted.from_config(self, cyl, head)
+    def mk_track(self, cyl: int, head: int) -> IBMTrack_Fixed:
+        return IBMTrack_Fixed.from_config(self, cyl, head)
+
+
+class IBMTrack_Empty(IBMTrack):
+
+    def __init__(self, cyl, head):
+        # Fake some parameters for raw_track()
+        super().__init__(cyl, head, Mode.MFM)
+        self.time_per_rev = 0.2
+        self.clock = 2e-6
+
+    def summary_string(self) -> str:
+        return "IBM Empty"
+
+    def set_img_track(self, tdat: bytearray) -> int:
+        raise error.Fatal('ibm.generic: Cannot handle IMG input data')
+
+
+class IBMTrack_Scan:
+
+    RATES = [ 125, 250, 500 ]
+    RPMS = [ 300, 360 ]
+    BEST_GUESS = None
+    
+    def __init__(self, cyl: int, head: int, config: IBMTrack_Scan_Config):
+        self.cyl, self.head = cyl, head
+        self.rate, self.rpm = config.rate, config.rpm
+        self.track: IBMTrack = IBMTrack_Empty(cyl, head)
+
+    @property
+    def nsec(self) -> int:
+        return self.track.nsec
+
+    def summary_string(self) -> str:
+        return self.track.summary_string()
+
+    def has_sec(self, sec_id):
+        return self.track.has_sec(sec_id)
+
+    def nr_missing(self):
+        return self.track.nr_missing()
+
+    def raw_track(self) -> MasterTrack:
+        return self.track.raw_track()
+
+    def flux(self, *args, **kwargs):
+        return self.track.raw_track().flux(*args, **kwargs)
+
+    def set_img_track(self, tdat: bytearray) -> int:
+        return self.track.set_img_track(tdat)
+
+    def get_img_track(self) -> bytearray:
+        return self.track.get_img_track()
+        
+    def decode_raw(self, track, pll=None) -> None:
+
+        # Add more data to an existing track instance?
+        if not isinstance(self.track, IBMTrack_Empty):
+            self.track.decode_raw(track = track, pll = pll)
+            return
+
+        # Try our best guess first.
+        if IBMTrack_Scan.BEST_GUESS is not None:
+            time_per_rev, clock, mode = IBMTrack_Scan.BEST_GUESS
+            t = IBMTrack(self.cyl, self.head, mode)
+            t.clock, t.time_per_rev = clock, time_per_rev
+            t.decode_raw(track, pll)
+            # Perfect match, no missing sectors? 
+            if t.nsec != 0 and t.nr_missing() == 0:
+                self.track = t
+                return
+
+        rates = self.RATES if self.rate is None else [self.rate]
+        rpms = self.RPMS if self.rpm is None else [self.rpm]
+
+        flux = track.flux()
+        flux.cue_at_index()
+
+        # Scan at various rates & modes to find at least one sector
+        for rpm in rpms:
+            time_per_rev = 60 / rpm
+            for rate in rates:
+                clock = 5e-4 / rate
+                raw = RawTrack(time_per_rev = time_per_rev,
+                               clock = clock, data = flux, pll = pll)
+                for mode in [Mode.MFM, Mode.FM]:
+                    t = IBMTrack(self.cyl, self.head, mode)
+                    t.clock, t.time_per_rev = clock, time_per_rev
+                    t.decode_raw(track = raw, pll = pll, flux = flux)
+                    if ((t.nsec - t.nr_missing())
+                        > (self.track.nsec - self.track.nr_missing())):
+                        self.track = t
+
+        # If we found a match, remember it as a best guess for the next track.
+        if not isinstance(self.track, IBMTrack_Empty):
+            t = self.track
+            IBMTrack_Scan.BEST_GUESS = (t.time_per_rev, t.clock, t.mode)
+
+    @classmethod
+    def from_config(cls, config: IBMTrack_Scan_Config, cyl: int, head: int):
+        return cls(cyl, head, config)
+
+
+class IBMTrack_Scan_Config:
+
+    default_revs = default_revs
+
+    def __init__(self, format_name: str):
+        self.rpm: Optional[int] = None
+        self.rate: Optional[int] = None
+
+    def add_param(self, key: str, val: str) -> None:
+        if key in ['rate', 'rpm']:
+            n = int(val)
+            error.check(1 <= n <= 2000, '%s out of range' % key)
+            setattr(self, key, n)
+        else:
+            raise error.Fatal('unrecognised track option %s' % key)
+
+    def finalise(self) -> None:
+        pass
+
+    def mk_track(self, cyl: int, head: int) -> IBMTrack_Scan:
+        return IBMTrack_Scan.from_config(self, cyl, head)
 
 # Local variables:
 # python-indent: 4

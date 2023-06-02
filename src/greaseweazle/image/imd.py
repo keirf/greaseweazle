@@ -25,7 +25,7 @@ class IMDMode:
 class IMD(Image):
 
     def __init__(self, name: str, noclobber=False):
-        self.to_track: Dict[Tuple[int,int],ibm.IBMTrackFormatted] = dict()
+        self.to_track: Dict[Tuple[int,int],ibm.IBMTrack_Fixed] = dict()
         self.filename = name
         self.noclobber = noclobber
 
@@ -59,16 +59,16 @@ class IMD(Image):
             error.check(0 <= head <= 1, 'IMD: Bad head value %x' % head)
 
             if mode == IMDMode.FM_250kbps or mode == IMDMode.FM_300kbps:
-                fmt = ibm.IBMTrackFormat('ibm.fm')
+                fmt = ibm.IBMTrack_Fixed_Config('ibm.fm')
                 fmt.rpm, fmt.rate = 300, 125
             elif mode == IMDMode.FM_500kbps:
-                fmt = ibm.IBMTrackFormat('ibm.fm')
+                fmt = ibm.IBMTrack_Fixed_Config('ibm.fm')
                 fmt.rpm, fmt.rate = 300, 250
             elif mode == IMDMode.MFM_250kbps or mode == IMDMode.MFM_300kbps:
-                fmt = ibm.IBMTrackFormat('ibm.mfm')
+                fmt = ibm.IBMTrack_Fixed_Config('ibm.mfm')
                 fmt.rpm, fmt.rate = 300, 250
             elif mode == IMDMode.MFM_500kbps:
-                fmt = ibm.IBMTrackFormat('ibm.mfm')
+                fmt = ibm.IBMTrack_Fixed_Config('ibm.mfm')
                 fmt.rpm, fmt.rate = 300, 500
             else:
                 raise error.Fatal('IMD: Unrecognised track mode %x' % mode)
@@ -119,17 +119,20 @@ class IMD(Image):
         return cls(name, noclobber=noclobber)
 
 
-    def get_track(self, cyl: int, side: int) -> Optional[ibm.IBMTrackFormatted]:
+    def get_track(self, cyl: int, side: int) -> Optional[ibm.IBMTrack_Fixed]:
         if (cyl,side) not in self.to_track:
             return None
         return self.to_track[cyl,side]
 
 
     def emit_track(self, cyl: int, side: int, track) -> None:
+        if issubclass(type(track), ibm.IBMTrack_Scan):
+            track = track.track
         error.check(issubclass(type(track), ibm.IBMTrack),
                     'IMD: Cannot create T%d.%d: Not IBM.FM nor IBM.MFM'
                     % (cyl, side))
-        self.to_track[cyl,side] = track
+        if not isinstance(track, ibm.IBMTrack_Empty):
+            self.to_track[cyl,side] = track
 
 
     def get_image(self) -> bytes:

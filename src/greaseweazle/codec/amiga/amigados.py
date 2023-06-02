@@ -172,7 +172,7 @@ class AmigaDOS_HD(AmigaDOS):
     clock = AmigaDOS_DD.clock / 2
 
 
-class AmigaDOSTrackFormat:
+class AmigaDOS_Config:
 
     default_revs = default_revs
 

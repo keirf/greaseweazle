@@ -193,7 +193,7 @@ class MacGCR:
                 and self.sector == readback_track.sector)
 
 
-class MacGCRTrackFormat:
+class MacGCR_Config:
 
     default_revs = default_revs
 

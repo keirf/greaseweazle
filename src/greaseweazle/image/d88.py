@@ -19,7 +19,7 @@ class D88(Image):
     read_only = True
 
     def __init__(self, name: str):
-        self.to_track: Dict[Tuple[int,int],ibm.IBMTrackFormatted] = dict()
+        self.to_track: Dict[Tuple[int,int],ibm.IBMTrack_Fixed] = dict()
         self.filename = name
 
     @staticmethod
@@ -79,18 +79,18 @@ class D88(Image):
                         if media_flag == 0x00:
 
                             if mfm_flag == 0x40:
-                                track = ibm.IBMTrackFormat('ibm.fm')
+                                track = ibm.IBMTrack_Fixed_Config('ibm.fm')
                                 track.rate = 125
                             else:
-                                track = ibm.IBMTrackFormat('ibm.mfm')
+                                track = ibm.IBMTrack_Fixed_Config('ibm.mfm')
                                 track.rate = 250
                             track.rpm = 300
                         else:
                             if mfm_flag == 0x40:
-                                track = ibm.IBMTrackFormat('ibm.fm')
+                                track = ibm.IBMTrack_Fixed_Config('ibm.fm')
                                 track.rate = 250
                             else:
-                                track = ibm.IBMTrackFormat('ibm.mfm')
+                                track = ibm.IBMTrack_Fixed_Config('ibm.mfm')
                                 track.rate = 500
                             track.rpm = 360
                         track_mfm_flag = mfm_flag
@@ -111,7 +111,7 @@ class D88(Image):
                 track.secs = len(secs)
                 track.sz = [x[3] for x in secs]
                 track.finalise()
-                t = ibm.IBMTrackFormatted.from_config(
+                t = ibm.IBMTrack_Fixed.from_config(
                     track, cyl, head, warn_on_oversize = False)
 
                 # If the track is oversized, remove duplicate sectors, and
@@ -125,7 +125,7 @@ class D88(Image):
                     secs = new_secs
                     track.secs = len(secs)
                     track.sz = [x[3] for x in secs]
-                    t = ibm.IBMTrackFormatted.from_config(
+                    t = ibm.IBMTrack_Fixed.from_config(
                         track, cyl, head, warn_on_oversize = True)
 
                 for nr,s in enumerate(t.sectors):
@@ -138,7 +138,7 @@ class D88(Image):
 
         return d88
 
-    def get_track(self, cyl: int, side: int) -> Optional[ibm.IBMTrackFormatted]:
+    def get_track(self, cyl: int, side: int) -> Optional[ibm.IBMTrack_Fixed]:
         if (cyl,side) not in self.to_track:
             return None
         return self.to_track[cyl,side]

@@ -194,7 +194,7 @@ class C64GCR:
                 and self.sector == readback_track.sector)
 
 
-class C64GCRTrackFormat:
+class C64GCR_Config:
 
     default_revs = default_revs
 

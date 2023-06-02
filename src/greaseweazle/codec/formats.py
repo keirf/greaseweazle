@@ -17,7 +17,7 @@ from greaseweazle.codec.macintosh import mac_gcr
 from greaseweazle.codec.commodore import c64_gcr
 from greaseweazle.tools import util
 
-class DiskFormat:
+class Disk_Config:
 
     def __init__(self):
         self.cyls, self.heads = None, None
@@ -89,24 +89,26 @@ def get_cfg_lines(cfg):
     return (lines, cfg)
 
 
-def mk_track_format(format_name):
+def mk_track_config(format_name):
     if format_name in ['amiga.amigados']:
-        return amigados.AmigaDOSTrackFormat(format_name)
-    if format_name in ['ibm.mfm','ibm.fm','dec.rx02']:
-        return ibm.IBMTrackFormat(format_name)
+        return amigados.AmigaDOS_Config(format_name)
+    if format_name in ['ibm.mfm', 'ibm.fm', 'dec.rx02']:
+        return ibm.IBMTrack_Fixed_Config(format_name)
+    if format_name in ['ibm.scan']:
+        return ibm.IBMTrack_Scan_Config(format_name)
     if format_name in ['mac.gcr']:
-        return mac_gcr.MacGCRTrackFormat(format_name)
+        return mac_gcr.MacGCR_Config(format_name)
     if format_name in ['c64.gcr']:
-        return c64_gcr.C64GCRTrackFormat(format_name)
+        return c64_gcr.C64GCR_Config(format_name)
     if format_name in ['bitcell']:
-        return bitcell.BitcellTrackFormat(format_name)
+        return bitcell.BitcellTrack_Config(format_name)
     raise error.Fatal('unrecognised format name: %s' % format_name)
 
 
 def get_format(name, cfg=None):
     parse_mode = ParseMode.Outer
     active, formats = False, []
-    disk_format, track_format = None, None
+    disk, track = None, None
     lines, cfg = get_cfg_lines(cfg)
 
     for linenr, l in enumerate(lines, start=1):
@@ -125,7 +127,7 @@ def get_format(name, cfg=None):
                 parse_mode = ParseMode.Disk
                 active = disk_match.group(1) == name
                 if active:
-                    disk_format = DiskFormat()
+                    disk = Disk_Config()
 
             elif parse_mode == ParseMode.Disk:
                 if t == 'end':
@@ -138,17 +140,17 @@ def get_format(name, cfg=None):
                     parse_mode = ParseMode.Track
                     if not active:
                         continue
-                    error.check(disk_format.cyls is not None,
+                    error.check(disk.cyls is not None,
                                 'missing cyls')
-                    error.check(disk_format.heads is not None,
+                    error.check(disk.heads is not None,
                                 'missing heads')
-                    track_format = mk_track_format(tracks_match.group(2))
+                    track = mk_track_config(tracks_match.group(2))
                     for x in tracks_match.group(1).split(','):
                         if x == '*':
-                            for c in range(disk_format.cyls):
-                                for hd in range(disk_format.heads):
-                                    if (c,hd) not in disk_format.track_map:
-                                        disk_format.track_map[c,hd] = track_format
+                            for c in range(disk.cyls):
+                                for hd in range(disk.heads):
+                                    if (c,hd) not in disk.track_map:
+                                        disk.track_map[c,hd] = track
                         else:
                             t_match = re.match(r'(\d+)(?:-(\d+))?'
                                                '(?:\.([01]))?', x)
@@ -159,18 +161,18 @@ def get_format(name, cfg=None):
                             e = s if e is None else int(e)
                             h = t_match.group(3)
                             if h is None:
-                                h = list(range(disk_format.heads))
+                                h = list(range(disk.heads))
                             else:
-                                error.check(int(h) < disk_format.heads,
+                                error.check(int(h) < disk.heads,
                                             'head out of range')
                                 h = [int(h)]
-                            error.check(0 <= s < disk_format.cyls
-                                        and 0 <= e < disk_format.cyls
+                            error.check(0 <= s < disk.cyls
+                                        and 0 <= e < disk.cyls
                                         and s <= e,
                                         'cylinder out of range')
                             for c in range(s,e+1):
                                 for hd in h:
-                                    disk_format.track_map[c,hd] = track_format
+                                    disk.track_map[c,hd] = track
                     continue
 
                 if not active:
@@ -179,15 +181,15 @@ def get_format(name, cfg=None):
                 keyval_match = re.match(r'([a-zA-Z0-9:,._-]+)\s*='
                                         '\s*([a-zA-Z0-9:,._-]+)', t)
                 error.check(keyval_match is not None, 'syntax error')
-                disk_format.add_param(keyval_match.group(1),
-                                      keyval_match.group(2))
+                disk.add_param(keyval_match.group(1),
+                               keyval_match.group(2))
 
             elif parse_mode == ParseMode.Track:
                 if t == 'end':
                     parse_mode = ParseMode.Disk
-                    if track_format is not None:
-                        track_format.finalise()
-                        track_format = None
+                    if track is not None:
+                        track.finalise()
+                        track = None
                     continue
 
                 if not active:
@@ -196,19 +198,19 @@ def get_format(name, cfg=None):
                 keyval_match = re.match(r'([a-zA-Z0-9:,._-]+)\s*='
                                         '\s*([a-zA-Z0-9:,._*-]+)', t)
                 error.check(keyval_match is not None, 'syntax error')
-                track_format.add_param(keyval_match.group(1),
-                                       keyval_match.group(2))
+                track.add_param(keyval_match.group(1),
+                                keyval_match.group(2))
 
         except Exception as err:
             s = "%s, line %d: " % (cfg, linenr)
             err.args = (s + err.args[0],) + err.args[1:]
             raise
 
-    if disk_format is None:
+    if disk is None:
         return None
-    disk_format.finalise()
+    disk.finalise()
 
-    return disk_format
+    return disk
 
 
 def print_formats(cfg=None):

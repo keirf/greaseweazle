@@ -76,7 +76,7 @@ class BitcellTrack:
         return track
 
 
-class BitcellTrackFormat:
+class BitcellTrack_Config:
 
     default_revs = default_revs
 
