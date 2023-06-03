@@ -14,8 +14,8 @@ writing raw data on nearly any type of floppy disk.
 
 For more info see the following links:
 
-* [Download binaries][Downloads]
-* [Purchase a ready-made Greaseweazle][rmb]
+* [Download the Greaseweazle software][Downloads]
+* [Purchase a Greaseweazle][rmb]
 * [Read the GitHub wiki](https://github.com/keirf/greaseweazle/wiki)
 * [Greaseweazle firmware repository][firmware]
 
@@ -47,7 +47,7 @@ in any form. Please see the [license](COPYING).
 
 [designfiles]: https://github.com/keirf/greaseweazle/wiki/Design-Files
 [firmware]: https://github.com/keirf/greaseweazle-firmware
-[rmb]: https://github.com/keirf/greaseweazle/wiki/Ready-Made-Boards
+[rmb]: https://github.com/keirf/greaseweazle/wiki/Purchase-a-Greaseweazle
 [Downloads]: https://github.com/keirf/greaseweazle/wiki/Download-Host-Tools
 [siwp]: https://github.com/keirf/greaseweazle/wiki/Software-Installation
 
