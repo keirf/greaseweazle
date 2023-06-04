@@ -209,6 +209,8 @@ def main(argv):
                         help="do not overwrite an existing file")
     parser.add_argument("--pll", type=track.PLL, metavar="PLLSPEC",
                         help="manual PLL parameter override")
+    parser.add_argument("--dd", type=util.level,
+                        help="drive interface DD/HD select (H,L)")
     parser.add_argument("file", help="output filename")
     parser.description = description
     parser.prog += ' ' + argv[1]
@@ -241,12 +243,19 @@ Known formats:\n%s"""
         if args.tracks is not None:
             def_tracks.update_from_trackspec(args.tracks.trackspec)
         args.tracks = def_tracks
-        
+
         print(("Reading %s revs=" % args.tracks) + str(args.revs))
         if args.format:
             print("Format " + args.format)
-        with open_image(args, image_class) as image:
-            util.with_drive_selected(read_to_image, usb, args, image)
+        try:
+            if args.dd is not None:
+                prev_pin2 = usb.get_pin(2)
+                usb.set_pin(2, args.dd)
+            with open_image(args, image_class) as image:
+                util.with_drive_selected(read_to_image, usb, args, image)
+        finally:
+            if args.dd is not None:
+                usb.set_pin(2, prev_pin2)
     except USB.CmdError as err:
         print("Command Failed: %s" % err)
 

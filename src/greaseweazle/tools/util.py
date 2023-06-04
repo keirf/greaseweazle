@@ -54,6 +54,12 @@ def min_int(_min):
     return x
 uint = min_int(0)
 
+def level(letter):
+    levels = { 'H': True, 'L': False }
+    if not letter.upper() in levels:
+        raise argparse.ArgumentTypeError("invalid pin level: '%s'" % letter)
+    return levels[letter.upper()]
+
 drive_desc = """\
 DRIVE: Drive (and bus) identifier:
   0 | 1 | 2           :: Shugart bus unit

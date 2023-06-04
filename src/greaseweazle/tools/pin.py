@@ -14,18 +14,12 @@ import sys, argparse
 from greaseweazle.tools import util
 from greaseweazle import usb as USB
 
-def level(letter):
-    levels = { 'H': True, 'L': False }
-    if not letter.upper() in levels:
-        raise argparse.ArgumentTypeError("invalid pin level: '%s'" % letter)
-    return levels[letter.upper()]
-
 def pin_set(argv):
 
     parser = util.ArgumentParser(usage='%(prog)s [options] pin level')
     parser.add_argument("--device", help="device name (COM/serial port)")
     parser.add_argument("pin", type=util.uint, help="pin number")
-    parser.add_argument("level", type=level, help="pin level (H,L)")
+    parser.add_argument("level", type=util.level, help="pin level (H,L)")
     parser.description = description
     parser.prog += ' pin set'
     args = parser.parse_args(argv[3:])
