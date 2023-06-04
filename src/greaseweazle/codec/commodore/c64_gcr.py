@@ -92,7 +92,8 @@ class C64GCR:
 
     def decode_raw(self, track, pll=None) -> None:
         raw = RawTrack(time_per_rev = self.time_per_rev,
-                       clock = self.clock, data = track, pll = pll)
+                       clock = self.clock, data = track, pll = pll,
+                       lowpass_thresh = 2.5e-6)
         bits, _ = raw.get_all_data()
 
         for offs in bits.itersearch(sector_sync):

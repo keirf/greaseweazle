@@ -16,17 +16,23 @@ class PLL:
     def __init__(self, pllspec: str):
         self.period_adj_pct = 5
         self.phase_adj_pct = 60
+        self.lowpass_thresh = None
         for x in pllspec.split(':'):
             k,v = x.split('=')
             if k == 'period':
                 self.period_adj_pct = int(v)
             elif k == 'phase':
                 self.phase_adj_pct = int(v)
+            elif k == 'lowpass':
+                self.lowpass_thresh = float(v)/1e6
             else:
                 raise ValueError()
     def __str__(self) -> str:
-        return ("PLL: period_adj=%d%% phase_adj=%d%%"
-                % (self.period_adj_pct, self.phase_adj_pct))
+        s = ("PLL: period_adj=%d%% phase_adj=%d%%"
+             % (self.period_adj_pct, self.phase_adj_pct))
+        if self.lowpass_thresh is not None:
+            s += (" lowpass_thresh=%.2f" % (self.lowpass_thresh*1e6))
+        return s
 
 plls = [
     # Default: An aggressive PLL which will quickly sync to extreme
@@ -263,13 +269,17 @@ class RawTrack:
     # clock: Expected time per raw bitcell, in seconds (float)
     # data: Flux object, or a form convertible to a Flux object
     # time_per_rev: Expected time per revolution, in seconds (optional, float)
-    def __init__(self, clock: float, data, time_per_rev=None, pll=None):
+    # lowpass_thresh: Merge short fluxes with adjacent fluxes (optional, float)
+    def __init__(self, clock: float, data, time_per_rev=None, pll=None,
+                 lowpass_thresh=None):
         self.clock = clock
         self.time_per_rev = time_per_rev
         self.clock_max_adj = 0.10
         if pll is None: pll = plls[0]
         self.pll_period_adj = pll.period_adj_pct / 100
         self.pll_phase_adj = pll.phase_adj_pct / 100
+        self.lowpass_thresh = (lowpass_thresh if pll.lowpass_thresh is None
+                               else pll.lowpass_thresh)
         self.bitarray = bitarray(endian='big')
         self.timearray: List[float] = []
         self.revolutions: List[int] = []
@@ -313,10 +323,26 @@ class RawTrack:
         index_iter = it.chain(iter(map(lambda x: x/freq, flux.index_list)),
                               [float('inf')])
 
+        if self.lowpass_thresh is not None:
+            # Short fluxes below the threshold are merged together, and with
+            # adjacent fluxes.
+            flux_list, thresh, prev_short = [0.0], self.lowpass_thresh, False
+            for x in flux.list:
+                short = x/freq <= thresh
+                if short or prev_short:
+                    flux_list[-1] += x
+                else:
+                    flux_list.append(x)
+                # Final flux in a short-flux sequence may itself be short.
+                # In this case do not merge with the following longer flux.
+                prev_short = short and not prev_short
+        else:
+            flux_list = flux.list
+
         # Make sure there's enough time in the flux list to cover all
         # revolutions by appending a "large enough" final flux value.
-        tail = max(0, sum(flux.index_list) - sum(flux.list) + clock*freq*2)
-        flux_iter = it.chain(flux.list, [tail])
+        tail = max(0, sum(flux.index_list) - sum(flux_list) + clock*freq*2)
+        flux_iter = it.chain(flux_list, [tail])
 
         try:
             optimised.flux_to_bitcells(

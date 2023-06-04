@@ -80,7 +80,8 @@ pllspec_desc = """\
 PLLSPEC: Colon-separated list of:
   period=PCT          :: Period adjustment as percentage of phase error
   phase=PCT           :: Phase adjustment as percentage of phase error
-  Defaults: period=5:phase=60
+  lowpass=USEC        :: Filter flux periods shorter than USEC
+  Defaults: period=5:phase=60 (no lowpass filter)
 """
 
 # Returns time period in seconds (float)
