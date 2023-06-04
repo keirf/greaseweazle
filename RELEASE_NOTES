@@ -13,7 +13,7 @@
  - New image formats:
    - D71: C64 CBMDOS GCR 1571 double-sided disk
    - TD0: IBM sector format (Read only)
-   - EDSK: Support writing new EDSK images (gw write my.dsk::edsk)
+   - EDSK: Support writing new EDSK images (gw read --format=ibm.scan my.edsk)
  - gw read/write: New option --dd to set interface pin 2 for 5.25" drives
  - C64: New low-pass filter PLL stage to clean up noisy flux images
    - Can also be used more generally via a new sub-option to "--pll"
