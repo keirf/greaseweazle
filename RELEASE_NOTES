@@ -3,6 +3,21 @@
 ** Keir Fraser <keir.xen@gmail.com>
 ************************************
 
+** v1.13 - 4 June 2023
+ - Generate a x64 Windows build in addition to x32
+ - New disk formats:
+  - Generic IBM track scanner: ibm.scan
+  - General Music: gem.1600
+  - TRS CoCo OS-9, MM/1 OS-9: coco.os9.*, mm1.os9.*
+  - Commodore 1571 (C64) GCR: commodore.1571
+ - New image formats:
+   - D71: C64 CBMDOS GCR 1571 double-sided disk
+   - TD0: IBM sector format (Read only)
+   - EDSK: Support writing new EDSK images (gw write my.dsk::edsk)
+ - gw read/write: New option --dd to set interface pin 2 for 5.25" drives
+ - C64: New low-pass filter PLL stage to clean up noisy flux images
+   - Can also be used more generally via a new sub-option to "--pll"
+
 ** v1.12 - 12 May 2023
  - New disk formats:
    - Commodore 1541 (C64) GCR: commodore.1541
