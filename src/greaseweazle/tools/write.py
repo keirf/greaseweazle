@@ -201,6 +201,8 @@ def main(argv):
                         help="number of retries on verify failure")
     parser.add_argument("--precomp", type=PrecompSpec,
                         help="write precompensation")
+    parser.add_argument("--dd", type=util.level,
+                        help="drive interface DD/HD select (H,L)")
     parser.add_argument("file", help="input filename")
     parser.description = description
     parser.prog += ' ' + argv[1]
@@ -236,7 +238,14 @@ Known formats:\n%s"""
                         'Cannot override image format with --format')
         if args.format:
             print("Format " + args.format)
-        util.with_drive_selected(write_from_image, usb, args, image)
+        try:
+            if args.dd is not None:
+                prev_pin2 = usb.get_pin(2)
+                usb.set_pin(2, args.dd)
+            util.with_drive_selected(write_from_image, usb, args, image)
+        finally:
+            if args.dd is not None:
+                usb.set_pin(2, prev_pin2)
     except USB.CmdError as err:
         print("Command Failed: %s" % err)
 
