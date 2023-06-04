@@ -44,7 +44,7 @@ class TrackIdentity:
         self.physical_cyl, self.physical_head = ts.ch_to_pch(cyl, head)
 
 
-def process_input_track(args, t, in_image, decoder):
+def process_input_track(args, t, in_image):
 
     cyl, head = t.cyl, t.head
 
@@ -55,11 +55,11 @@ def process_input_track(args, t, in_image, decoder):
     if args.adjust_speed is not None:
         track.scale(args.adjust_speed / track.time_per_rev)
 
-    if decoder is None or not args.raw_image_class:
+    if args.fmt_cls is None or not args.raw_image_class:
         dat = track
         print("T%u.%u: %s" % (cyl, head, track.summary_string()))
     else:
-        dat = decoder(cyl, head, track)
+        dat = args.fmt_cls.decode_track(cyl, head, track)
         if dat is None:
             print("T%u.%u: WARNING: out of range for format '%s': Track "
                   "skipped" % (cyl, head, args.format))
@@ -74,7 +74,7 @@ def process_input_track(args, t, in_image, decoder):
     return dat
 
 
-def convert(args, in_image, out_image, decoder=None):
+def convert(args, in_image, out_image):
 
     summary = dict()
 
@@ -84,7 +84,7 @@ def convert(args, in_image, out_image, decoder=None):
             dat = summary[cyl, head]
         elif (cyl, head) in args.tracks:
             dat = process_input_track(
-                args, TrackIdentity(args.tracks, cyl, head), in_image, decoder)
+                args, TrackIdentity(args.tracks, cyl, head), in_image)
             if dat is None:
                 continue
             summary[cyl,head] = dat
@@ -92,7 +92,7 @@ def convert(args, in_image, out_image, decoder=None):
             continue
         out_image.emit_track(t.physical_cyl, t.physical_head, dat)
 
-    if decoder is not None:
+    if args.fmt_cls is not None:
         greaseweazle.tools.read.print_summary(args, summary)
 
 
@@ -138,7 +138,7 @@ def main(argv):
     if not args.format and hasattr(out_image_class, 'default_format'):
         args.format = out_image_class.default_format
 
-    decoder, def_tracks, args.fmt_cls = None, None, None
+    def_tracks, args.fmt_cls = None, None
     if args.format:
         args.fmt_cls = formats.get_format(args.format, args.diskdefs)
         if args.fmt_cls is None:
@@ -147,7 +147,6 @@ Unknown format '%s'
 Known formats:\n%s"""
                               % (args.format, formats.print_formats(
                                   args.diskdefs)))
-        decoder = args.fmt_cls.decode_track
         def_tracks = copy.copy(args.fmt_cls.tracks)
     if def_tracks is None:
         def_tracks = util.TrackSet('c=0-81:h=0-1')
@@ -167,7 +166,7 @@ Known formats:\n%s"""
 
     in_image = open_input_image(args, in_image_class)
     with open_output_image(args, out_image_class) as out_image:
-        convert(args, in_image, out_image, decoder=decoder)
+        convert(args, in_image, out_image)
 
 
 # Local variables:

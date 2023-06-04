@@ -152,15 +152,10 @@ class AmigaDOS:
     def verify_track(self, flux):
         cyl = self.tracknr // 2
         head = self.tracknr & 1
-        readback_track = self.decode_track(cyl, head, flux)
+        readback_track = self.__class__(cyl, head)
+        readback_track.decode_raw(flux)
         return (readback_track.nr_missing() == 0
                 and self.sector == readback_track.sector)
-
-    @classmethod
-    def decode_track(cls, cyl, head, track):
-        ados = cls(cyl, head)
-        ados.decode_raw(track)
-        return ados
 
 
 class AmigaDOS_DD(AmigaDOS):

@@ -49,18 +49,18 @@ def read_and_normalise(usb, args, revs, ticks=0):
     return flux
 
 
-def read_with_retry(usb, args, t, decoder):
+def read_with_retry(usb, args, t):
 
     cyl, head = t.cyl, t.head
 
     usb.seek(t.physical_cyl, t.physical_head)
 
     flux = read_and_normalise(usb, args, args.revs, args.ticks)
-    if decoder is None:
+    if args.fmt_cls is None:
         print("T%u.%u: %s" % (cyl, head, flux.summary_string()))
         return flux, flux
 
-    dat = decoder(cyl, head, flux)
+    dat = args.fmt_cls.decode_track(cyl, head, flux)
     if dat is None:
         print("T%u.%u: WARNING: Out of range for for format '%s': No format "
               "conversion applied" % (cyl, head, args.format))
@@ -138,7 +138,7 @@ def print_summary(args, summary):
               (good_sec, tot_sec, good_sec*100/tot_sec))
 
 
-def read_to_image(usb, args, image, decoder=None):
+def read_to_image(usb, args, image):
     """Reads a floppy disk and dumps it into a new image file.
     """
 
@@ -163,15 +163,15 @@ def read_to_image(usb, args, image, decoder=None):
 
     for t in args.tracks:
         cyl, head = t.cyl, t.head
-        flux, dat = read_with_retry(usb, args, t, decoder)
-        if decoder is not None and dat is not None:
+        flux, dat = read_with_retry(usb, args, t)
+        if args.fmt_cls is not None and dat is not None:
             summary[cyl,head] = dat
         if args.raw:
             image.emit_track(cyl, head, flux)
         elif dat is not None:
             image.emit_track(cyl, head, dat)
 
-    if decoder is not None:
+    if args.fmt_cls is not None:
         print_summary(args, summary)
 
 
@@ -224,7 +224,7 @@ def main(argv):
         image_class = util.get_image_class(args.file)
         if not args.format and hasattr(image_class, 'default_format'):
             args.format = image_class.default_format
-        decoder, def_tracks, args.fmt_cls = None, None, None
+        def_tracks, args.fmt_cls = None, None
         if args.format:
             args.fmt_cls = formats.get_format(args.format, args.diskdefs)
             if args.fmt_cls is None:
@@ -233,7 +233,6 @@ Unknown format '%s'
 Known formats:\n%s"""
                                   % (args.format, formats.print_formats(
                                       args.diskdefs)))
-            decoder = args.fmt_cls.decode_track
             def_tracks = copy.copy(args.fmt_cls.tracks)
             if args.revs is None: args.revs = args.fmt_cls.default_revs
         if def_tracks is None:
@@ -247,8 +246,7 @@ Known formats:\n%s"""
         if args.format:
             print("Format " + args.format)
         with open_image(args, image_class) as image:
-            util.with_drive_selected(read_to_image, usb, args, image,
-                                     decoder=decoder)
+            util.with_drive_selected(read_to_image, usb, args, image)
     except USB.CmdError as err:
         print("Command Failed: %s" % err)
 
