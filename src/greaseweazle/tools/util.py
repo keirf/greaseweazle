@@ -282,6 +282,7 @@ image_types = OrderedDict(
       '.scp': 'SCP',
       '.ssd': ('SSD','acorn'),
       '.st' : 'IMG',
+      '.td0': 'TD0',
       '.xdf': 'XDF' })
 
 def get_image_class(name):
