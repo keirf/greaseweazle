@@ -8,12 +8,13 @@
 # This is free and unencumbered software released into the public domain.
 # See the file COPYING for more details, or visit <http://unlicense.org>.
 
-from typing import Dict, Tuple, Optional, List
+from typing import Dict, Tuple, Optional, List, Union
 
 import binascii, math, struct
 import itertools as it
 from bitarray import bitarray
 
+from greaseweazle import __version__
 from greaseweazle import error
 from greaseweazle.codec.ibm import ibm
 from greaseweazle.track import MasterTrack, RawTrack
@@ -161,10 +162,9 @@ class EDSKTrack:
 
 class EDSK(Image):
 
-    read_only = True
-
     def __init__(self) -> None:
-        self.to_track: Dict[Tuple[int,int],EDSKTrack] = dict()
+        self.to_track: Dict[Tuple[int,int],
+                            Union[ibm.IBMTrack,EDSKTrack]] = dict()
 
     # Find all weak ranges in the given sector data copies.
     @staticmethod
@@ -487,6 +487,86 @@ class EDSK(Image):
         if (cyl,side) not in self.to_track:
             return None
         return self.to_track[cyl,side].raw_track()
+
+
+    def emit_track(self, cyl: int, side: int, track) -> None:
+        if issubclass(type(track), ibm.IBMTrack_Scan):
+            track = track.track
+        error.check(issubclass(type(track), ibm.IBMTrack),
+                    'EDSK: Cannot create T%d.%d: Not IBM.FM nor IBM.MFM'
+                    % (cyl, side))
+        if not isinstance(track, ibm.IBMTrack_Empty):
+            self.to_track[cyl,side] = track
+
+
+    def get_image(self) -> bytes:
+
+        dat, tdat_list = bytearray(), list()
+
+        n_side = max(self.to_track.keys(), default=(0,0), key=lambda x:x[1])[1]
+        n_side += 1
+
+        n_cyl = max(self.to_track.keys(), default=(0,0), key=lambda x:x[0])[0]
+        n_cyl += 1
+
+        dat += struct.pack('<34s13sx2B2x',
+                           b'EXTENDED CPC DSK File\r\nDisk-Info\r\n',
+                           ('GW %s' % __version__).encode(),
+                           n_cyl, n_side)
+
+        for c in range(n_cyl):
+
+            for h in range(n_side):
+
+                # Empty track: NUL in Track Size Table
+                if (c,h) not in self.to_track:
+                    dat += b'\x00'
+                    continue
+
+                # TODO: Handle FM, and non-DD data rates
+                t = self.to_track[c,h]
+                assert isinstance(t, ibm.IBMTrack)
+                error.check(t.mode is ibm.Mode.MFM,
+                            'EDSK: Cannot handle %s track format' % t.mode)
+                error.check(1.9e-6 < t.clock < 2.1e-6,
+                            'EDSK: Cannot handle %.2fus clock' % (t.clock*1e6))
+
+                # Estimate sec_sz from size of first sector only.
+                # Estimate gap3 from gap between first two sectors.
+                n_sec, sec_sz, gap3 = len(t.sectors), 0, 0
+                if n_sec > 0:
+                    sec_sz = t.sectors[0].idam.n
+                    gap3 = ibm.MFMGaps.gap3[t.sectors[0].idam.n]
+                if n_sec > 1:
+                    gap3 = t.sectors[1].start - t.sectors[0].end
+                    gap3 = max(0, round(gap3 / 16) - t.gap_presync)
+                tdat = struct.pack('<12s4x2B2x4B',
+                                   b'Track-Info\r\n', c, h,
+                                   sec_sz, n_sec, gap3, 0xe5)
+
+                # Track Information Block
+                for s in t.sectors:
+                    tdat += struct.pack('<6BH',
+                                        s.idam.c, s.idam.h, s.idam.r, s.idam.n,
+                                        0, 0, ibm.sec_sz(s.idam.n))
+                tdat += bytes(-len(tdat) & 255)
+
+                # Track Data
+                for s in t.sectors:
+                    tdat += s.dam.data[:]
+
+                # Track Size Table
+                assert (len(tdat) & 255) == 0
+                dat += struct.pack('B', len(tdat) // 256)
+
+                tdat_list.append(tdat)
+
+        # Pad and concatenate the whole image together.
+        dat += bytes(-len(dat) & 255)
+        for tdat in tdat_list:
+            dat += tdat
+
+        return dat
 
 
 # Local variables:
