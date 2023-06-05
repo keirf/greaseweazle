@@ -325,17 +325,19 @@ class RawTrack:
 
         if self.lowpass_thresh is not None:
             # Short fluxes below the threshold are merged together, and with
-            # adjacent fluxes.
-            flux_list, thresh, prev_short = [0.0], self.lowpass_thresh, False
-            for x in flux.list:
-                short = x/freq <= thresh
-                if short or prev_short:
-                    flux_list[-1] += x
+            # adjacent fluxes. The scenario discussed in issue #325 is that
+            # a long flux (>=10us) gets a single short flux-reversal pair 
+            # inserted in the middle by drive electronics. So all we really
+            # need to filter in practice is:
+            #   (Long),(Short),(Long) -> (Long+Short+Long)
+            # Sequences of short pulses have not been seen in real disk dumps.
+            flux_list, thresh = [0.0], self.lowpass_thresh
+            flux_iter = iter(flux.list)
+            while (x := next(flux_iter, None)) is not None:
+                if x/freq <= thresh:
+                    flux_list[-1] += x + next(flux_iter, 0.0)
                 else:
                     flux_list.append(x)
-                # Final flux in a short-flux sequence may itself be short.
-                # In this case do not merge with the following longer flux.
-                prev_short = short and not prev_short
         else:
             flux_list = flux.list
 
