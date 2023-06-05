@@ -14,7 +14,7 @@ def version():
     return version
 
 setup(name = 'greaseweazle',
-      python_requires = '>=3.7',
+      python_requires = '>=3.8',
       version = version(),
       install_requires = [
           'crcmod',
