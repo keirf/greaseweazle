@@ -834,9 +834,7 @@ class IBMTrack_Fixed_Config:
                 else:
                     n, l = int(x), 1
                 s = 0
-                while True:
-                    if n == 128<<s:
-                        break
+                while n != 128<<s:
                     s += 1
                     error.check(s <= 6, 'bps value out of range')
                 for _ in range(l):
