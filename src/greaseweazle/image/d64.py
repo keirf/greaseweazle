@@ -35,7 +35,7 @@ class D64(IMG):
         assert isinstance(img, D64)
         disk_id = img.get_disk_id()
         for _, t in img.to_track.items():
-            error.check(issubclass(type(t), c64_gcr.C64GCR),
+            error.check(isinstance(t, c64_gcr.C64GCR),
                         f'{cls.__name__}: Only {cls.default_format} format '
                         f'is supported')
             if disk_id is not None:

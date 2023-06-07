@@ -122,7 +122,7 @@ class MSA(Image):
                 error.check((c,h) in self.to_track,
                             f'MSA: Missing track {c}.{h} in output')
                 track = self.to_track[c,h]
-                error.check(issubclass(type(track), ibm.IBMTrack_Fixed),
+                error.check(isinstance(track, ibm.IBMTrack_Fixed),
                             f'MSA: Track {c}.{h} is not an IBM track: '
                             'Maybe missing --format= option?')
                 tdat = track.get_img_track()

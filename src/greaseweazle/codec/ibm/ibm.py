@@ -602,7 +602,7 @@ class IBMTrack:
             raw = RawTrack(time_per_rev = self.time_per_rev,
                            clock = self.clock, data = flux, pll = pll)
         else:
-            assert issubclass(type(track), RawTrack)
+            assert isinstance(track, RawTrack)
             raw = track
 
         if self.mode is Mode.FM:

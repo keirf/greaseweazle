@@ -490,9 +490,9 @@ class EDSK(Image):
 
 
     def emit_track(self, cyl: int, side: int, track) -> None:
-        if issubclass(type(track), ibm.IBMTrack_Scan):
+        if isinstance(track, ibm.IBMTrack_Scan):
             track = track.track
-        error.check(issubclass(type(track), ibm.IBMTrack),
+        error.check(isinstance(track, ibm.IBMTrack),
                     'EDSK: Cannot create T%d.%d: Not IBM.FM nor IBM.MFM'
                     % (cyl, side))
         if not isinstance(track, ibm.IBMTrack_Empty):

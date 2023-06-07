@@ -215,8 +215,7 @@ class HFE(Image):
 
     def emit_track(self, cyl: int, side: int, track) -> None:
         # HFE convention is that FM is recorded at double density
-        is_fm = (issubclass(type(track), ibm.IBMTrack)
-                 and track.mode is ibm.Mode.FM)
+        is_fm = isinstance(track, ibm.IBMTrack) and track.mode is ibm.Mode.FM
         t = track.raw_track() if hasattr(track, 'raw_track') else track
         if self.opts.bitrate is None:
             error.check(hasattr(t, 'bitrate'),
@@ -226,7 +225,7 @@ class HFE(Image):
             if is_fm:
                 self.opts.bitrate *= 2
             print('HFE: Data bitrate detected: %d kbit/s' % self.opts.bitrate)
-        if issubclass(type(t), MasterTrack):
+        if isinstance(t, MasterTrack):
             # Rotate data and timings to start at the index.
             index = -t.splice % len(t.bits)
             bits = t.bits[index:] + t.bits[:index]
