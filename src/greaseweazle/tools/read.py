@@ -224,7 +224,7 @@ def main(argv):
     try:
         usb = util.usb_open(args.device)
         image_class = util.get_image_class(args.file)
-        if not args.format and hasattr(image_class, 'default_format'):
+        if not args.format:
             args.format = image_class.default_format
         def_tracks, args.fmt_cls = None, None
         if args.format:
