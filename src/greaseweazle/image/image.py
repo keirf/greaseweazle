@@ -5,12 +5,15 @@
 # This is free and unencumbered software released into the public domain.
 # See the file COPYING for more details, or visit <http://unlicense.org>.
 
+from typing import Optional
+
 import os
 
 from greaseweazle import error
 
 class Image:
 
+    default_format: Optional[str] = None
     read_only = False
     write_on_ctrl_c = False
 

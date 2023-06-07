@@ -15,7 +15,7 @@ from .image import Image
 from greaseweazle.codec import formats
 
 class DCP(IMG):
-    default_format = None
+
     read_only = True
 
     @classmethod

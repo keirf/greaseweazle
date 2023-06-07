@@ -131,11 +131,11 @@ def main(argv):
         plls.insert(0, args.pll)
 
     in_image_class = util.get_image_class(args.in_file)
-    if not args.format and hasattr(in_image_class, 'default_format'):
+    if not args.format:
         args.format = in_image_class.default_format
 
     out_image_class = util.get_image_class(args.out_file)
-    if not args.format and hasattr(out_image_class, 'default_format'):
+    if not args.format:
         args.format = out_image_class.default_format
 
     def_tracks, args.fmt_cls = None, None
