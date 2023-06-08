@@ -12,6 +12,7 @@ import crcmod.predefined
 
 from greaseweazle import __version__
 from greaseweazle import error
+from greaseweazle import optimised
 from greaseweazle.codec.ibm import ibm
 from .image import Image
 
@@ -36,10 +37,16 @@ class TD0(Image):
         # Check and strip the header
         sig, td_ver, data_rate, stepping, n_sides, crc = struct.unpack(
             '<2s2x2BxBxBH', dat[:12])
-        error.check(sig == b'TD', 'TD0: bad file signature')
+        error.check(sig == b'TD' or sig == b'td', 'TD0: bad file signature')
         error.check(crc16.new(dat[:10]).crcValue == crc,
                     'TD0: bad file header crc')
         print('TD0: Teledisk version %d.%d' % (td_ver>>4, td_ver&15))
+
+        if sig == b'td':
+            print('TD0: Advanced compression')
+            error.check(optimised.enabled,
+                        'TD0: Decompression requires optimised C extension')
+            dat = dat[:12] + optimised.td0_unpack(dat[12:])
 
         # data_rate[7] = global FM flag
         global_is_fm = (data_rate >> 7) == 1

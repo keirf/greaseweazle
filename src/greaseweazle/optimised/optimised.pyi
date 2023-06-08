@@ -32,6 +32,9 @@ def decode_c64_gcr(dat: bytes) -> bytes:
 def encode_c64_gcr(dat: bytes) -> bytes:
     ...
 
+def td0_unpack(dat: bytes) -> bytes:
+    ...
+
 # Local variables:
 # python-indent: 4
 # End:

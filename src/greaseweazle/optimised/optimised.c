@@ -353,7 +353,7 @@ py_decode_c64_gcr(PyObject *self, PyObject *args)
         return NULL;
 
     if (in.len % 5)
-        return NULL;
+        goto fail;
     out_len = (in.len / 5) * 4;
 
     out = PyBytes_FromStringAndSize(NULL, out_len);
@@ -380,7 +380,7 @@ py_encode_c64_gcr(PyObject *self, PyObject *args)
         return NULL;
 
     if (in.len % 4)
-        return NULL;
+        goto fail;
     out_len = (in.len / 4) * 5;
 
     out = PyBytes_FromStringAndSize(NULL, out_len);
@@ -396,6 +396,32 @@ fail:
     return out;
 }
 
+uint8_t *td0_unpack(uint8_t *packeddata, unsigned int size,
+                    unsigned int *unpacked_size);
+
+static PyObject *
+py_td0_unpack(PyObject *self, PyObject *args)
+{
+    Py_buffer in;
+    PyObject *out_obj = NULL;
+    unsigned int out_len;
+    uint8_t *out;
+
+    if (!PyArg_ParseTuple(args, "y*", &in))
+        return NULL;
+
+    out = td0_unpack((uint8_t *)in.buf, in.len, &out_len);
+    if (out == NULL)
+        goto fail;
+
+    out_obj = PyBytes_FromStringAndSize((char *)out, out_len);
+    free(out);
+
+fail:
+    PyBuffer_Release(&in);
+    return out_obj;
+}
+
 static PyMethodDef modulefuncs[] = {
     { "flux_to_bitcells", flux_to_bitcells, METH_VARARGS, NULL },
     { "decode_flux", decode_flux, METH_VARARGS, NULL },
@@ -405,6 +431,7 @@ static PyMethodDef modulefuncs[] = {
     { "encode_mac_sector", py_encode_mac_sector, METH_VARARGS, NULL },
     { "decode_c64_gcr", py_decode_c64_gcr, METH_VARARGS, NULL },
     { "encode_c64_gcr", py_encode_c64_gcr, METH_VARARGS, NULL },
+    { "td0_unpack", py_td0_unpack, METH_VARARGS, NULL },
     { NULL }
 };
 

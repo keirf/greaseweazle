@@ -29,7 +29,8 @@ setup(name = 'greaseweazle',
           Extension('greaseweazle.optimised.optimised',
                     sources = ['src/greaseweazle/optimised/optimised.c',
                                'src/greaseweazle/optimised/c64.c',
-                               'src/greaseweazle/optimised/mac.c'],
+                               'src/greaseweazle/optimised/mac.c',
+                               'src/greaseweazle/optimised/td0_lzss.c'],
                     extra_compile_args = extra_compile_args)
       ],
       entry_points= {
