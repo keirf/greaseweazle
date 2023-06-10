@@ -5,9 +5,11 @@
 # This is free and unencumbered software released into the public domain.
 # See the file COPYING for more details, or visit <http://unlicense.org>.
 
+from typing import Optional
+
 from abc import abstractmethod
 
-from greaseweazle.track import MasterTrack
+from greaseweazle.track import PLL, MasterTrack
 from greaseweazle.flux import Flux
 
 class Codec:
@@ -22,7 +24,7 @@ class Codec:
         ...
 
     @abstractmethod
-    def has_sec(self, sec_id) -> bool:
+    def has_sec(self, sec_id: int) -> bool:
         ...
 
     @abstractmethod
@@ -38,15 +40,15 @@ class Codec:
         ...
 
     @abstractmethod
-    def decode_raw(self, track, pll=None) -> None:
+    def decode_raw(self, track, pll: Optional[PLL]) -> None:
         ...
 
     @abstractmethod
     def master_track(self) -> MasterTrack:
         ...
 
-    def flux(self, *args, **kwargs) -> Flux:
-        return self.master_track().flux(*args, **kwargs)
+    def flux(self) -> Flux:
+        return self.master_track().flux()
 
 # Local variables:
 # python-indent: 4

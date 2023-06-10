@@ -17,7 +17,8 @@ import crcmod.predefined
 
 from greaseweazle import error
 from greaseweazle.codec import codec
-from greaseweazle.track import MasterTrack, PLLTrack
+from greaseweazle.track import PLL, MasterTrack, PLLTrack
+from greaseweazle.flux import Flux
 
 default_revs = 2
 
@@ -592,16 +593,14 @@ class IBMTrack(codec.Codec):
 
         return areas
 
-    def decode_raw(self, track, pll=None, flux=None) -> None:
+    def decode_raw(self, track, pll=None) -> None:
+        flux = track.flux()
+        flux.cue_at_index()
+        raw = PLLTrack(time_per_rev = self.time_per_rev,
+                       clock = self.clock, data = flux, pll = pll)
+        self._decode_raw(raw, pll, flux)
 
-        if flux is None:
-            flux = track.flux()
-            flux.cue_at_index()
-            raw = PLLTrack(time_per_rev = self.time_per_rev,
-                           clock = self.clock, data = flux, pll = pll)
-        else:
-            assert isinstance(track, PLLTrack)
-            raw = track
+    def _decode_raw(self, raw: PLLTrack, pll: PLL, flux: Flux) -> None:
 
         if self.mode is Mode.FM:
             areas = self.fm_decode_raw(raw)
@@ -641,10 +640,10 @@ class IBMTrack_Fixed(IBMTrack):
         self.raw = IBMTrack(cyl, head, mode)
         self.oversized = False
 
-    def decode_raw(self, track, pll=None, flux=None) -> None:
+    def decode_raw(self, track, pll=None) -> None:
         self.raw.clock = self.clock
         self.raw.time_per_rev = self.time_per_rev
-        self.raw.decode_raw(track, pll, flux)
+        self.raw.decode_raw(track, pll)
         mismatches = set()
         for r in self.raw.sectors:
             if r.idam.crc != 0:
@@ -934,7 +933,7 @@ class IBMTrack_Scan(codec.Codec):
 
         # Add more data to an existing track instance?
         if not isinstance(self.track, IBMTrack_Empty):
-            self.track.decode_raw(track = track, pll = pll)
+            self.track.decode_raw(track, pll)
             return
 
         # Try our best guess first.
@@ -964,7 +963,7 @@ class IBMTrack_Scan(codec.Codec):
                 for mode in [Mode.MFM, Mode.FM]:
                     t = IBMTrack(self.cyl, self.head, mode)
                     t.clock, t.time_per_rev = clock, time_per_rev
-                    t.decode_raw(track = raw, pll = pll, flux = flux)
+                    t._decode_raw(raw, pll, flux)
                     if ((t.nsec - t.nr_missing())
                         > (self.track.nsec - self.track.nr_missing())):
                         self.track = t
