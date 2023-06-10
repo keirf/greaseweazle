@@ -94,7 +94,7 @@ class EDSKTrack:
         self.clock = 2e-6
         self.bits, self.weak, self.bytes = [], [], bytearray()
 
-    def raw_track(self):
+    def master_track(self):
         track = MasterTrack(
             bits = self.bits,
             time_per_rev = self.time_per_rev,
@@ -486,7 +486,7 @@ class EDSK(Image):
     def get_track(self, cyl: int, side: int) -> Optional[MasterTrack]:
         if (cyl,side) not in self.to_track:
             return None
-        return self.to_track[cyl,side].raw_track()
+        return self.to_track[cyl,side].master_track()
 
 
     def emit_track(self, cyl: int, side: int, track) -> None:

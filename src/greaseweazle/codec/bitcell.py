@@ -12,21 +12,31 @@ from bitarray import bitarray
 
 from greaseweazle import error
 from greaseweazle import optimised
+from greaseweazle.codec import codec
 from greaseweazle.track import MasterTrack, RawTrack
 from greaseweazle.flux import Flux
 
 default_revs = 1
 
-class BitcellTrack:
+class BitcellTrack(codec.Codec):
 
+    nsec: int
+    
     def __init__(self, cyl: int, head: int, config):
         self.cyl, self.head = cyl, head
         self.config = config
         self.clock = config.clock
         self.nsec = 0
-        self.time_per_rev = config.time_per_rev
         self.raw: Optional[RawTrack] = None
 
+    @property
+    def time_per_rev(self) -> float:
+        if self.raw is not None:
+            return self.raw.time_per_rev
+        if self.config.time_per_rev is not None:
+            return self.config.time_per_rev
+        return 0.2
+        
     def summary_string(self) -> str:
         if self.raw is None:
             s = "Raw Bitcell (empty)"
@@ -48,31 +58,25 @@ class BitcellTrack:
     def set_img_track(self, tdat: bytearray) -> int:
         return 0
 
-    def flux(self, *args, **kwargs) -> Flux:
-        return self.raw_track().flux(*args, **kwargs)
-
     def decode_raw(self, track, pll=None) -> None:
         flux = track.flux()
         flux.cue_at_index()
-        time_per_rev = self.time_per_rev
+        time_per_rev = self.config.time_per_rev
         if time_per_rev is None:
             time_per_rev = flux.time_per_rev
         self.raw = RawTrack(time_per_rev = time_per_rev,
                             clock = self.clock, data = flux, pll = pll)
 
-    def raw_track(self) -> MasterTrack:
+    def master_track(self) -> MasterTrack:
         if self.raw is None:
-            time_per_rev = self.time_per_rev
-            if time_per_rev is None:
-                time_per_rev = 0.2
-            nbytes = int(time_per_rev / self.clock) // 8
+            nbytes = int(self.time_per_rev / self.clock) // 8
             track = MasterTrack(bits = bytes(nbytes),
-                                time_per_rev = time_per_rev,
+                                time_per_rev = self.time_per_rev,
                                 weak = [(0,nbytes*8)])
             track.force_random_weak = True
             return track
         bits, _ = self.raw.get_revolution(0)
-        track = MasterTrack(bits = bits, time_per_rev = self.raw.time_per_rev)
+        track = MasterTrack(bits = bits, time_per_rev = self.time_per_rev)
         return track
 
 

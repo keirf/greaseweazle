@@ -12,6 +12,7 @@ import itertools as it
 from bitarray import bitarray
 
 from greaseweazle import error
+from greaseweazle.codec import codec
 from greaseweazle.codec.ibm import ibm
 from greaseweazle.track import MasterTrack, RawTrack
 from greaseweazle.flux import Flux
@@ -24,7 +25,7 @@ sync.frombytes(sync_bytes)
 
 bad_sector = b'-=[BAD SECTOR]=-' * 32
 
-class AmigaDOS:
+class AmigaDOS(codec.Codec):
 
     # Subclasses must define these
     nsec: int
@@ -76,10 +77,6 @@ class AmigaDOS:
             self.sector[sec] = bytes(16), tdat[sec*512:(sec+1)*512]
         return totsize
 
-    def flux(self, *args, **kwargs) -> Flux:
-        return self.raw_track().flux(*args, **kwargs)
-
-
     def decode_raw(self, track, pll=None) -> None:
         raw = RawTrack(time_per_rev = self.time_per_rev,
                        clock = self.clock, data = track, pll = pll)
@@ -115,7 +112,7 @@ class AmigaDOS:
             self.add(sec_id, togo, label, data)
 
 
-    def raw_track(self) -> MasterTrack:
+    def master_track(self) -> MasterTrack:
 
         # List of sector IDs missing from the sector map:
         missing = iter([x for x in range(self.nsec) if not x in self.map])

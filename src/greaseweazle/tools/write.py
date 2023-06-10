@@ -14,16 +14,14 @@ import sys, copy
 from greaseweazle.tools import util
 from greaseweazle import error, track
 from greaseweazle import usb as USB
-from greaseweazle.codec import formats
+from greaseweazle.codec import codec, formats
 
 # Read and parse the image file.
 def open_image(args, image_class):
     try:
         image = image_class.from_file(args.file)
-        args.raw_image_class = True
     except TypeError:
         image = image_class.from_file(args.file, args.fmt_cls)
-        args.raw_image_class = False
     return image
 
 # write_from_image:
@@ -55,7 +53,7 @@ def write_from_image(usb, args, image):
             usb.erase_track(drive_ticks_per_rev * 1.1)
             continue
 
-        if args.raw_image_class and args.fmt_cls is not None:
+        if not isinstance(track, codec.Codec) and args.fmt_cls is not None:
             track = args.fmt_cls.decode_track(cyl, head, track)
             if track is None:
                 print("T%u.%u: WARNING: out of range for format '%s': Track "
@@ -64,8 +62,8 @@ def write_from_image(usb, args, image):
             error.check(track.nr_missing() == 0,
                         'T%u.%u: %u missing sectors in input image'
                         % (cyl, head, track.nr_missing()))
-        if hasattr(track, 'raw_track'):
-            track = track.raw_track()
+        if isinstance(track, codec.Codec):
+            track = track.master_track()
 
         if args.precomp is not None:
             track.precomp = args.precomp.track_precomp(cyl)

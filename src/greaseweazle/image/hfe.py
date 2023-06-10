@@ -13,6 +13,7 @@ import itertools as it
 
 from greaseweazle import error
 from greaseweazle.tools import util
+from greaseweazle.codec import codec
 from greaseweazle.codec.ibm import ibm
 from greaseweazle.track import MasterTrack, RawTrack
 from bitarray import bitarray
@@ -216,7 +217,7 @@ class HFE(Image):
     def emit_track(self, cyl: int, side: int, track) -> None:
         # HFE convention is that FM is recorded at double density
         is_fm = isinstance(track, ibm.IBMTrack) and track.mode is ibm.Mode.FM
-        t = track.raw_track() if hasattr(track, 'raw_track') else track
+        t = track.master_track() if isinstance(track, codec.Codec) else track
         if self.opts.bitrate is None:
             error.check(hasattr(t, 'bitrate'),
                         'HFE: Requires bitrate to be specified'

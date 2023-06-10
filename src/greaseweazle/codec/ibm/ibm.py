@@ -16,6 +16,7 @@ from enum import Enum
 import crcmod.predefined
 
 from greaseweazle import error
+from greaseweazle.codec import codec
 from greaseweazle.track import MasterTrack, RawTrack
 
 default_revs = 2
@@ -237,7 +238,7 @@ class DEC_MMFM:
 
 dec_mmfm = DEC_MMFM()
 
-class IBMTrack:
+class IBMTrack(codec.Codec):
 
     # Subclasses must define these
     time_per_rev: float
@@ -272,9 +273,6 @@ class IBMTrack:
 
     def nr_missing(self):
         return len(list(filter(lambda x: x.crc != 0, self.sectors)))
-
-    def flux(self, *args, **kwargs):
-        return self.raw_track().flux(*args, **kwargs)
 
     def set_img_track(self, tdat: bytearray) -> int:
         pos = 0
@@ -322,7 +320,7 @@ class IBMTrack:
             return False
         return self.sectors == readback_track.sectors
 
-    def mfm_raw_track(self) -> bytes:
+    def mfm_master_track(self) -> bytes:
 
         areas = heapq.merge(self.iams, self.sectors, key=lambda x:x.start)
         t = bytes()
@@ -352,7 +350,7 @@ class IBMTrack:
 
         return t
 
-    def fm_raw_track(self, mmfm_areas=None) -> bytes:
+    def fm_master_track(self, mmfm_areas=None) -> bytes:
 
         areas = heapq.merge(self.iams, self.sectors, key=lambda x:x.start)
         t = bytes()
@@ -385,17 +383,17 @@ class IBMTrack:
 
         return t
 
-    def raw_track(self) -> MasterTrack:
+    def master_track(self) -> MasterTrack:
 
         t: Union[bytes, bitarray]
 
         if self.mode is Mode.FM:
-            t = self.fm_raw_track()
+            t = self.fm_master_track()
         elif self.mode is Mode.MFM:
-            t = self.mfm_raw_track()
+            t = self.mfm_master_track()
         elif self.mode is Mode.DEC_RX02:
             mmfm_areas: List[Tuple[bytes,int]] = list()
-            t = self.fm_raw_track(mmfm_areas)
+            t = self.fm_master_track(mmfm_areas)
 
         # Add the pre-index gap.
         tlen = int((self.time_per_rev / self.clock) // 16)
@@ -887,7 +885,7 @@ class IBMTrack_Fixed_Config:
 class IBMTrack_Empty(IBMTrack):
 
     def __init__(self, cyl, head):
-        # Fake some parameters for raw_track()
+        # Fake some parameters for master_track()
         super().__init__(cyl, head, Mode.MFM)
         self.time_per_rev = 0.2
         self.clock = 2e-6
@@ -899,7 +897,7 @@ class IBMTrack_Empty(IBMTrack):
         raise error.Fatal('ibm.generic: Cannot handle IMG input data')
 
 
-class IBMTrack_Scan:
+class IBMTrack_Scan(codec.Codec):
 
     RATES = [ 125, 250, 500 ]
     RPMS = [ 300, 360 ]
@@ -923,11 +921,8 @@ class IBMTrack_Scan:
     def nr_missing(self):
         return self.track.nr_missing()
 
-    def raw_track(self) -> MasterTrack:
-        return self.track.raw_track()
-
-    def flux(self, *args, **kwargs):
-        return self.track.raw_track().flux(*args, **kwargs)
+    def master_track(self) -> MasterTrack:
+        return self.track.master_track()
 
     def set_img_track(self, tdat: bytearray) -> int:
         return self.track.set_img_track(tdat)
@@ -979,10 +974,6 @@ class IBMTrack_Scan:
             t = self.track
             IBMTrack_Scan.BEST_GUESS = (t.time_per_rev, t.clock, t.mode)
 
-    @classmethod
-    def from_config(cls, config: IBMTrack_Scan_Config, cyl: int, head: int):
-        return cls(cyl, head, config)
-
 
 class IBMTrack_Scan_Config:
 
@@ -1004,7 +995,7 @@ class IBMTrack_Scan_Config:
         pass
 
     def mk_track(self, cyl: int, head: int) -> IBMTrack_Scan:
-        return IBMTrack_Scan.from_config(self, cyl, head)
+        return IBMTrack_Scan(cyl, head, self)
 
 # Local variables:
 # python-indent: 4

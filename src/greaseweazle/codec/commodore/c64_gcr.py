@@ -12,6 +12,7 @@ from bitarray import bitarray
 
 from greaseweazle import error
 from greaseweazle import optimised
+from greaseweazle.codec import codec
 from greaseweazle.track import MasterTrack, RawTrack
 from greaseweazle.flux import Flux
 
@@ -29,8 +30,9 @@ data_sync = data_sync[:20]
 
 bad_sector = b'-=[BAD SECTOR]=-' * 16
 
-class C64GCR:
+class C64GCR(codec.Codec):
 
+    nsec: int
     time_per_rev = 0.2
 
     def __init__(self, cyl: int, head: int, config):
@@ -85,10 +87,6 @@ class C64GCR:
         for sec in range(self.nsec):
             self.sector[sec] = tdat[sec*256:(sec+1)*256]
         return totsize
-
-    def flux(self, *args, **kwargs) -> Flux:
-        return self.raw_track().flux(*args, **kwargs)
-
 
     def decode_raw(self, track, pll=None) -> None:
         raw = RawTrack(time_per_rev = self.time_per_rev,
@@ -151,7 +149,7 @@ class C64GCR:
             self.add(sec_id, sec[1:257])
 
 
-    def raw_track(self) -> MasterTrack:
+    def master_track(self) -> MasterTrack:
 
         # Post-index track gap.
         t = bytes([0x55] * 10)

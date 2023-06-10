@@ -13,7 +13,7 @@ import greaseweazle.tools.read
 from greaseweazle.tools import util
 from greaseweazle import error
 from greaseweazle.flux import Flux
-from greaseweazle.codec import formats
+from greaseweazle.codec import codec, formats
 
 from greaseweazle import track
 plls = track.plls
@@ -21,10 +21,8 @@ plls = track.plls
 def open_input_image(args, image_class):
     try:
         image = image_class.from_file(args.in_file)
-        args.raw_image_class = True
     except TypeError:
         image = image_class.from_file(args.in_file, args.fmt_cls)
-        args.raw_image_class = False
     return image
 
 
@@ -53,9 +51,11 @@ def process_input_track(args, t, in_image):
         return None
 
     if args.adjust_speed is not None:
+        if isinstance(track, codec.Codec):
+            track = track.master_track()
         track.scale(args.adjust_speed / track.time_per_rev)
 
-    if args.fmt_cls is None or not args.raw_image_class:
+    if args.fmt_cls is None or isinstance(track, codec.Codec):
         dat = track
         print("T%u.%u: %s" % (cyl, head, track.summary_string()))
     else:
