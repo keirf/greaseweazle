@@ -20,7 +20,7 @@ from greaseweazle import error
 from greaseweazle import optimised
 from greaseweazle.codec import codec
 from greaseweazle.codec.ibm import ibm
-from greaseweazle.track import MasterTrack, PLLTrack
+from greaseweazle.track import MasterTrack, PLL, PLLTrack
 from greaseweazle.flux import Flux
 
 default_revs = 1.3
@@ -68,15 +68,11 @@ class MacGCR(codec.Codec):
         return s
 
     # private
-    def exists(self, sec_id) -> bool:
-        return self.sector[sec_id] is not None
-
-    # private
     def add(self, sec_id, data) -> None:
-        assert not self.exists(sec_id)
+        assert not self.has_sec(sec_id)
         self.sector[sec_id] = data
 
-    def has_sec(self, sec_id) -> bool:
+    def has_sec(self, sec_id: int) -> bool:
         return self.sector[sec_id] is not None
 
     def nr_missing(self) -> int:
@@ -96,7 +92,7 @@ class MacGCR(codec.Codec):
             self.sector[sec] = bytes(12) + tdat[sec*512:(sec+1)*512]
         return totsize
 
-    def decode_raw(self, track, pll=None) -> None:
+    def decode_raw(self, track, pll: Optional[PLL]=None) -> None:
         raw = PLLTrack(time_per_rev = self.time_per_rev,
                        clock = self.clock, data = track, pll = pll)
         bits, _ = raw.get_all_data()
@@ -125,7 +121,7 @@ class MacGCR(codec.Codec):
                       'C:%d H:%d R:%d F:0x%x'
                       % (self.cyl, self.head, cyl, side, sec_id, fmt))
                 continue
-            if self.exists(sec_id):
+            if self.has_sec(sec_id):
                 continue
 
             # Find data

@@ -9,7 +9,7 @@ from typing import Optional
 
 from abc import abstractmethod
 
-from greaseweazle.track import PLL, MasterTrack
+from greaseweazle.track import MasterTrack, PLL
 from greaseweazle.flux import Flux
 
 class Codec:

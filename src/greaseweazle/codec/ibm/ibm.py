@@ -17,7 +17,7 @@ import crcmod.predefined
 
 from greaseweazle import error
 from greaseweazle.codec import codec
-from greaseweazle.track import PLL, MasterTrack, PLLTrack
+from greaseweazle.track import MasterTrack, PLL, PLLTrack
 from greaseweazle.flux import Flux
 
 default_revs = 2
@@ -269,10 +269,10 @@ class IBMTrack(codec.Codec):
         s = "%s (%d/%d sectors)" % (str(self.mode), nsec - nbad, nsec)
         return s
 
-    def has_sec(self, sec_id):
+    def has_sec(self, sec_id: int):
         return self.sectors[sec_id].crc == 0
 
-    def nr_missing(self):
+    def nr_missing(self) -> int:
         return len(list(filter(lambda x: x.crc != 0, self.sectors)))
 
     def set_img_track(self, tdat: bytearray) -> int:
@@ -593,14 +593,15 @@ class IBMTrack(codec.Codec):
 
         return areas
 
-    def decode_raw(self, track, pll=None) -> None:
+    def decode_raw(self, track, pll: Optional[PLL]=None) -> None:
         flux = track.flux()
         flux.cue_at_index()
         raw = PLLTrack(time_per_rev = self.time_per_rev,
                        clock = self.clock, data = flux, pll = pll)
         self._decode_raw(raw, pll, flux)
 
-    def _decode_raw(self, raw: PLLTrack, pll: PLL, flux: Flux) -> None:
+    def _decode_raw(self, raw: PLLTrack, pll: Optional[PLL],
+                    flux: Flux) -> None:
 
         if self.mode is Mode.FM:
             areas = self.fm_decode_raw(raw)
@@ -640,7 +641,7 @@ class IBMTrack_Fixed(IBMTrack):
         self.raw = IBMTrack(cyl, head, mode)
         self.oversized = False
 
-    def decode_raw(self, track, pll=None) -> None:
+    def decode_raw(self, track, pll: Optional[PLL]=None) -> None:
         self.raw.clock = self.clock
         self.raw.time_per_rev = self.time_per_rev
         self.raw.decode_raw(track, pll)
@@ -914,10 +915,10 @@ class IBMTrack_Scan(codec.Codec):
     def summary_string(self) -> str:
         return self.track.summary_string()
 
-    def has_sec(self, sec_id):
+    def has_sec(self, sec_id: int):
         return self.track.has_sec(sec_id)
 
-    def nr_missing(self):
+    def nr_missing(self) -> int:
         return self.track.nr_missing()
 
     def master_track(self) -> MasterTrack:
@@ -929,7 +930,7 @@ class IBMTrack_Scan(codec.Codec):
     def get_img_track(self) -> bytearray:
         return self.track.get_img_track()
         
-    def decode_raw(self, track, pll=None) -> None:
+    def decode_raw(self, track, pll: Optional[PLL]=None) -> None:
 
         # Add more data to an existing track instance?
         if not isinstance(self.track, IBMTrack_Empty):

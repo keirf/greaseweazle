@@ -13,7 +13,7 @@ from bitarray import bitarray
 from greaseweazle import error
 from greaseweazle import optimised
 from greaseweazle.codec import codec
-from greaseweazle.track import MasterTrack, PLLTrack
+from greaseweazle.track import MasterTrack, PLL, PLLTrack
 from greaseweazle.flux import Flux
 
 default_revs = 1.1
@@ -42,7 +42,7 @@ class C64GCR(codec.Codec):
         self.clock = config.clock
         self.sector: List[Optional[bytes]]
         self.sector = [None] * self.nsec
-        self.disk_id = None
+        self.disk_id: Optional[int] = None
         error.check(optimised.enabled,
                     'Commodore GCR requires optimised C extension')
 
@@ -51,24 +51,20 @@ class C64GCR(codec.Codec):
         s = "Commodore GCR (%d/%d sectors)" % (nsec - nbad, nsec)
         return s
 
-    def set_disk_id(self, disk_id):
+    def set_disk_id(self, disk_id: int):
         assert self.disk_id is None
         self.disk_id = disk_id
 
     # private
-    def exists(self, sec_id) -> bool:
-        return self.sector[sec_id] is not None
-
-    # private
     def add(self, sec_id, data) -> None:
-        assert not self.exists(sec_id)
+        assert not self.has_sec(sec_id)
         self.sector[sec_id] = data
 
     # private
     def tracknr(self) -> int:
         return self.head*35 + self.cyl + 1
 
-    def has_sec(self, sec_id) -> bool:
+    def has_sec(self, sec_id: int) -> bool:
         return self.sector[sec_id] is not None
 
     def nr_missing(self) -> int:
@@ -88,7 +84,7 @@ class C64GCR(codec.Codec):
             self.sector[sec] = tdat[sec*256:(sec+1)*256]
         return totsize
 
-    def decode_raw(self, track, pll=None) -> None:
+    def decode_raw(self, track, pll: Optional[PLL]=None) -> None:
         raw = PLLTrack(time_per_rev = self.time_per_rev,
                        clock = self.clock, data = track, pll = pll,
                        lowpass_thresh = 2.5e-6)
@@ -123,7 +119,7 @@ class C64GCR(codec.Codec):
                       % (self.cyl, self.head, self.disk_id,
                          cyl, sec_id, disk_id))
                 continue
-            if self.exists(sec_id):
+            if self.has_sec(sec_id):
                 continue
 
             # Find data

@@ -13,7 +13,7 @@ from bitarray import bitarray
 from greaseweazle import error
 from greaseweazle import optimised
 from greaseweazle.codec import codec
-from greaseweazle.track import MasterTrack, PLLTrack
+from greaseweazle.track import MasterTrack, PLL, PLLTrack
 from greaseweazle.flux import Flux
 
 default_revs = 1
@@ -46,7 +46,7 @@ class BitcellTrack(codec.Codec):
                  % (len(bits), self.raw.time_per_rev*1000))
         return s
 
-    def has_sec(self, sec_id) -> bool:
+    def has_sec(self, sec_id: int) -> bool:
         return False
 
     def nr_missing(self) -> int:
@@ -58,7 +58,7 @@ class BitcellTrack(codec.Codec):
     def set_img_track(self, tdat: bytearray) -> int:
         return 0
 
-    def decode_raw(self, track, pll=None) -> None:
+    def decode_raw(self, track, pll: Optional[PLL]=None) -> None:
         flux = track.flux()
         flux.cue_at_index()
         time_per_rev = self.config.time_per_rev
