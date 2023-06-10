@@ -20,7 +20,7 @@ from greaseweazle import error
 from greaseweazle import optimised
 from greaseweazle.codec import codec
 from greaseweazle.codec.ibm import ibm
-from greaseweazle.track import MasterTrack, RawTrack
+from greaseweazle.track import MasterTrack, PLLTrack
 from greaseweazle.flux import Flux
 
 default_revs = 1.3
@@ -97,7 +97,7 @@ class MacGCR(codec.Codec):
         return totsize
 
     def decode_raw(self, track, pll=None) -> None:
-        raw = RawTrack(time_per_rev = self.time_per_rev,
+        raw = PLLTrack(time_per_rev = self.time_per_rev,
                        clock = self.clock, data = track, pll = pll)
         bits, _ = raw.get_all_data()
 

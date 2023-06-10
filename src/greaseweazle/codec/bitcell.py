@@ -13,7 +13,7 @@ from bitarray import bitarray
 from greaseweazle import error
 from greaseweazle import optimised
 from greaseweazle.codec import codec
-from greaseweazle.track import MasterTrack, RawTrack
+from greaseweazle.track import MasterTrack, PLLTrack
 from greaseweazle.flux import Flux
 
 default_revs = 1
@@ -27,7 +27,7 @@ class BitcellTrack(codec.Codec):
         self.config = config
         self.clock = config.clock
         self.nsec = 0
-        self.raw: Optional[RawTrack] = None
+        self.raw: Optional[PLLTrack] = None
 
     @property
     def time_per_rev(self) -> float:
@@ -64,7 +64,7 @@ class BitcellTrack(codec.Codec):
         time_per_rev = self.config.time_per_rev
         if time_per_rev is None:
             time_per_rev = flux.time_per_rev
-        self.raw = RawTrack(time_per_rev = time_per_rev,
+        self.raw = PLLTrack(time_per_rev = time_per_rev,
                             clock = self.clock, data = flux, pll = pll)
 
     def master_track(self) -> MasterTrack:

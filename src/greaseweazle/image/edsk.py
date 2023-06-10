@@ -17,7 +17,7 @@ from bitarray import bitarray
 from greaseweazle import __version__
 from greaseweazle import error
 from greaseweazle.codec.ibm import ibm
-from greaseweazle.track import MasterTrack, RawTrack
+from greaseweazle.track import MasterTrack, PLLTrack
 from .image import Image
 
 class SR1:
@@ -111,7 +111,7 @@ class EDSKTrack:
     
     def verify_track(self, flux):
         flux.cue_at_index()
-        raw = RawTrack(time_per_rev = self.time_per_rev,
+        raw = PLLTrack(time_per_rev = self.time_per_rev,
                        clock = self.time_per_rev / len(self.bits),
                        data = flux)
         bits, _ = raw.get_all_data()

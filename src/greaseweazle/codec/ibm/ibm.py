@@ -17,7 +17,7 @@ import crcmod.predefined
 
 from greaseweazle import error
 from greaseweazle.codec import codec
-from greaseweazle.track import MasterTrack, RawTrack
+from greaseweazle.track import MasterTrack, PLLTrack
 
 default_revs = 2
 
@@ -425,7 +425,7 @@ class IBMTrack(codec.Codec):
         return track
 
     @staticmethod
-    def mfm_decode_raw(raw: RawTrack) -> List[TrackArea]:
+    def mfm_decode_raw(raw: PLLTrack) -> List[TrackArea]:
 
         bits, _ = raw.get_all_data()
         areas: List[TrackArea] = []
@@ -491,8 +491,8 @@ class IBMTrack(codec.Codec):
         return areas
 
     @staticmethod
-    def fm_decode_raw(raw: RawTrack,
-                      mmfm_raw: Optional[RawTrack] = None) -> List[TrackArea]:
+    def fm_decode_raw(raw: PLLTrack,
+                      mmfm_raw: Optional[PLLTrack] = None) -> List[TrackArea]:
 
         bits, times = raw.get_all_data()
         areas: List[TrackArea] = []
@@ -597,10 +597,10 @@ class IBMTrack(codec.Codec):
         if flux is None:
             flux = track.flux()
             flux.cue_at_index()
-            raw = RawTrack(time_per_rev = self.time_per_rev,
+            raw = PLLTrack(time_per_rev = self.time_per_rev,
                            clock = self.clock, data = flux, pll = pll)
         else:
-            assert isinstance(track, RawTrack)
+            assert isinstance(track, PLLTrack)
             raw = track
 
         if self.mode is Mode.FM:
@@ -608,7 +608,7 @@ class IBMTrack(codec.Codec):
         elif self.mode is Mode.MFM:
             areas = self.mfm_decode_raw(raw)
         elif self.mode is Mode.DEC_RX02:
-            mmfm_raw = RawTrack(time_per_rev = self.time_per_rev,
+            mmfm_raw = PLLTrack(time_per_rev = self.time_per_rev,
                                 clock = self.clock/2, data = flux, pll = pll)
             areas = self.fm_decode_raw(raw, mmfm_raw)
 
@@ -959,7 +959,7 @@ class IBMTrack_Scan(codec.Codec):
             time_per_rev = 60 / rpm
             for rate in rates:
                 clock = 5e-4 / rate
-                raw = RawTrack(time_per_rev = time_per_rev,
+                raw = PLLTrack(time_per_rev = time_per_rev,
                                clock = clock, data = flux, pll = pll)
                 for mode in [Mode.MFM, Mode.FM]:
                     t = IBMTrack(self.cyl, self.head, mode)

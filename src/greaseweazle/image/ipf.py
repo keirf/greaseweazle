@@ -10,7 +10,7 @@ import platform
 import ctypes as ct
 import itertools as it
 from bitarray import bitarray
-from greaseweazle.track import MasterTrack, RawTrack
+from greaseweazle.track import MasterTrack, PLLTrack
 from greaseweazle import error
 from .image import Image
 
@@ -134,7 +134,7 @@ class IPFTrack(MasterTrack):
 
     def verify_track(self, flux):
         flux.cue_at_index()
-        raw = RawTrack(clock = self.time_per_rev/len(self.bits), data = flux)
+        raw = PLLTrack(clock = self.time_per_rev/len(self.bits), data = flux)
         raw_bits, _ = raw.get_all_data()
         for s,l in IPFTrack.strong_data(self.sectors, self.weak):
             sector = self.bits[s:s+l]

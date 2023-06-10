@@ -264,7 +264,7 @@ class MasterTrack:
 
 
 # Track data generated from flux.
-class RawTrack:
+class PLLTrack:
 
     # clock: Expected time per raw bitcell, in seconds (float)
     # data: Flux object, or a form convertible to a Flux object

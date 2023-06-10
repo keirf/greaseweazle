@@ -13,7 +13,7 @@ from bitarray import bitarray
 from greaseweazle import error
 from greaseweazle import optimised
 from greaseweazle.codec import codec
-from greaseweazle.track import MasterTrack, RawTrack
+from greaseweazle.track import MasterTrack, PLLTrack
 from greaseweazle.flux import Flux
 
 default_revs = 1.1
@@ -89,7 +89,7 @@ class C64GCR(codec.Codec):
         return totsize
 
     def decode_raw(self, track, pll=None) -> None:
-        raw = RawTrack(time_per_rev = self.time_per_rev,
+        raw = PLLTrack(time_per_rev = self.time_per_rev,
                        clock = self.clock, data = track, pll = pll,
                        lowpass_thresh = 2.5e-6)
         bits, _ = raw.get_all_data()

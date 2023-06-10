@@ -15,7 +15,7 @@ from greaseweazle import error
 from greaseweazle.tools import util
 from greaseweazle.codec import codec
 from greaseweazle.codec.ibm import ibm
-from greaseweazle.track import MasterTrack, RawTrack
+from greaseweazle.track import MasterTrack, PLLTrack
 from bitarray import bitarray
 from .image import Image
 
@@ -258,7 +258,7 @@ class HFE(Image):
         else:
             flux = t.flux()
             flux.cue_at_index()
-            raw = RawTrack(clock = 5e-4 / self.opts.bitrate, data = flux)
+            raw = PLLTrack(clock = 5e-4 / self.opts.bitrate, data = flux)
             bits, bit_ticks = raw.get_revolution(0)
             mt = MasterTrack(
                 bits = bits, time_per_rev = flux.time_per_rev,
