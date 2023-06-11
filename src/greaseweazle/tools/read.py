@@ -68,7 +68,7 @@ def read_with_retry(usb, args, t):
     for pll in plls[1:]:
         if dat.nr_missing() == 0:
             break
-        dat.decode_raw(flux, pll)
+        dat.decode_flux(flux, pll)
 
     seek_retry, retry = 0, 0
     while True:
@@ -94,7 +94,7 @@ def read_with_retry(usb, args, t):
         for pll in plls:
             if dat.nr_missing() == 0:
                 break
-            dat.decode_raw(_flux, pll)
+            dat.decode_flux(_flux, pll)
         flux.append(_flux)
 
     return flux, dat

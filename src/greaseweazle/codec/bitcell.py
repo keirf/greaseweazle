@@ -14,7 +14,7 @@ from greaseweazle import error
 from greaseweazle import optimised
 from greaseweazle.codec import codec, formats
 from greaseweazle.track import MasterTrack, PLL, PLLTrack
-from greaseweazle.flux import Flux
+from greaseweazle.flux import Flux, HasFlux
 
 default_revs = 1
 
@@ -58,7 +58,7 @@ class BitcellTrack(codec.Codec):
     def set_img_track(self, tdat: bytearray) -> int:
         return 0
 
-    def decode_raw(self, track, pll: Optional[PLL]=None) -> None:
+    def decode_flux(self, track: HasFlux, pll: Optional[PLL]=None) -> None:
         flux = track.flux()
         flux.cue_at_index()
         time_per_rev = self.config.time_per_rev

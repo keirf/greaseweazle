@@ -15,6 +15,7 @@ from abc import abstractmethod
 from greaseweazle import error
 from greaseweazle.codec import codec
 from greaseweazle.tools import util
+from greaseweazle.flux import HasFlux
 
 class Track_Config:
 
@@ -78,10 +79,11 @@ class Disk_Config:
             return None
         return self.track_map[cyl, head].mk_track(cyl, head)
     
-    def decode_track(self, cyl: int, head: int, track) -> Optional[codec.Codec]:
+    def decode_track(self, cyl: int, head: int,
+                     track: HasFlux) -> Optional[codec.Codec]:
         t = self.mk_track(cyl, head)
         if t is not None:
-            t.decode_raw(track)
+            t.decode_flux(track)
         return t
 
     @property

@@ -67,7 +67,7 @@ def process_input_track(args, t, in_image):
         for pll in plls[1:]:
             if dat.nr_missing() == 0:
                 break
-            dat.decode_raw(track, pll)
+            dat.decode_flux(track, pll)
         print("T%u.%u: %s from %s" % (cyl, head, dat.summary_string(),
                                       track.summary_string()))
 

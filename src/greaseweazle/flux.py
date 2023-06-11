@@ -6,9 +6,13 @@
 # See the file COPYING for more details, or visit <http://unlicense.org>.
 
 from __future__ import annotations
-from typing import List
+from typing import List, Protocol
 
 from greaseweazle import error
+
+class HasFlux(Protocol):
+    def flux(self) -> Flux:
+        ...
 
 class Flux:
 

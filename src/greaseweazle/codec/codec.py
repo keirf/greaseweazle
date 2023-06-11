@@ -10,7 +10,7 @@ from typing import Optional
 from abc import abstractmethod
 
 from greaseweazle.track import MasterTrack, PLL
-from greaseweazle.flux import Flux
+from greaseweazle.flux import Flux, HasFlux
 
 class Codec:
 
@@ -40,7 +40,7 @@ class Codec:
         ...
 
     @abstractmethod
-    def decode_raw(self, track, pll: Optional[PLL] = None) -> None:
+    def decode_flux(self, track: HasFlux, pll: Optional[PLL] = None) -> None:
         ...
 
     @abstractmethod

@@ -14,7 +14,7 @@ from greaseweazle import error
 from greaseweazle import optimised
 from greaseweazle.codec import codec, formats
 from greaseweazle.track import MasterTrack, PLL, PLLTrack
-from greaseweazle.flux import Flux
+from greaseweazle.flux import Flux, HasFlux
 
 default_revs = 1.1
 
@@ -84,7 +84,7 @@ class C64GCR(codec.Codec):
             self.sector[sec] = tdat[sec*256:(sec+1)*256]
         return totsize
 
-    def decode_raw(self, track, pll: Optional[PLL]=None) -> None:
+    def decode_flux(self, track: HasFlux, pll: Optional[PLL]=None) -> None:
         raw = PLLTrack(time_per_rev = self.time_per_rev,
                        clock = self.clock, data = track, pll = pll,
                        lowpass_thresh = 2.5e-6)
@@ -184,7 +184,7 @@ class C64GCR(codec.Codec):
 
     def verify_track(self, flux):
         readback_track = self.__class__(self.cyl, self.head, self.config)
-        readback_track.decode_raw(flux)
+        readback_track.decode_flux(flux)
         return (readback_track.nr_missing() == 0
                 and self.sector == readback_track.sector)
 

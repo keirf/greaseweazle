@@ -18,7 +18,7 @@ import crcmod.predefined
 from greaseweazle import error
 from greaseweazle.codec import codec, formats
 from greaseweazle.track import MasterTrack, PLL, PLLTrack
-from greaseweazle.flux import Flux
+from greaseweazle.flux import Flux, HasFlux
 
 default_revs = 2
 
@@ -316,7 +316,7 @@ class IBMTrack(codec.Codec):
             idam, dam = copy.copy(sec.idam), copy.copy(sec.dam)
             idam.crc, dam.crc = 0xffff, 0xffff
             readback_track.sectors.append(Sector(idam, dam))
-        readback_track.decode_raw(flux)
+        readback_track.decode_flux(flux)
         if readback_track.nr_missing() != 0:
             return False
         return self.sectors == readback_track.sectors
@@ -593,15 +593,15 @@ class IBMTrack(codec.Codec):
 
         return areas
 
-    def decode_raw(self, track, pll: Optional[PLL]=None) -> None:
+    def decode_flux(self, track: HasFlux, pll: Optional[PLL]=None) -> None:
         flux = track.flux()
         flux.cue_at_index()
         raw = PLLTrack(time_per_rev = self.time_per_rev,
                        clock = self.clock, data = flux, pll = pll)
-        self._decode_raw(raw, pll, flux)
+        self.decode_raw(raw, pll, flux)
 
-    def _decode_raw(self, raw: PLLTrack, pll: Optional[PLL],
-                    flux: Flux) -> None:
+    def decode_raw(self, raw: PLLTrack, pll: Optional[PLL],
+                   flux: Flux) -> None:
 
         if self.mode is Mode.FM:
             areas = self.fm_decode_raw(raw)
@@ -641,10 +641,10 @@ class IBMTrack_Fixed(IBMTrack):
         self.raw = IBMTrack(cyl, head, mode)
         self.oversized = False
 
-    def decode_raw(self, track, pll: Optional[PLL]=None) -> None:
+    def decode_flux(self, track: HasFlux, pll: Optional[PLL]=None) -> None:
         self.raw.clock = self.clock
         self.raw.time_per_rev = self.time_per_rev
-        self.raw.decode_raw(track, pll)
+        self.raw.decode_flux(track, pll)
         mismatches = set()
         for r in self.raw.sectors:
             if r.idam.crc != 0:
@@ -929,12 +929,12 @@ class IBMTrack_Scan(codec.Codec):
 
     def get_img_track(self) -> bytearray:
         return self.track.get_img_track()
-        
-    def decode_raw(self, track, pll: Optional[PLL]=None) -> None:
+
+    def decode_flux(self, track: HasFlux, pll: Optional[PLL]=None) -> None:
 
         # Add more data to an existing track instance?
         if not isinstance(self.track, IBMTrack_Empty):
-            self.track.decode_raw(track, pll)
+            self.track.decode_flux(track, pll)
             return
 
         # Try our best guess first.
@@ -942,7 +942,7 @@ class IBMTrack_Scan(codec.Codec):
             time_per_rev, clock, mode = IBMTrack_Scan.BEST_GUESS
             t = IBMTrack(self.cyl, self.head, mode)
             t.clock, t.time_per_rev = clock, time_per_rev
-            t.decode_raw(track, pll)
+            t.decode_flux(track, pll)
             # Perfect match, no missing sectors? 
             if t.nsec != 0 and t.nr_missing() == 0:
                 self.track = t
@@ -964,7 +964,7 @@ class IBMTrack_Scan(codec.Codec):
                 for mode in [Mode.MFM, Mode.FM]:
                     t = IBMTrack(self.cyl, self.head, mode)
                     t.clock, t.time_per_rev = clock, time_per_rev
-                    t._decode_raw(raw, pll, flux)
+                    t.decode_raw(raw, pll, flux)
                     if ((t.nsec - t.nr_missing())
                         > (self.track.nsec - self.track.nr_missing())):
                         self.track = t

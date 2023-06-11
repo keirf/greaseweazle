@@ -15,7 +15,7 @@ from greaseweazle import error
 from greaseweazle.codec import codec, formats
 from greaseweazle.codec.ibm import ibm
 from greaseweazle.track import MasterTrack, PLL, PLLTrack
-from greaseweazle.flux import Flux
+from greaseweazle.flux import Flux, HasFlux
 
 default_revs = 1.1
 
@@ -77,7 +77,7 @@ class AmigaDOS(codec.Codec):
             self.sector[sec] = bytes(16), tdat[sec*512:(sec+1)*512]
         return totsize
 
-    def decode_raw(self, track, pll: Optional[PLL]=None) -> None:
+    def decode_flux(self, track: HasFlux, pll: Optional[PLL]=None) -> None:
         raw = PLLTrack(time_per_rev = self.time_per_rev,
                        clock = self.clock, data = track, pll = pll)
         bits, _ = raw.get_all_data()
@@ -150,7 +150,7 @@ class AmigaDOS(codec.Codec):
         cyl = self.tracknr // 2
         head = self.tracknr & 1
         readback_track = self.__class__(cyl, head)
-        readback_track.decode_raw(flux)
+        readback_track.decode_flux(flux)
         return (readback_track.nr_missing() == 0
                 and self.sector == readback_track.sector)
 
