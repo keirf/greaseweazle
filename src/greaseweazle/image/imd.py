@@ -59,16 +59,16 @@ class IMD(Image):
             error.check(0 <= head <= 1, 'IMD: Bad head value %x' % head)
 
             if mode == IMDMode.FM_250kbps or mode == IMDMode.FM_300kbps:
-                fmt = ibm.IBMTrack_Fixed_Config('ibm.fm')
+                fmt = ibm.IBMTrack_FixedDef('ibm.fm')
                 fmt.rpm, fmt.rate = 300, 125
             elif mode == IMDMode.FM_500kbps:
-                fmt = ibm.IBMTrack_Fixed_Config('ibm.fm')
+                fmt = ibm.IBMTrack_FixedDef('ibm.fm')
                 fmt.rpm, fmt.rate = 300, 250
             elif mode == IMDMode.MFM_250kbps or mode == IMDMode.MFM_300kbps:
-                fmt = ibm.IBMTrack_Fixed_Config('ibm.mfm')
+                fmt = ibm.IBMTrack_FixedDef('ibm.mfm')
                 fmt.rpm, fmt.rate = 300, 250
             elif mode == IMDMode.MFM_500kbps:
-                fmt = ibm.IBMTrack_Fixed_Config('ibm.mfm')
+                fmt = ibm.IBMTrack_FixedDef('ibm.mfm')
                 fmt.rpm, fmt.rate = 300, 500
             else:
                 raise error.Fatal('IMD: Unrecognised track mode %x' % mode)

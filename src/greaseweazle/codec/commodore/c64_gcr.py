@@ -12,7 +12,7 @@ from bitarray import bitarray
 
 from greaseweazle import error
 from greaseweazle import optimised
-from greaseweazle.codec import codec, formats
+from greaseweazle.codec import codec
 from greaseweazle.track import MasterTrack, PLL, PLLTrack
 from greaseweazle.flux import Flux, HasFlux
 
@@ -189,7 +189,7 @@ class C64GCR(codec.Codec):
                 and self.sector == readback_track.sector)
 
 
-class C64GCR_Config(formats.Track_Config):
+class C64GCRDef(codec.TrackDef):
 
     default_revs = default_revs
 

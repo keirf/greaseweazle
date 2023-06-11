@@ -77,7 +77,7 @@ class TD0(Image):
             track_is_fm = (head & 128) or global_is_fm
             head &= 127
 
-            fmt = ibm.IBMTrack_Fixed_Config(['ibm.mfm','ibm.fm'][track_is_fm])
+            fmt = ibm.IBMTrack_FixedDef(['ibm.mfm','ibm.fm'][track_is_fm])
             fmt.rpm, fmt.rate = 300, data_rate
             if track_is_fm:
                 fmt.rate = fmt.rate // 2

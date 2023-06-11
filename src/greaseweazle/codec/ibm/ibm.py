@@ -16,7 +16,7 @@ from enum import Enum
 import crcmod.predefined
 
 from greaseweazle import error
-from greaseweazle.codec import codec, formats
+from greaseweazle.codec import codec
 from greaseweazle.track import MasterTrack, PLL, PLLTrack
 from greaseweazle.flux import Flux, HasFlux
 
@@ -668,7 +668,7 @@ class IBMTrack_Fixed(IBMTrack):
                   % (self.cyl, self.head, *m))
 
     @classmethod
-    def from_config(cls, config: IBMTrack_Fixed_Config, cyl: int, head: int,
+    def from_config(cls, config: IBMTrack_FixedDef, cyl: int, head: int,
                     warn_on_oversize = True):
 
         def sec_n(i):
@@ -795,7 +795,7 @@ class IBMTrack_Fixed(IBMTrack):
         return t
 
 
-class IBMTrack_Fixed_Config(formats.Track_Config):
+class IBMTrack_FixedDef(codec.TrackDef):
 
     default_revs = default_revs
 
@@ -903,7 +903,7 @@ class IBMTrack_Scan(codec.Codec):
     RPMS = [ 300, 360 ]
     BEST_GUESS = None
     
-    def __init__(self, cyl: int, head: int, config: IBMTrack_Scan_Config):
+    def __init__(self, cyl: int, head: int, config: IBMTrack_ScanDef):
         self.cyl, self.head = cyl, head
         self.rate, self.rpm = config.rate, config.rpm
         self.track: IBMTrack = IBMTrack_Empty(cyl, head)
@@ -975,7 +975,7 @@ class IBMTrack_Scan(codec.Codec):
             IBMTrack_Scan.BEST_GUESS = (t.time_per_rev, t.clock, t.mode)
 
 
-class IBMTrack_Scan_Config(formats.Track_Config):
+class IBMTrack_ScanDef(codec.TrackDef):
 
     default_revs = default_revs
 

@@ -9,10 +9,8 @@ import struct
 
 from greaseweazle import error
 from greaseweazle.image.img import IMG
-from greaseweazle.codec.formats import *
+from greaseweazle.codec import codec
 from .image import Image
-
-from greaseweazle.codec import formats
 
 class DIM(IMG):
     default_format = None
@@ -32,7 +30,7 @@ class DIM(IMG):
                 format_str = 'pc98.2hs'
             else:
                 raise error.Fatal("DIM: Unsupported format.")
-            fmt = formats.get_format(format_str)
+            fmt = codec.get_diskdef(format_str)
             dat = f.read()
 
         img = cls(name, fmt)

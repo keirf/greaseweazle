@@ -15,7 +15,7 @@ from greaseweazle.tools import util
 from greaseweazle import error
 from greaseweazle import usb as USB
 from greaseweazle.flux import Flux
-from greaseweazle.codec import formats
+from greaseweazle.codec import codec
 
 from greaseweazle import track
 plls = track.plls
@@ -60,7 +60,7 @@ def read_with_retry(usb, args, t):
         print("T%u.%u: %s" % (cyl, head, flux.summary_string()))
         return flux, flux
 
-    dat = args.fmt_cls.decode_track(cyl, head, flux)
+    dat = args.fmt_cls.decode_flux(cyl, head, flux)
     if dat is None:
         print("T%u.%u: WARNING: Out of range for for format '%s': No format "
               "conversion applied" % (cyl, head, args.format))
@@ -180,7 +180,7 @@ def main(argv):
     epilog = (util.drive_desc + "\n"
               + util.speed_desc + "\n" + util.tspec_desc
               + "\n" + util.pllspec_desc
-              + "\nFORMAT options:\n" + formats.print_formats()
+              + "\nFORMAT options:\n" + codec.print_formats()
               + "\n\nSupported file suffixes:\n"
               + util.columnify(util.image_types))
     parser = util.ArgumentParser(usage='%(prog)s [options] file',
@@ -228,12 +228,12 @@ def main(argv):
             args.format = image_class.default_format
         def_tracks, args.fmt_cls = None, None
         if args.format:
-            args.fmt_cls = formats.get_format(args.format, args.diskdefs)
+            args.fmt_cls = codec.get_diskdef(args.format, args.diskdefs)
             if args.fmt_cls is None:
                 raise error.Fatal("""\
 Unknown format '%s'
 Known formats:\n%s"""
-                                  % (args.format, formats.print_formats(
+                                  % (args.format, codec.print_formats(
                                       args.diskdefs)))
             def_tracks = copy.copy(args.fmt_cls.tracks)
             if args.revs is None: args.revs = args.fmt_cls.default_revs

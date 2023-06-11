@@ -14,7 +14,7 @@ import sys, copy
 from greaseweazle.tools import util
 from greaseweazle import error, track
 from greaseweazle import usb as USB
-from greaseweazle.codec import codec, formats
+from greaseweazle.codec import codec
 
 # Read and parse the image file.
 def open_image(args, image_class):
@@ -54,7 +54,7 @@ def write_from_image(usb, args, image):
             continue
 
         if not isinstance(track, codec.Codec) and args.fmt_cls is not None:
-            track = args.fmt_cls.decode_track(cyl, head, track)
+            track = args.fmt_cls.decode_flux(cyl, head, track)
             if track is None:
                 print("T%u.%u: WARNING: out of range for format '%s': Track "
                       "skipped" % (cyl, head, args.format))
@@ -175,7 +175,7 @@ def main(argv):
 
     epilog = (util.drive_desc + "\n"
               + util.speed_desc + "\n" + util.tspec_desc
-              + "\nFORMAT options:\n" + formats.print_formats()
+              + "\nFORMAT options:\n" + codec.print_formats()
               + "\n\nSupported file suffixes:\n"
               + util.columnify(util.image_types))
     parser = util.ArgumentParser(usage='%(prog)s [options] file',
@@ -212,12 +212,12 @@ def main(argv):
             args.format = image_class.default_format
         def_tracks, args.fmt_cls = None, None
         if args.format:
-            args.fmt_cls = formats.get_format(args.format, args.diskdefs)
+            args.fmt_cls = codec.get_diskdef(args.format, args.diskdefs)
             if args.fmt_cls is None:
                 raise error.Fatal("""\
 Unknown format '%s'
 Known formats:\n%s"""
-                                  % (args.format, formats.print_formats(
+                                  % (args.format, codec.print_formats(
                                       args.diskdefs)))
             def_tracks = copy.copy(args.fmt_cls.tracks)
         if def_tracks is None:

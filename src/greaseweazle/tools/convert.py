@@ -13,7 +13,7 @@ import greaseweazle.tools.read
 from greaseweazle.tools import util
 from greaseweazle import error
 from greaseweazle.flux import Flux
-from greaseweazle.codec import codec, formats
+from greaseweazle.codec import codec
 
 from greaseweazle import track
 plls = track.plls
@@ -59,7 +59,7 @@ def process_input_track(args, t, in_image):
         dat = track
         print("T%u.%u: %s" % (cyl, head, track.summary_string()))
     else:
-        dat = args.fmt_cls.decode_track(cyl, head, track)
+        dat = args.fmt_cls.decode_flux(cyl, head, track)
         if dat is None:
             print("T%u.%u: WARNING: out of range for format '%s': Track "
                   "skipped" % (cyl, head, args.format))
@@ -100,7 +100,7 @@ def main(argv):
 
     epilog = (util.speed_desc + "\n" + util.tspec_desc
               + "\n" + util.pllspec_desc
-              + "\nFORMAT options:\n" + formats.print_formats()
+              + "\nFORMAT options:\n" + codec.print_formats()
               + "\n\nSupported file suffixes:\n"
               + util.columnify(util.image_types))
     parser = util.ArgumentParser(usage='%(prog)s [options] in_file out_file',
@@ -140,12 +140,12 @@ def main(argv):
 
     def_tracks, args.fmt_cls = None, None
     if args.format:
-        args.fmt_cls = formats.get_format(args.format, args.diskdefs)
+        args.fmt_cls = codec.get_diskdef(args.format, args.diskdefs)
         if args.fmt_cls is None:
             raise error.Fatal("""\
 Unknown format '%s'
 Known formats:\n%s"""
-                              % (args.format, formats.print_formats(
+                              % (args.format, codec.print_formats(
                                   args.diskdefs)))
         def_tracks = copy.copy(args.fmt_cls.tracks)
     if def_tracks is None:

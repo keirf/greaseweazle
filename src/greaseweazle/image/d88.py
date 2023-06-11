@@ -79,18 +79,18 @@ class D88(Image):
                         if media_flag == 0x00:
 
                             if mfm_flag == 0x40:
-                                track = ibm.IBMTrack_Fixed_Config('ibm.fm')
+                                track = ibm.IBMTrack_FixedDef('ibm.fm')
                                 track.rate = 125
                             else:
-                                track = ibm.IBMTrack_Fixed_Config('ibm.mfm')
+                                track = ibm.IBMTrack_FixedDef('ibm.mfm')
                                 track.rate = 250
                             track.rpm = 300
                         else:
                             if mfm_flag == 0x40:
-                                track = ibm.IBMTrack_Fixed_Config('ibm.fm')
+                                track = ibm.IBMTrack_FixedDef('ibm.fm')
                                 track.rate = 250
                             else:
-                                track = ibm.IBMTrack_Fixed_Config('ibm.mfm')
+                                track = ibm.IBMTrack_FixedDef('ibm.mfm')
                                 track.rate = 500
                             track.rpm = 360
                         track_mfm_flag = mfm_flag

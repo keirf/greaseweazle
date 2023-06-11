@@ -9,10 +9,8 @@ import struct
 
 from greaseweazle import error
 from greaseweazle.image.img import IMG
-from greaseweazle.codec.formats import *
+from greaseweazle.codec import codec
 from .image import Image
-
-from greaseweazle.codec import formats
 
 class DCP(IMG):
 
@@ -24,7 +22,7 @@ class DCP(IMG):
         with open(name, "rb") as f:
             header = f.read(162)
             format_str = 'pc98.2hd'
-            fmt = formats.formats[format_str]()
+            fmt = codec.get_diskdef(format_str)
             dat = f.read()
 
         img = cls(name, fmt)

@@ -62,7 +62,7 @@ class MSA(Image):
                     error.check(len(tdat) == spt*512,
                                 'MSA: Bad track compressed data')
 
-                track = ibm.IBMTrack_Fixed_Config('ibm.mfm')
+                track = ibm.IBMTrack_FixedDef('ibm.mfm')
                 track.iam = False
                 track.rate = 250
                 track.rpm = 300
