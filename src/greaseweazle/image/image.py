@@ -5,11 +5,14 @@
 # This is free and unencumbered software released into the public domain.
 # See the file COPYING for more details, or visit <http://unlicense.org>.
 
+from __future__ import annotations
 from typing import Optional
 
 import os
 
 from greaseweazle import error
+from greaseweazle.codec import codec
+from greaseweazle.flux import HasFlux
 
 class Image:
 
@@ -63,15 +66,19 @@ class Image:
     ## Additionally, subclasses must provide following public interfaces:
 
     ## Read support:
-    # def from_file(cls, name)
-    # def get_track(self, cyl, side)
+    @classmethod
+    def from_file(cls, name: str, fmt: Optional[codec.DiskDef]) -> Image:
+        raise NotImplementedError
+
+    def get_track(self, cyl: int, side: int) -> Optional[HasFlux]:
+        raise NotImplementedError
 
     ## Write support (if not cls.read_only):
-    # def emit_track(self, cyl, side, track)
-    ## Plus either:
-    # def get_image(self)
-    ## Or:
-    # __enter__ / __exit__
+    def emit_track(self, cyl: int, side: int, track: HasFlux):
+        raise NotImplementedError
+    ## Plus get_image, or __enter__ / __exit__
+    def get_image(self) -> bytes:
+        raise NotImplementedError
 
 
 # Local variables:

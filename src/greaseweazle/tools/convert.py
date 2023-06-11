@@ -7,6 +7,8 @@
 
 description = "Convert between image formats."
 
+from typing import Dict, Tuple
+
 import sys, copy
 
 import greaseweazle.tools.read
@@ -19,11 +21,7 @@ from greaseweazle import track
 plls = track.plls
 
 def open_input_image(args, image_class):
-    try:
-        image = image_class.from_file(args.in_file)
-    except TypeError:
-        image = image_class.from_file(args.in_file, args.fmt_cls)
-    return image
+    return image_class.from_file(args.in_file, args.fmt_cls)
 
 
 def open_output_image(args, image_class):
@@ -74,9 +72,9 @@ def process_input_track(args, t, in_image):
     return dat
 
 
-def convert(args, in_image, out_image):
+def convert(args, in_image, out_image) -> None:
 
-    summary = dict()
+    summary: Dict[Tuple[int,int],codec.Codec] = dict()
 
     for t in args.out_tracks:
         cyl, head = t.cyl, t.head

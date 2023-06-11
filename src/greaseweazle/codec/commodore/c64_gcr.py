@@ -76,7 +76,7 @@ class C64GCR(codec.Codec):
             tdat += sec if sec is not None else bad_sector
         return tdat
 
-    def set_img_track(self, tdat: bytearray) -> int:
+    def set_img_track(self, tdat: bytes) -> int:
         totsize = self.nsec * 256
         if len(tdat) < totsize:
             tdat += bytes(totsize - len(tdat))

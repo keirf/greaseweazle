@@ -18,11 +18,7 @@ from greaseweazle.codec import codec
 
 # Read and parse the image file.
 def open_image(args, image_class):
-    try:
-        image = image_class.from_file(args.file)
-    except TypeError:
-        image = image_class.from_file(args.file, args.fmt_cls)
-    return image
+    return image_class.from_file(args.file, args.fmt_cls)
 
 # write_from_image:
 # Writes the specified image file to floppy disk.

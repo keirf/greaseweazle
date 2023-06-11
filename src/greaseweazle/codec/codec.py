@@ -43,7 +43,7 @@ class Codec:
         ...
 
     @abstractmethod
-    def set_img_track(self, tdat: bytearray) -> int:
+    def set_img_track(self, tdat: bytes) -> int:
         ...
 
     @abstractmethod

@@ -125,7 +125,7 @@ class SCP(Image):
 
 
     @classmethod
-    def from_file(cls, name: str) -> Image:
+    def from_file(cls, name: str, _fmt) -> Image:
 
         splices = None
 

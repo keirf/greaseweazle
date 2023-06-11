@@ -9,6 +9,8 @@
 
 description = "Read a disk to the specified image file."
 
+from typing import Dict, Tuple
+
 import sys, copy
 
 from greaseweazle.tools import util
@@ -16,6 +18,7 @@ from greaseweazle import error
 from greaseweazle import usb as USB
 from greaseweazle.flux import Flux
 from greaseweazle.codec import codec
+from greaseweazle.image import image
 
 from greaseweazle import track
 plls = track.plls
@@ -100,7 +103,7 @@ def read_with_retry(usb, args, t):
     return flux, dat
 
 
-def print_summary(args, summary):
+def print_summary(args, summary: Dict[Tuple[int,int],codec.Codec]):
     if not summary:
         return
     nsec = max((summary[x].nsec for x in summary), default = None)
@@ -125,20 +128,20 @@ def print_summary(args, summary):
         for sec in range(nsec):
             print("%d.%2d: " % (head, sec), end="")
             for cyl in args.tracks.cyls:
-                s = summary.get((cyl,head), None)
-                if s is None or sec >= s.nsec:
+                t = summary.get((cyl,head), None)
+                if t is None or sec >= t.nsec:
                     print(" ", end="")
                 else:
                     tot_sec += 1
-                    if s.has_sec(sec): good_sec += 1
-                    print("." if s.has_sec(sec) else "X", end="")
+                    if t.has_sec(sec): good_sec += 1
+                    print("." if t.has_sec(sec) else "X", end="")
             print()
     if tot_sec != 0:
         print("Found %d sectors of %d (%d%%)" %
               (good_sec, tot_sec, good_sec*100/tot_sec))
 
 
-def read_to_image(usb, args, image):
+def read_to_image(usb, args, image: image.Image) -> None:
     """Reads a floppy disk and dumps it into a new image file.
     """
 
@@ -159,7 +162,7 @@ def read_to_image(usb, args, image):
             args.ticks = int(args.drive_ticks_per_rev * args.revs)
             args.revs = 2
 
-    summary = dict()
+    summary: Dict[Tuple[int,int],codec.Codec] = dict()
 
     for t in args.tracks:
         cyl, head = t.cyl, t.head

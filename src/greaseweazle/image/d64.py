@@ -12,6 +12,7 @@ import struct
 from greaseweazle import error
 from greaseweazle.image.image import Image
 from greaseweazle.image.img import IMG
+from greaseweazle.codec import codec
 from greaseweazle.codec.commodore import c64_gcr
 
 class D64(IMG):
@@ -30,7 +31,7 @@ class D64(IMG):
         return disk_id
 
     @classmethod
-    def from_file(cls, name: str, fmt) -> Image:
+    def from_file(cls, name: str, fmt: Optional[codec.DiskDef]) -> Image:
         img = super().from_file(name, fmt)
         assert isinstance(img, D64)
         disk_id = img.get_disk_id()
@@ -38,6 +39,7 @@ class D64(IMG):
             error.check(isinstance(t, c64_gcr.C64GCR),
                         f'{cls.__name__}: Only {cls.default_format} format '
                         f'is supported')
+            assert isinstance(t, c64_gcr.C64GCR) # mypy
             if disk_id is not None:
                 t.set_disk_id(disk_id)
         return img

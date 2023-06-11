@@ -18,7 +18,7 @@ class DSK(IMG):
             sig = f.read(16)
 
         if sig[:8] == b'MV - CPC' or sig[:16] == b'EXTENDED CPC DSK':
-            return EDSK.from_file(name)
+            return EDSK.from_file(name, fmt)
 
         return IMG.from_file(name, fmt)
 

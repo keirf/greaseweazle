@@ -31,7 +31,7 @@ class IMD(Image):
 
 
     @classmethod
-    def from_file(cls, name: str) -> Image:
+    def from_file(cls, name: str, _fmt) -> Image:
 
         with open(name, "rb") as f:
             dat = f.read()

@@ -36,7 +36,7 @@ class D88(Image):
         return new_secs
 
     @classmethod
-    def from_file(cls, name: str) -> Image:
+    def from_file(cls, name: str, _fmt) -> Image:
 
         with open(name, "rb") as f:
             header = struct.unpack('<16sB9xBBL', f.read(32))

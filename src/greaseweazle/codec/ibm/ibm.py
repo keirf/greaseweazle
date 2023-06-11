@@ -275,7 +275,7 @@ class IBMTrack(codec.Codec):
     def nr_missing(self) -> int:
         return len(list(filter(lambda x: x.crc != 0, self.sectors)))
 
-    def set_img_track(self, tdat: bytearray) -> int:
+    def set_img_track(self, tdat: bytes) -> int:
         pos = 0
         self.sectors.sort(key = lambda x: x.idam.r)
         if self.img_bps is not None:
@@ -893,7 +893,7 @@ class IBMTrack_Empty(IBMTrack):
     def summary_string(self) -> str:
         return "IBM Empty"
 
-    def set_img_track(self, tdat: bytearray) -> int:
+    def set_img_track(self, tdat: bytes) -> int:
         raise error.Fatal('ibm.generic: Cannot handle IMG input data')
 
 
@@ -924,7 +924,7 @@ class IBMTrack_Scan(codec.Codec):
     def master_track(self) -> MasterTrack:
         return self.track.master_track()
 
-    def set_img_track(self, tdat: bytearray) -> int:
+    def set_img_track(self, tdat: bytes) -> int:
         return self.track.set_img_track(tdat)
 
     def get_img_track(self) -> bytearray:

@@ -8,6 +8,8 @@
 from typing import Dict, Tuple, Optional, Any
 
 from greaseweazle import error
+from greaseweazle.codec import codec
+from greaseweazle.flux import HasFlux
 from .image import Image
 
 class IMG(Image):
@@ -17,11 +19,11 @@ class IMG(Image):
     min_cyls: Optional[int] = None
 
     def __init__(self, name: str, fmt, noclobber=False):
-        self.to_track: Dict[Tuple[int,int],Any] = dict()
+        self.to_track: Dict[Tuple[int,int],codec.Codec] = dict()
         error.check(fmt is not None, """\
 Sector image requires a disk format to be specified""")
         self.filename = name
-        self.fmt = fmt
+        self.fmt: codec.DiskDef = fmt
         self.noclobber = noclobber
 
 
@@ -39,12 +41,13 @@ Sector image requires a disk format to be specified""")
 
 
     @classmethod
-    def from_file(cls, name: str, fmt) -> Image:
+    def from_file(cls, name: str, fmt: Optional[codec.DiskDef]) -> Image:
 
         with open(name, "rb") as f:
             dat = f.read()
 
         img = cls(name, fmt)
+        assert fmt is not None
 
         pos = 0
         for (cyl, head) in img.track_list():
@@ -65,7 +68,7 @@ Sector image requires a disk format to be specified""")
         return cls(name, fmt, noclobber=noclobber)
 
 
-    def get_track(self, cyl: int, side: int):
+    def get_track(self, cyl: int, side: int) -> Optional[codec.Codec]:
         if (cyl,side) not in self.to_track:
             return None
         return self.to_track[cyl,side]
@@ -96,9 +99,12 @@ Sector image requires a disk format to be specified""")
             if self.sides_swapped:
                 head ^= 1
             if (cyl,head) in self.to_track:
-                tdat += self.to_track[cyl,head].get_img_track()
+                t = self.to_track[cyl,head]
             else:
-                tdat += self.fmt.mk_track(cyl, head).get_img_track()
+                _t = self.fmt.mk_track(cyl, head)
+                assert _t is not None # mypy
+                t = _t
+            tdat += t.get_img_track()
 
         return tdat
 

@@ -166,7 +166,7 @@ class HFE(Image):
 
 
     @classmethod
-    def from_file(cls, name: str):
+    def from_file(cls, name: str, _fmt):
 
         with open(name, "rb") as f:
             dat = f.read()

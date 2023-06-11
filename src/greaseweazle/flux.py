@@ -11,6 +11,8 @@ from typing import List, Protocol
 from greaseweazle import error
 
 class HasFlux(Protocol):
+    def summary_string(self) -> str:
+        ...
     def flux(self) -> Flux:
         ...
 

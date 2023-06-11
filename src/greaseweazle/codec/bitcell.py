@@ -55,7 +55,7 @@ class BitcellTrack(codec.Codec):
     def get_img_track(self) -> bytearray:
         return bytearray()
 
-    def set_img_track(self, tdat: bytearray) -> int:
+    def set_img_track(self, tdat: bytes) -> int:
         return 0
 
     def decode_flux(self, track: HasFlux, pll: Optional[PLL]=None) -> None:
