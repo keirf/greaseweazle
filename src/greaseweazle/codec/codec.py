@@ -18,6 +18,7 @@ from greaseweazle.tools import util
 from greaseweazle.track import MasterTrack, PLL
 from greaseweazle.flux import Flux, HasFlux
 
+
 class Codec:
 
     @property
@@ -55,6 +56,7 @@ class Codec:
 
     def flux(self) -> Flux:
         return self.master_track().flux()
+
 
 class TrackDef:
 
@@ -130,11 +132,6 @@ class DiskDef:
         return max([x.default_revs for x in self.track_map.values()])
 
 
-class ParseMode:
-    Outer = 0
-    Disk  = 1
-    Track = 2
-
 
 def read_diskdef_file_lines(filename: Optional[str]) -> Tuple[List[str], str]:
     if filename is None:
@@ -145,6 +142,7 @@ def read_diskdef_file_lines(filename: Optional[str]) -> Tuple[List[str], str]:
         with open(os.path.expanduser(filename), 'r') as f:
             lines = f.readlines()
     return (lines, filename)
+
 
 # Import the TrackDef subclasses
 from greaseweazle.codec import bitcell
@@ -167,6 +165,12 @@ def mk_trackdef(format_name: str) -> TrackDef:
     if format_name in ['bitcell']:
         return bitcell.BitcellTrackDef(format_name)
     raise error.Fatal('unrecognised format name: %s' % format_name)
+
+
+class ParseMode:
+    Outer = 0
+    Disk  = 1
+    Track = 2
 
 def get_diskdef(
         format_name: str,
@@ -298,3 +302,7 @@ def print_formats(diskdef_filename: Optional[str] = None) -> str:
             formats.append(disk_match.group(1))
     formats.sort()
     return util.columnify(formats)
+
+# Local variables:
+# python-indent: 4
+# End:
