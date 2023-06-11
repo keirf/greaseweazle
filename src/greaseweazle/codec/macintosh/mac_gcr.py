@@ -18,7 +18,7 @@ from bitarray import bitarray
 
 from greaseweazle import error
 from greaseweazle import optimised
-from greaseweazle.codec import codec
+from greaseweazle.codec import codec, formats
 from greaseweazle.codec.ibm import ibm
 from greaseweazle.track import MasterTrack, PLL, PLLTrack
 from greaseweazle.flux import Flux
@@ -187,7 +187,7 @@ class MacGCR(codec.Codec):
                 and self.sector == readback_track.sector)
 
 
-class MacGCR_Config:
+class MacGCR_Config(formats.Track_Config):
 
     default_revs = default_revs
 

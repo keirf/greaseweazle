@@ -40,7 +40,7 @@ class Codec:
         ...
 
     @abstractmethod
-    def decode_raw(self, track, pll: Optional[PLL]) -> None:
+    def decode_raw(self, track, pll: Optional[PLL] = None) -> None:
         ...
 
     @abstractmethod

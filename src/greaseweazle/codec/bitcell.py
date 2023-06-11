@@ -12,7 +12,7 @@ from bitarray import bitarray
 
 from greaseweazle import error
 from greaseweazle import optimised
-from greaseweazle.codec import codec
+from greaseweazle.codec import codec, formats
 from greaseweazle.track import MasterTrack, PLL, PLLTrack
 from greaseweazle.flux import Flux
 
@@ -80,7 +80,7 @@ class BitcellTrack(codec.Codec):
         return track
 
 
-class BitcellTrack_Config:
+class BitcellTrack_Config(formats.Track_Config):
 
     default_revs = default_revs
 

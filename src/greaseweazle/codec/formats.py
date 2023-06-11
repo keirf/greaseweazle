@@ -5,38 +5,55 @@
 # This is free and unencumbered software released into the public domain.
 # See the file COPYING for more details, or visit <http://unlicense.org>.
 
+from typing import Dict, List, Tuple, Optional
+
 import os.path, re
 import importlib.resources
 from copy import copy
+from abc import abstractmethod
 
 from greaseweazle import error
-from greaseweazle.codec import bitcell
-from greaseweazle.codec.ibm import ibm
-from greaseweazle.codec.amiga import amigados
-from greaseweazle.codec.macintosh import mac_gcr
-from greaseweazle.codec.commodore import c64_gcr
+from greaseweazle.codec import codec
 from greaseweazle.tools import util
+
+class Track_Config:
+
+    default_revs: float
+
+    @abstractmethod
+    def add_param(self, key: str, val) -> None:
+        ...
+
+    @abstractmethod
+    def finalise(self) -> None:
+        ...
+
+    @abstractmethod
+    def mk_track(self, cyl: int, head: int) -> codec.Codec:
+        ...
+    
 
 class Disk_Config:
 
-    def __init__(self):
-        self.cyls, self.heads = None, None
+    def __init__(self) -> None:
+        self.cyls: Optional[int] = None
+        self.heads: Optional[int] = None
         self.step = 1
-        self.track_map = dict()
+        self.track_map: Dict[Tuple[int,int],Track_Config] = dict()
 
-    def add_param(self, key, val):
+    def add_param(self, key: str, val: str) -> None:
         if key == 'cyls':
-            val = int(val)
-            error.check(1 <= val <= 255, '%s out of range' % key)
-            self.cyls = val
+            n = int(val)
+            error.check(1 <= n <= 255, '%s out of range' % key)
+            self.cyls = n
         elif key == 'heads':
-            val = int(val)
-            error.check(1 <= val <= 2, '%s out of range' % key)
-            self.heads = val
+            n = int(val)
+            error.check(1 <= n <= 2, '%s out of range' % key)
+            self.heads = n
         elif key == 'step':
-            val = int(val)
-            error.check(1 <= val <= 4, '%s out of range' % key)
-            self.step = val
+            n = int(val)
+            error.check(1 <= n <= 4, '%s out of range' % key)
+            self.step = n
         else:
             raise error.Fatal('unrecognised disk option: %s' % key)
 
@@ -56,19 +73,19 @@ class Disk_Config:
             s += ':step=' + str(self.step)
         return s
 
-    def mk_track(self, cyl, head):
+    def mk_track(self, cyl: int, head: int) -> Optional[codec.Codec]:
         if (cyl, head) not in self.track_map:
             return None
         return self.track_map[cyl, head].mk_track(cyl, head)
     
-    def decode_track(self, cyl, head, track):
+    def decode_track(self, cyl: int, head: int, track) -> Optional[codec.Codec]:
         t = self.mk_track(cyl, head)
         if t is not None:
             t.decode_raw(track)
         return t
 
     @property
-    def default_revs(self):
+    def default_revs(self) -> float:
         return max([x.default_revs for x in self.track_map.values()])
 
 
@@ -78,7 +95,7 @@ class ParseMode:
     Track = 2
 
 
-def get_cfg_lines(cfg):
+def get_cfg_lines(cfg: Optional[str]) -> Tuple[List[str], str]:
     if cfg is None:
         cfg = 'diskdefs.cfg'
         with importlib.resources.open_text('greaseweazle.data', cfg) as f:
@@ -88,8 +105,14 @@ def get_cfg_lines(cfg):
             lines = f.readlines()
     return (lines, cfg)
 
+# Import the Track_Config subclasses
+from greaseweazle.codec import bitcell
+from greaseweazle.codec.ibm import ibm
+from greaseweazle.codec.amiga import amigados
+from greaseweazle.codec.macintosh import mac_gcr
+from greaseweazle.codec.commodore import c64_gcr
 
-def mk_track_config(format_name):
+def mk_track_config(format_name: str) -> Track_Config:
     if format_name in ['amiga.amigados']:
         return amigados.AmigaDOS_Config(format_name)
     if format_name in ['ibm.mfm', 'ibm.fm', 'dec.rx02']:
@@ -104,17 +127,19 @@ def mk_track_config(format_name):
         return bitcell.BitcellTrack_Config(format_name)
     raise error.Fatal('unrecognised format name: %s' % format_name)
 
-
-def get_format(name, cfg=None):
+def get_format(name, cfg: Optional[str] = None) -> Optional[Disk_Config]:
     parse_mode = ParseMode.Outer
-    active, formats = False, []
-    disk, track = None, None
+    active = False
+    disk: Optional[Disk_Config] = None
+    track: Optional[Track_Config] = None
     lines, cfg = get_cfg_lines(cfg)
 
     for linenr, l in enumerate(lines, start=1):
         try:
             # Strip comments and whitespace.
-            t = re.match(r'\s*([^#]*)', l).group(1).strip()
+            match = re.match(r'\s*([^#]*)', l)
+            assert match is not None # mypy
+            t = match.group(1).strip()
 
             # Skip empty lines.
             if not t:
@@ -122,8 +147,8 @@ def get_format(name, cfg=None):
 
             if parse_mode == ParseMode.Outer:
                 disk_match = re.match(r'disk\s+([\w,.-]+)', t)
-                error.check(disk_match is not None,
-                            'syntax error')
+                error.check(disk_match is not None, 'syntax error')
+                assert disk_match is not None # mypy
                 parse_mode = ParseMode.Disk
                 active = disk_match.group(1) == name
                 if active:
@@ -140,10 +165,11 @@ def get_format(name, cfg=None):
                     parse_mode = ParseMode.Track
                     if not active:
                         continue
-                    error.check(disk.cyls is not None,
-                                'missing cyls')
-                    error.check(disk.heads is not None,
-                                'missing heads')
+                    assert disk is not None # mypy
+                    error.check(disk.cyls is not None, 'missing cyls')
+                    error.check(disk.heads is not None, 'missing heads')
+                    assert disk.cyls is not None # mypy
+                    assert disk.heads is not None # mypy
                     track = mk_track_config(tracks_match.group(2))
                     for x in tracks_match.group(1).split(','):
                         if x == '*':
@@ -156,6 +182,7 @@ def get_format(name, cfg=None):
                                                '(?:\.([01]))?', x)
                             error.check(t_match is not None,
                                         'bad track specifier')
+                            assert t_match is not None # mypy
                             s = int(t_match.group(1))
                             e = t_match.group(2)
                             e = s if e is None else int(e)
@@ -177,10 +204,12 @@ def get_format(name, cfg=None):
 
                 if not active:
                     continue
+                assert disk is not None # mypy
 
                 keyval_match = re.match(r'([a-zA-Z0-9:,._-]+)\s*='
                                         '\s*([a-zA-Z0-9:,._-]+)', t)
                 error.check(keyval_match is not None, 'syntax error')
+                assert keyval_match is not None # mypy
                 disk.add_param(keyval_match.group(1),
                                keyval_match.group(2))
 
@@ -194,16 +223,18 @@ def get_format(name, cfg=None):
 
                 if not active:
                     continue
+                assert track is not None # mypy
 
                 keyval_match = re.match(r'([a-zA-Z0-9:,._-]+)\s*='
                                         '\s*([a-zA-Z0-9:,._*-]+)', t)
                 error.check(keyval_match is not None, 'syntax error')
+                assert keyval_match is not None # mypy
                 track.add_param(keyval_match.group(1),
                                 keyval_match.group(2))
 
         except Exception as err:
-            s = "%s, line %d: " % (cfg, linenr)
-            err.args = (s + err.args[0],) + err.args[1:]
+            ctxt = "%s, line %d: " % (cfg, linenr)
+            err.args = (ctxt + err.args[0],) + err.args[1:]
             raise
 
     if disk is None:
@@ -213,7 +244,7 @@ def get_format(name, cfg=None):
     return disk
 
 
-def print_formats(cfg=None):
+def print_formats(cfg: Optional[str] = None) -> str:
     columns, sep, formats = 80, 2, []
     lines, _ = get_cfg_lines(cfg)
     for l in lines:

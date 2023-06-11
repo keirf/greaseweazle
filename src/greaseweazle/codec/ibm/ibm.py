@@ -16,7 +16,7 @@ from enum import Enum
 import crcmod.predefined
 
 from greaseweazle import error
-from greaseweazle.codec import codec
+from greaseweazle.codec import codec, formats
 from greaseweazle.track import MasterTrack, PLL, PLLTrack
 from greaseweazle.flux import Flux
 
@@ -795,7 +795,7 @@ class IBMTrack_Fixed(IBMTrack):
         return t
 
 
-class IBMTrack_Fixed_Config:
+class IBMTrack_Fixed_Config(formats.Track_Config):
 
     default_revs = default_revs
 
@@ -975,7 +975,7 @@ class IBMTrack_Scan(codec.Codec):
             IBMTrack_Scan.BEST_GUESS = (t.time_per_rev, t.clock, t.mode)
 
 
-class IBMTrack_Scan_Config:
+class IBMTrack_Scan_Config(formats.Track_Config):
 
     default_revs = default_revs
 

@@ -12,7 +12,7 @@ import itertools as it
 from bitarray import bitarray
 
 from greaseweazle import error
-from greaseweazle.codec import codec
+from greaseweazle.codec import codec, formats
 from greaseweazle.codec.ibm import ibm
 from greaseweazle.track import MasterTrack, PLL, PLLTrack
 from greaseweazle.flux import Flux
@@ -164,7 +164,7 @@ class AmigaDOS_HD(AmigaDOS):
     clock = AmigaDOS_DD.clock / 2
 
 
-class AmigaDOS_Config:
+class AmigaDOS_Config(formats.Track_Config):
 
     default_revs = default_revs
 
