@@ -190,7 +190,7 @@ class MasterTrack:
             # Similarly modify the last bit of the weak region.
             bits[e-1] = not(bits[e-2] or bits[e])
 
-        if cue_at_index or not for_writeout:
+        if cue_at_index:
             # Rotate data to start at the index.
             index = -self.splice % bitlen
             if index != 0:
@@ -198,6 +198,7 @@ class MasterTrack:
                 bit_ticks = bit_ticks[index:] + bit_ticks[:index]
             splice_at_index = index < 4 or bitlen - index < 4
         else:
+            assert for_writeout
             splice_at_index = False
 
         if not for_writeout:
