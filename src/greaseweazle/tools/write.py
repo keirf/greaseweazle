@@ -71,20 +71,20 @@ def write_from_image(usb: USB.Unit, args, image: image.Image) -> None:
                         'Cannot apply write precomp to raw flux')
             assert isinstance(track, MasterTrack) # mypy
             track.precomp = args.precomp.track_precomp(cyl)
-        flux = track.flux_for_writeout(cue_at_index = not no_index)
+        wflux = track.flux_for_writeout(cue_at_index = not no_index)
 
         # @factor adjusts flux times for speed variations between the
         # read-in and write-out drives.
-        factor = drive_ticks_per_rev / flux.index_list[0]
+        factor = drive_ticks_per_rev / wflux.ticks_to_index
 
         # Convert the flux samples to Greaseweazle sample frequency.
         rem = 0.0
-        flux_list = []
-        for x in flux.list:
+        wflux_list = []
+        for x in wflux.list:
             y = x * factor + rem
             val = round(y)
             rem = y - val
-            flux_list.append(val)
+            wflux_list.append(val)
 
         # Encode the flux times for Greaseweazle, and write them out.
         verified = False
@@ -96,11 +96,11 @@ def write_from_image(usb: USB.Unit, args, image: image.Image) -> None:
             if retry != 0:
                 s += " (Verify Failure: Retry #%u)" % retry
             else:
-                s += " (%s)" % flux.summary_string()
+                s += " (%s)" % wflux.summary_string()
             print(s)
-            usb.write_track(flux_list = flux_list,
-                            cue_at_index = flux.index_cued,
-                            terminate_at_index = flux.terminate_at_index)
+            usb.write_track(flux_list = wflux_list,
+                            cue_at_index = wflux.index_cued,
+                            terminate_at_index = wflux.terminate_at_index)
             verify: Optional[HasVerify] = None
             no_verify = (args.no_verify
                          or not isinstance(track, MasterTrack)

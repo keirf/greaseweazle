@@ -84,7 +84,7 @@ class HasVerify(Protocol):
 # A pristine representation of a track, from a codec and/or a perfect image.
 class MasterTrack:
 
-    # verify state may be added "ad hoc" to a MasterTrack object
+    # Verify capability may be added "ad hoc" to a MasterTrack object
     verify: Optional[HasVerify] = None
 
     @property
@@ -140,12 +140,17 @@ class MasterTrack:
         s += ')'
         return s
 
-    def flux_for_writeout(self, cue_at_index) -> WriteoutFlux:
-        flux = self.flux(for_writeout=True, cue_at_index=cue_at_index)
-        assert isinstance(flux, WriteoutFlux)
+    def flux(self) -> Flux:
+        flux = self._flux(for_writeout=False, cue_at_index=True)
+        assert isinstance(flux, Flux)
         return flux
 
-    def flux(self, for_writeout=False, cue_at_index=True) -> Flux:
+    def flux_for_writeout(self, cue_at_index) -> WriteoutFlux:
+        wflux = self._flux(for_writeout=True, cue_at_index=cue_at_index)
+        assert isinstance(wflux, WriteoutFlux)
+        return wflux
+
+    def _flux(self, for_writeout, cue_at_index) -> Union[Flux, WriteoutFlux]:
 
         # We're going to mess with the track data, so take a copy.
         bits = self.bits.copy()
@@ -249,22 +254,22 @@ class MasterTrack:
                 flux_list.append(flux_ticks)
                 flux_ticks = 0
 
-        # Package up the flux for return.
-        flux: Flux
+        # Package up WriteoutFlux.
         if for_writeout:
             if flux_ticks:
                 flux_list.append(flux_ticks)
-            flux = WriteoutFlux(ticks_to_index, flux_list,
-                                ticks_to_index / self.time_per_rev,
-                                index_cued = cue_at_index,
-                                terminate_at_index = splice_at_index)
-        else:
-            flux_list = flux_list + [flux_ticks+flux_list[0]] + flux_list[1:]
-            flux = Flux([ticks_to_index]*2, flux_list,
-                        ticks_to_index / self.time_per_rev,
-                        index_cued = True)
-            flux.splice = sum(bit_ticks[:self.splice])
+            return WriteoutFlux(
+                ticks_to_index, flux_list,
+                sample_freq = ticks_to_index / self.time_per_rev,
+                index_cued = cue_at_index,
+                terminate_at_index = splice_at_index)
 
+        # Package up Flux.
+        flux_list = flux_list + [flux_ticks+flux_list[0]] + flux_list[1:]
+        flux = Flux([ticks_to_index]*2, flux_list,
+                    sample_freq = ticks_to_index / self.time_per_rev,
+                    index_cued = True)
+        flux.splice = sum(bit_ticks[:self.splice])
         return flux
 
 

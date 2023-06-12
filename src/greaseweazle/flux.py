@@ -164,11 +164,19 @@ class Flux:
         return self.ticks_per_rev / self.sample_freq
 
 
-class WriteoutFlux(Flux):
+class WriteoutFlux:
 
-    def __init__(self, ticks_to_index, flux_list, sample_freq,
-                 index_cued, terminate_at_index) -> None:
-        super().__init__([ticks_to_index], flux_list, sample_freq)
+    def __init__(
+            self,
+            ticks_to_index: float,
+            flux_list: List[float],
+            sample_freq: float,
+            index_cued: bool,
+            terminate_at_index: bool
+    ) -> None:
+        self.ticks_to_index = ticks_to_index
+        self.list = flux_list
+        self.sample_freq = sample_freq
         self.index_cued = index_cued
         self.terminate_at_index = terminate_at_index
 
@@ -177,7 +185,7 @@ class WriteoutFlux(Flux):
         s = ("\nWriteoutFlux: %.2f MHz, %.2fms to index, %s\n"
              " Total: %u samples, %.2fms"
              % (self.sample_freq*1e-6,
-                self.index_list[0]*1000/self.sample_freq,
+                self.ticks_to_index*1000/self.sample_freq,
                 ("Write all", "Terminate at index")[self.terminate_at_index],
                 len(self.list), sum(self.list)*1000/self.sample_freq))
         return s
@@ -185,20 +193,10 @@ class WriteoutFlux(Flux):
 
     def summary_string(self) -> str:
         s = ("Flux: %.1fms period, %.1f ms total, %s"
-             % (self.index_list[0]*1000/self.sample_freq,
+             % (self.ticks_to_index*1000/self.sample_freq,
                 sum(self.list)*1000/self.sample_freq,
                 ("Write all", "Terminate at index")[self.terminate_at_index]))
         return s
-
-
-    def flux_for_writeout(self, cue_at_index) -> WriteoutFlux:
-        raise error.Fatal("WriteoutFlux: flux_for_writeout is unsupported")
- 
-
-    @property
-    def ticks_per_rev(self) -> float:
-        """Mean time between index pulses, in sample ticks"""
-        return sum(self.index_list) / len(self.index_list)
 
 
 # Local variables:
