@@ -105,7 +105,7 @@ class MasterTrack:
             bits: Union[bitarray, bytes],
             time_per_rev: float,
             bit_ticks: Optional[List[float]] = None,
-            splice = 0,
+            splice: int = 0,
             weak: List[Tuple[int,int]] = []
     ) -> None:
         self.bits: bitarray
@@ -118,7 +118,7 @@ class MasterTrack:
         self.bit_ticks = bit_ticks
         self.splice = splice
         self.weak = weak
-        self.precomp = None
+        self.precomp: Optional[Precomp] = None
         self.force_random_weak = True
 
     def __str__(self) -> str:

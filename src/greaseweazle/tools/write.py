@@ -66,10 +66,7 @@ def write_from_image(usb: USB.Unit, args, image: image.Image) -> None:
         if isinstance(track, codec.Codec):
             track = track.master_track()
 
-        if args.precomp is not None:
-            error.check(isinstance(track, MasterTrack),
-                        'Cannot apply write precomp to raw flux')
-            assert isinstance(track, MasterTrack) # mypy
+        if args.precomp is not None and isinstance(track, MasterTrack):
             track.precomp = args.precomp.track_precomp(cyl)
         wflux = track.flux_for_writeout(cue_at_index = not no_index)
 
