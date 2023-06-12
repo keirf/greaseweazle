@@ -6,7 +6,7 @@
 # See the file COPYING for more details, or visit <http://unlicense.org>.
 
 from __future__ import annotations
-from typing import List, Protocol
+from typing import List, Optional, Protocol
 
 from greaseweazle import error
 
@@ -30,7 +30,7 @@ class Flux:
         self.index_list = index_list
         self.list = flux_list
         self.sample_freq = sample_freq
-        self.splice = None
+        self.splice: Optional[float] = None
         self.index_cued = index_cued
 
 
@@ -107,7 +107,7 @@ class Flux:
             remain -= f
 
         if not cue_at_index:
-            # We will write more than one revolutionm and terminate the
+            # We will write more than one revolution and terminate the
             # second revolution at the splice. Extend the start of the write
             # with "safe" 4us sample values, in case the drive motor is a
             # little fast.

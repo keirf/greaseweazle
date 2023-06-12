@@ -6,7 +6,7 @@
 # See the file COPYING for more details, or visit <http://unlicense.org>.
 
 from __future__ import annotations
-from typing import Dict, Tuple, Optional, List
+from typing import cast, Dict, Tuple, Optional, List
 
 import struct
 import itertools as it
@@ -417,8 +417,11 @@ def hfev3_mk_track(track_v1: HFETrack) -> HFETrack:
         ticks[i] = rate
 
     mt = MasterTrack(
-        bits = bits, time_per_rev = sum(ticks)/36e6,
-        bit_ticks = ticks, weak = list(map(lambda x: (x.s, x.n), weak)))
+        bits = bits,
+        time_per_rev = sum(ticks)/36e6,
+        bit_ticks = cast(List[float], ticks), # mypy
+        weak = list(map(lambda x: (x.s, x.n), weak))
+    )
     return HFETrack(mt)
 
 
@@ -443,11 +446,14 @@ class HFEv3_Generator:
     def __init__(self, track: MasterTrack) -> None:
         # Properties of the input track.
         self.track = track
-        self.ticks_per_rev = (len(track.bits) if track.bit_ticks is None
-                              else sum(track.bit_ticks))
+        if track.bit_ticks is not None:
+            self.ticks_per_rev = sum(track.bit_ticks)
+        else:
+            self.ticks_per_rev = len(track.bits)
         self.time_per_tick = self.track.time_per_rev / self.ticks_per_rev
         # tick_iter: An iterator over ranges of consecutive bitcells with
         # identical ticks per bitcell.
+        self.ticks: List[Tuple[int,int,float]]
         if track.bit_ticks is None:
             self.ticks = [(0,len(track.bits),1)]
         else:

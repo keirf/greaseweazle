@@ -100,9 +100,15 @@ class MasterTrack:
     # bit_ticks: Per-bitcell time values, in unitless 'ticks'
     # splice: Location of the track splice, in bitcells, after the index
     # weak: List of (start, length) weak ranges
-    def __init__(self, bits: Union[bitarray, bytes],
-                 time_per_rev: float,
-                 bit_ticks=None, splice=0, weak=[]):
+    def __init__(
+            self,
+            bits: Union[bitarray, bytes],
+            time_per_rev: float,
+            bit_ticks: Optional[List[float]] = None,
+            splice = 0,
+            weak: List[Tuple[int,int]] = []
+    ) -> None:
+        self.bits: bitarray
         if isinstance(bits, bytes):
             self.bits = bitarray(endian='big')
             self.bits.frombytes(bits)

@@ -5,12 +5,15 @@
 # This is free and unencumbered software released into the public domain.
 # See the file COPYING for more details, or visit <http://unlicense.org>.
 
+from typing import cast, List, Tuple, Optional, Generator
+
 import os, sys
 import platform
 import ctypes as ct
 import itertools as it
 from bitarray import bitarray
 from greaseweazle.track import MasterTrack, PLLTrack
+from greaseweazle.flux import Flux
 from greaseweazle import error
 from .image import Image
 
@@ -99,13 +102,17 @@ class DI_LOCK:
     SETWSEED  = 1<<14
     def_flags = (DENVAR | UPDATEFD | NOUPDATE | TYPE | OVLBIT | TRKBIT)
 
+RangeList = List[Tuple[int,int]]
+
 class IPFTrack(MasterTrack):
 
-    verify_revs = 2
+    verify_revs: float = 2
     tolerance = 100
 
+    sectors: RangeList
+
     @staticmethod
-    def strong_data(sector, weak):
+    def strong_data(sector: RangeList, weak: RangeList) -> Generator:
         """Return list of sector data areas excluding weak sections."""
         def range_next(i):
             s,l = next(i)
@@ -132,7 +139,7 @@ class IPFTrack(MasterTrack):
         except StopIteration:
             pass
 
-    def verify_track(self, flux):
+    def verify_track(self, flux: Flux) -> bool:
         flux.cue_at_index()
         raw = PLLTrack(clock = self.time_per_rev/len(self.bits), data = flux)
         raw_bits, _ = raw.get_all_data()
@@ -148,12 +155,15 @@ class IPFTrack(MasterTrack):
 
 class IPF(Image):
 
+    iid: int
+    pi: CapsImageInfo
+
     read_only = True
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.lib = get_libcaps()
 
-    def __del__(self):
+    def __del__(self) -> None:
         try:
             self.lib.CAPSUnlockAllTracks(self.iid)
             self.lib.CAPSUnlockImage(self.iid)
@@ -162,7 +172,7 @@ class IPF(Image):
         except AttributeError:
             pass
 
-    def __str__(self):
+    def __str__(self) -> str:
         pi = self.pi
         s = "IPF Image File:"
         s += "\n SPS ID: %04d (rev %d)" % (pi.release, pi.revision)
@@ -183,7 +193,7 @@ class IPF(Image):
         return s
 
     @classmethod
-    def from_file(cls, name):
+    def from_file(cls, name: str, _fmt) -> Image:
 
         ipf = cls()
 
@@ -202,7 +212,7 @@ class IPF(Image):
         return ipf
 
 
-    def get_track(self, cyl, head):
+    def get_track(self, cyl: int, head: int) -> Optional[MasterTrack]:
         pi = self.pi
         if head < pi.minhead or head > pi.maxhead:
             return None
@@ -271,9 +281,10 @@ class IPF(Image):
         track = IPFTrack(
             bits = trackbuf,
             time_per_rev = 60/rpm,
-            bit_ticks = timebuf,
+            bit_ticks = cast(List[float], timebuf), # mypy
             splice = ti.overlap,
-            weak = weak)
+            weak = weak
+        )
         track.verify = track
         track.sectors = data
         return track
