@@ -33,6 +33,8 @@ class AmigaDOS(codec.Codec):
 
     time_per_rev = 0.2
 
+    verify_revs = default_revs
+
     def __init__(self, cyl: int, head: int):
         self.tracknr = cyl*2 + head
         self.sector: List[Optional[Tuple[bytes,bytes]]]
@@ -142,7 +144,6 @@ class AmigaDOS(codec.Codec):
             bits = ibm.mfm_encode(t),
             time_per_rev = 0.2)
         track.verify = self
-        track.verify_revs = default_revs
         return track
 
 

@@ -45,6 +45,8 @@ class MacGCR(codec.Codec):
     nsec: int
     time_per_rev = 0.2
 
+    verify_revs = default_revs
+
     def __init__(self, cyl: int, head: int, config):
         self.cyl, self.head = cyl, head
         self.config = config
@@ -176,7 +178,6 @@ class MacGCR(codec.Codec):
 
         track = MasterTrack(bits = t, time_per_rev = 0.2)
         track.verify = self
-        track.verify_revs = default_revs
         return track
 
 

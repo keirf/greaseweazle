@@ -88,7 +88,8 @@ class EDSKTrack:
     gapbyte = 0x4e
     
     verify_len: int
-    
+    verify_revs = 1
+
     def __init__(self):
         self.time_per_rev = 0.2
         self.clock = 2e-6
@@ -100,7 +101,6 @@ class EDSKTrack:
             time_per_rev = self.time_per_rev,
             weak = self.weak)
         track.verify = self
-        track.verify_revs = 1
         return track
 
     def _find_sync(self, bits, sync, start):

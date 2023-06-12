@@ -5,7 +5,7 @@
 # This is free and unencumbered software released into the public domain.
 # See the file COPYING for more details, or visit <http://unlicense.org>.
 
-from typing import Any, List, Tuple, Union
+from typing import Any, List, Optional, Tuple, Union, Protocol
 import binascii
 import itertools as it
 from bitarray import bitarray
@@ -76,13 +76,16 @@ class Precomp:
             bit_ticks[i+1] += t
             bit_ticks[i+2] -= t
 
+class HasVerify(Protocol):
+    verify_revs: float
+    def verify_track(self, flux: Flux) -> bool:
+        ...
 
 # A pristine representation of a track, from a codec and/or a perfect image.
 class MasterTrack:
 
     # verify state may be added "ad hoc" to a MasterTrack object
-    verify: Any = None
-    verify_revs: float
+    verify: Optional[HasVerify] = None
 
     @property
     def bitrate(self) -> float:

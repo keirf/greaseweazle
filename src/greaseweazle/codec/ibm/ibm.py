@@ -245,6 +245,8 @@ class IBMTrack(codec.Codec):
     time_per_rev: float
     clock: float
 
+    verify_revs: float = 1
+
     def __init__(self, cyl: int, head: int, mode: Mode):
         self.cyl, self.head = cyl, head
         self.sectors: List[Sector] = []
@@ -422,7 +424,6 @@ class IBMTrack(codec.Codec):
             bits = t,
             time_per_rev = self.time_per_rev)
         track.verify = self
-        track.verify_revs = default_revs
         return track
 
     @staticmethod

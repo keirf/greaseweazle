@@ -178,9 +178,10 @@ class C64GCR(codec.Codec):
 
         track = MasterTrack(bits = t, time_per_rev = 0.2)
         track.verify = self
-        track.verify_revs = default_revs
         return track
 
+
+    verify_revs = default_revs
 
     def verify_track(self, flux):
         readback_track = self.__class__(self.cyl, self.head, self.config)

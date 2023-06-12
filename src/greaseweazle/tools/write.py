@@ -18,7 +18,7 @@ from greaseweazle import error, track
 from greaseweazle import usb as USB
 from greaseweazle.codec import codec
 from greaseweazle.image import image
-from greaseweazle.track import MasterTrack
+from greaseweazle.track import HasVerify, MasterTrack
 
 # Read and parse the image file.
 def open_image(args, image_class: Type[image.Image]) -> image.Image:
@@ -101,15 +101,16 @@ def write_from_image(usb: USB.Unit, args, image: image.Image) -> None:
             usb.write_track(flux_list = flux_list,
                             cue_at_index = flux.index_cued,
                             terminate_at_index = flux.terminate_at_index)
+            verify: Optional[HasVerify] = None
             no_verify = (args.no_verify
                          or not isinstance(track, MasterTrack)
-                         or track.verify is None)
+                         or (verify := track.verify) is None)
             if no_verify:
                 not_verified_count += 1
                 verified = True
                 break
-            assert isinstance(track, MasterTrack) # mypy
-            v_revs, v_ticks = track.verify_revs, 0
+            assert verify is not None # mypy
+            v_revs, v_ticks = verify.verify_revs, 0
             if isinstance(v_revs, float):
                 v_ticks = int(drive_ticks_per_rev * v_revs)
                 v_revs = 2
@@ -126,7 +127,7 @@ def write_from_image(usb: USB.Unit, args, image: image.Image) -> None:
             else:
                 v_flux = usb.read_track(revs = v_revs, ticks = v_ticks)
             v_flux._ticks_per_rev = drive_ticks_per_rev
-            verified = track.verify.verify_track(v_flux)
+            verified = verify.verify_track(v_flux)
             if verified:
                 verified_count += 1
                 break
