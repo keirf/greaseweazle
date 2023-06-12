@@ -9,7 +9,7 @@
 
 description = "Read a disk to the specified image file."
 
-from typing import Dict, Tuple, List, Type, Optional
+from typing import cast, Dict, Tuple, List, Type, Optional
 
 import sys, copy
 
@@ -35,15 +35,15 @@ def open_image(args, image_class: Type[image.Image]) -> image.Image:
     return image
 
 
-def read_and_normalise(usb, args, revs, ticks=0):
+def read_and_normalise(usb: USB.Unit, args, revs: int, ticks=0) -> Flux:
     if args.fake_index is not None:
         drive_tpr = int(args.drive_ticks_per_rev)
         pre_index = int(usb.sample_freq * 0.5e-3)
         if ticks == 0:
             ticks = revs*drive_tpr + 2*pre_index
         flux = usb.read_track(revs=0, ticks=ticks)
-        flux.index_list = ([pre_index] +
-                           [drive_tpr] * ((ticks-pre_index)//drive_tpr))
+        index_list = [pre_index] + [drive_tpr] * ((ticks-pre_index)//drive_tpr)
+        flux.index_list = cast(List[float], index_list) # mypy
     else:
         flux = usb.read_track(revs=revs, ticks=ticks)
     flux._ticks_per_rev = args.drive_ticks_per_rev

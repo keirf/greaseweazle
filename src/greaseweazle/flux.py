@@ -15,6 +15,8 @@ class HasFlux(Protocol):
         ...
     def flux(self) -> Flux:
         ...
+    def flux_for_writeout(self, cue_at_index) -> WriteoutFlux:
+        ...
 
 class Flux:
 
@@ -83,7 +85,7 @@ class Flux:
         self.index_cued = True
 
 
-    def flux_for_writeout(self, cue_at_index=True) -> Flux:
+    def flux_for_writeout(self, cue_at_index) -> WriteoutFlux:
 
         # Splice at index unless we know better.
         splice = 0 if self.splice is None else self.splice
@@ -189,7 +191,7 @@ class WriteoutFlux(Flux):
         return s
 
 
-    def flux_for_writeout(self, cue_at_index=True) -> Flux:
+    def flux_for_writeout(self, cue_at_index) -> WriteoutFlux:
         raise error.Fatal("WriteoutFlux: flux_for_writeout is unsupported")
  
 

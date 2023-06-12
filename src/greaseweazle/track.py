@@ -81,7 +81,7 @@ class Precomp:
 class MasterTrack:
 
     # verify state may be added "ad hoc" to a MasterTrack object
-    verify: Any
+    verify: Any = None
     verify_revs: float
 
     @property
@@ -137,8 +137,10 @@ class MasterTrack:
         s += ')'
         return s
 
-    def flux_for_writeout(self, cue_at_index=True) -> Flux:
-        return self.flux(for_writeout=True, cue_at_index=cue_at_index)
+    def flux_for_writeout(self, cue_at_index) -> WriteoutFlux:
+        flux = self.flux(for_writeout=True, cue_at_index=cue_at_index)
+        assert isinstance(flux, WriteoutFlux)
+        return flux
 
     def flux(self, for_writeout=False, cue_at_index=True) -> Flux:
 

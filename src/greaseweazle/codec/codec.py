@@ -16,7 +16,7 @@ from greaseweazle import error
 from greaseweazle.codec import codec
 from greaseweazle.tools import util
 from greaseweazle.track import MasterTrack, PLL
-from greaseweazle.flux import Flux, HasFlux
+from greaseweazle.flux import Flux, HasFlux, WriteoutFlux
 
 
 class Codec:
@@ -56,6 +56,9 @@ class Codec:
 
     def flux(self) -> Flux:
         return self.master_track().flux()
+
+    def flux_for_writeout(self, cue_at_index) -> WriteoutFlux:
+        return self.master_track().flux_for_writeout(cue_at_index)
 
 
 class TrackDef:

@@ -9,7 +9,7 @@
 
 description = "Write a disk from the specified image file."
 
-from typing import Optional, Type
+from typing import cast, Optional, List, Type
 
 import sys, copy
 
@@ -26,7 +26,7 @@ def open_image(args, image_class: Type[image.Image]) -> image.Image:
 
 # write_from_image:
 # Writes the specified image file to floppy disk.
-def write_from_image(usb, args, image):
+def write_from_image(usb: USB.Unit, args, image: image.Image) -> None:
 
     # Measure drive RPM.
     # We will adjust the flux intervals per track to allow for this.
@@ -101,14 +101,14 @@ def write_from_image(usb, args, image):
             usb.write_track(flux_list = flux_list,
                             cue_at_index = flux.index_cued,
                             terminate_at_index = flux.terminate_at_index)
-            try:
-                no_verify = args.no_verify or track.verify is None
-            except AttributeError: # track.verify undefined
-                no_verify = True
+            no_verify = (args.no_verify
+                         or not isinstance(track, MasterTrack)
+                         or track.verify is None)
             if no_verify:
                 not_verified_count += 1
                 verified = True
                 break
+            assert isinstance(track, MasterTrack) # mypy
             v_revs, v_ticks = track.verify_revs, 0
             if isinstance(v_revs, float):
                 v_ticks = int(drive_ticks_per_rev * v_revs)
@@ -119,9 +119,10 @@ def write_from_image(usb, args, image):
                 if v_ticks == 0:
                     v_ticks = v_revs*drive_tpr + 2*pre_index
                 v_flux = usb.read_track(revs = 0, ticks = v_ticks)
-                v_flux.index_list = (
+                index_list = (
                     [pre_index]
                     + [drive_tpr] * ((v_ticks-pre_index)//drive_tpr))
+                v_flux.index_list = cast(List[float], index_list) # mypy
             else:
                 v_flux = usb.read_track(revs = v_revs, ticks = v_ticks)
             v_flux._ticks_per_rev = drive_ticks_per_rev
