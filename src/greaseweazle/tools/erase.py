@@ -15,7 +15,7 @@ from greaseweazle import error
 from greaseweazle.tools import util
 from greaseweazle import usb as USB
 
-def erase(usb, args):
+def erase(usb: USB.Unit, args) -> None:
 
     # @drive_ticks is the time in Greaseweazle ticks between index pulses.
     # We will adjust the flux intervals per track to allow for this.
@@ -39,14 +39,14 @@ def erase(usb, args):
                 usb.erase_track(drive_ticks * 1.1)
 
 
-def main(argv):
+def main(argv) -> None:
 
     epilog = (util.drive_desc + "\n"
               + util.speed_desc + "\n" + util.tspec_desc)
     parser = util.ArgumentParser(usage='%(prog)s [options]',
                                  epilog=epilog)
     parser.add_argument("--device", help="device name (COM/serial port)")
-    parser.add_argument("--drive", type=util.drive_letter, default='A',
+    parser.add_argument("--drive", type=util.Drive(), default='A',
                         help="drive to read")
     parser.add_argument("--revs", type=util.min_int(1), metavar="N", default=1,
                         help="number of revolutions to erase per track")
@@ -67,7 +67,7 @@ def main(argv):
             tracks.update_from_trackspec(args.tracks.trackspec)
         args.tracks = tracks
         print("Erasing %s" % (args.tracks))
-        util.with_drive_selected(erase, usb, args)
+        util.with_drive_selected(lambda: erase(usb, args), usb, args.drive)
     except USB.CmdError as err:
         print("Command Failed: %s" % err)
 

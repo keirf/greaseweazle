@@ -7,6 +7,9 @@
 # This is free and unencumbered software released into the public domain.
 # See the file COPYING for more details, or visit <http://unlicense.org>.
 
+from __future__ import annotations
+from typing import Callable
+
 import argparse, os, sys, serial, struct, time, re, platform
 import importlib
 import serial.tools.list_ports
@@ -109,18 +112,21 @@ def period(arg):
     if m is not None:
         return float(m.group(1)) / 40e6 # SCP @ 40MHz
     return 60 / float(arg)
-    
-def drive_letter(letter):
-    types = {
-        'A': (USB.BusType.IBMPC, 0),
-        'B': (USB.BusType.IBMPC, 1),
-        '0': (USB.BusType.Shugart, 0),
-        '1': (USB.BusType.Shugart, 1),
-        '2': (USB.BusType.Shugart, 2),
-    }
-    if not letter.upper() in types:
-        raise argparse.ArgumentTypeError("invalid drive letter: '%s'" % letter)
-    return types[letter.upper()]
+
+class Drive:
+    def __call__(self, letter: str) -> Drive:
+        types = {
+            'A': (USB.BusType.IBMPC, 0),
+            'B': (USB.BusType.IBMPC, 1),
+            '0': (USB.BusType.Shugart, 0),
+            '1': (USB.BusType.Shugart, 1),
+            '2': (USB.BusType.Shugart, 2),
+        }
+        if not letter.upper() in types:
+            raise argparse.ArgumentTypeError("invalid drive letter: '%s'"
+                                             % letter)
+        self.bus, self.unit_id = types[letter.upper()]
+        return self
 
 def range_str(l):
     if len(l) == 0:
@@ -299,23 +305,28 @@ def get_image_class(name):
     return mod.__dict__[typename]
 
 
-def with_drive_selected(fn, usb, args, *_args, **_kwargs):
+def with_drive_selected(
+        fn: Callable[[],None],
+        usb: USB.Unit,
+        drive: Drive,
+        motor: bool = True
+):
     try:
-        usb.set_bus_type(args.drive[0].value)
+        usb.set_bus_type(drive.bus.value)
     except USB.CmdError as err:
         if err.code == USB.Ack.BadCommand:
-            raise error.Fatal("Device does not support " + str(args.drive[0]))
+            raise error.Fatal("Device does not support " + str(drive.bus))
         raise
     try:
-        usb.drive_select(args.drive[1])
-        usb.drive_motor(args.drive[1], _kwargs.pop('motor', True))
-        fn(usb, args, *_args, **_kwargs)
+        usb.drive_select(drive.unit_id)
+        usb.drive_motor(drive.unit_id, motor)
+        fn()
     except KeyboardInterrupt:
         print()
         usb.reset()
         raise
     finally:
-        usb.drive_motor(args.drive[1], False)
+        usb.drive_motor(drive.unit_id, False)
         usb.drive_deselect()
 
 

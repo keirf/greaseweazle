@@ -9,15 +9,19 @@
 
 description = "Write a disk from the specified image file."
 
+from typing import Optional, Type
+
 import sys, copy
 
 from greaseweazle.tools import util
 from greaseweazle import error, track
 from greaseweazle import usb as USB
 from greaseweazle.codec import codec
+from greaseweazle.image import image
+from greaseweazle.track import MasterTrack
 
 # Read and parse the image file.
-def open_image(args, image_class):
+def open_image(args, image_class: Type[image.Image]) -> image.Image:
     return image_class.from_file(args.file, args.fmt_cls)
 
 # write_from_image:
@@ -55,6 +59,7 @@ def write_from_image(usb, args, image):
                 print("T%u.%u: WARNING: out of range for format '%s': Track "
                       "skipped" % (cyl, head, args.format))
                 continue
+            assert isinstance(track, codec.Codec)
             error.check(track.nr_missing() == 0,
                         'T%u.%u: %u missing sectors in input image'
                         % (cyl, head, track.nr_missing()))
@@ -62,6 +67,9 @@ def write_from_image(usb, args, image):
             track = track.master_track()
 
         if args.precomp is not None:
+            error.check(isinstance(track, MasterTrack),
+                        'Cannot apply write precomp to raw flux')
+            assert isinstance(track, MasterTrack) # mypy
             track.precomp = args.precomp.track_precomp(cyl)
         flux = track.flux_for_writeout(cue_at_index = not no_index)
 
@@ -137,19 +145,19 @@ def write_from_image(usb, args, image):
 
 
 class PrecompSpec:
-    def __str__(self):
+    def __str__(self) -> str:
         s = "Precomp %s" % track.Precomp.TYPESTRING[self.type]
         for e in self.list:
             s += ", %d-:%dns" % e
         return s
 
-    def track_precomp(self, cyl):
+    def track_precomp(self, cyl: int) -> Optional[track.Precomp]:
         for c,s in reversed(self.list):
             if cyl >= c:
                 return track.Precomp(self.type, s)
         return None
 
-    def importspec(self, spec):
+    def importspec(self, spec: str) -> None:
         self.list = []
         self.type = track.Precomp.MFM
         for x in spec.split(':'):
@@ -160,14 +168,14 @@ class PrecompSpec:
                 self.list.append((int(k), int(v)))
         self.list.sort()
 
-    def __init__(self, spec):
+    def __init__(self, spec: str) -> None:
         try:
             self.importspec(spec)
         except:
             raise ValueError
         
 
-def main(argv):
+def main(argv) -> None:
 
     epilog = (util.drive_desc + "\n"
               + util.speed_desc + "\n" + util.tspec_desc
@@ -177,7 +185,7 @@ def main(argv):
     parser = util.ArgumentParser(usage='%(prog)s [options] file',
                                  epilog=epilog)
     parser.add_argument("--device", help="device name (COM/serial port)")
-    parser.add_argument("--drive", type=util.drive_letter, default='A',
+    parser.add_argument("--drive", type=util.Drive(), default='A',
                         help="drive to read")
     parser.add_argument("--diskdefs", help="disk definitions file")
     parser.add_argument("--format", help="disk format")
@@ -236,7 +244,8 @@ Known formats:\n%s"""
             if args.dd is not None:
                 prev_pin2 = usb.get_pin(2)
                 usb.set_pin(2, args.dd)
-            util.with_drive_selected(write_from_image, usb, args, image)
+            util.with_drive_selected(
+                lambda: write_from_image(usb, args, image), usb, args.drive)
         finally:
             if args.dd is not None:
                 usb.set_pin(2, prev_pin2)

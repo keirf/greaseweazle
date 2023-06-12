@@ -14,7 +14,7 @@ import sys, argparse
 from greaseweazle.tools import util
 from greaseweazle import usb as USB
 
-def pin_set(argv):
+def pin_set(argv) -> None:
 
     parser = util.ArgumentParser(usage='%(prog)s [options] pin level')
     parser.add_argument("--device", help="device name (COM/serial port)")
@@ -32,20 +32,20 @@ def pin_set(argv):
     except USB.CmdError as error:
         print("Command Failed: %s" % error)
 
-def _pin_get(usb, args, **_kwargs):
+def _pin_get(usb: USB.Unit, args) -> None:
     """Get the specified pin value.
     """
     value = usb.get_pin(args.pin)
     print("Pin %u is %s" %
           (args.pin, ("Low (0v)", "High (5v)")[value]))
 
-def pin_get(argv):
+def pin_get(argv) -> None:
 
     epilog = (util.drive_desc)
     parser = util.ArgumentParser(usage='%(prog)s [options] pin',
                                  epilog=epilog)
     parser.add_argument("--device", help="device name (COM/serial port)")
-    parser.add_argument("--drive", type=util.drive_letter, default='A',
+    parser.add_argument("--drive", type=util.Drive(), default='A',
                         help="drive to read")
     parser.add_argument("pin", type=util.uint, help="pin number")
     parser.description = description
@@ -54,16 +54,17 @@ def pin_get(argv):
 
     try:
         usb = util.usb_open(args.device)
-        util.with_drive_selected(_pin_get, usb, args, motor=False)
+        util.with_drive_selected(lambda: _pin_get(usb, args), usb, args.drive,
+                                 motor=False)
     except USB.CmdError as error:
         print("Command Failed: %s" % error)
 
-def usage(argv):
+def usage(argv) -> None:
     print("usage: gw pin get|set [-h] ...")
     print("  get|set  Get or set a pin")
     sys.exit(1)
 
-def main(argv):
+def main(argv) -> None:
 
     if len(argv) < 3:
         usage(argv)

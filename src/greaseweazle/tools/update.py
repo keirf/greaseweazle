@@ -118,7 +118,7 @@ def download_latest():
     return download(rsp.json())
 
 
-def main(argv):
+def main(argv) -> None:
 
     epilog = """\
 Examples:

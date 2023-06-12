@@ -12,10 +12,10 @@ description = "Measure RPM of drive spindle."
 from greaseweazle.tools import util
 from greaseweazle import usb as USB
 
-def speed_str(tpr):
+def speed_str(tpr: float) -> str:
     return "Rate: %.3f rpm ; Period: %.3f ms" % (60 / tpr, tpr * 1e3)
 
-def print_rpm(usb, args):
+def print_rpm(usb: USB.Unit, args) -> None:
     """Prints spindle RPM.
     """
 
@@ -38,13 +38,13 @@ def print_rpm(usb, args):
             print("SLOWEST:  " + speed_str(max(time_per_rev)))
 
 
-def main(argv):
+def main(argv) -> None:
 
     epilog = (util.drive_desc)
     parser = util.ArgumentParser(usage='%(prog)s [options]',
                                  epilog=epilog)
     parser.add_argument("--device", help="greaseweazle device name")
-    parser.add_argument("--drive", type=util.drive_letter, default='A',
+    parser.add_argument("--drive", type=util.Drive(), default='A',
                         help="drive to read")
     parser.add_argument("--nr", type=util.uint, default=1, metavar="N",
                         help="number of iterations")
@@ -54,7 +54,7 @@ def main(argv):
 
     try:
         usb = util.usb_open(args.device)
-        util.with_drive_selected(print_rpm, usb, args)
+        util.with_drive_selected(lambda: print_rpm(usb, args), usb, args.drive)
     except USB.CmdError as err:
         print("Command Failed: %s" % err)
 

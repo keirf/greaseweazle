@@ -9,6 +9,8 @@
 
 description = "Display information about the Greaseweazle setup."
 
+from typing import Tuple
+
 import requests, re
 import sys, serial
 
@@ -38,18 +40,19 @@ mcu_id = { 2: 'AT32F403',
            7: 'AT32F403A',
            5: 'AT32F415' }
 
-def print_info_line(name, value, tab=0):
+def print_info_line(name: str, value: str, tab=0) -> None:
     print(''.ljust(tab) + (name + ':').ljust(12-tab) + value)
 
-def latest_firmware():
+def latest_firmware() -> Tuple[int,int]:
     rsp = requests.get('https://api.github.com/repos/keirf/'
                        'greaseweazle-firmware/releases/latest', timeout=5)
     tag = rsp.json()['tag_name']
     r = re.match(r'v(\d+)\.(\d+)', tag)
+    assert r is not None
     major, minor = int(r.group(1)), int(r.group(2))
     return major, minor
 
-def main(argv):
+def main(argv) -> None:
 
     parser = util.ArgumentParser(usage='%(prog)s [options]')
     parser.add_argument("--device", help="device name (COM/serial port)")

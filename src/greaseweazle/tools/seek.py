@@ -17,19 +17,19 @@ from greaseweazle import usb as USB
 from greaseweazle.flux import Flux
 
 
-def seek(usb, args, **_kwargs):
+def seek(usb: USB.Unit, args) -> None:
     """Seeks to the cylinder specified in args.
     """
     usb.seek(args.cylinder, 0)
 
 
-def main(argv):
+def main(argv) -> None:
 
     epilog = (util.drive_desc)
     parser = util.ArgumentParser(usage='%(prog)s [options] cylinder',
                                  epilog=epilog)
     parser.add_argument("--device", help="device name (COM/serial port)")
-    parser.add_argument("--drive", type=util.drive_letter, default='A',
+    parser.add_argument("--drive", type=util.Drive(), default='A',
                         help="drive to read")
     parser.add_argument("--force", action="store_true",
                         help="allow extreme cylinders with no prompt")
@@ -51,7 +51,8 @@ def main(argv):
     
     try:
         usb = util.usb_open(args.device)
-        util.with_drive_selected(seek, usb, args, motor=args.motor_on)
+        util.with_drive_selected(lambda: seek(usb, args), usb, args.drive,
+                                 motor=args.motor_on)
     except USB.CmdError as err:
         print("Command Failed: %s" % err)
 

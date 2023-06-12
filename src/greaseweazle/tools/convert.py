@@ -7,24 +7,26 @@
 
 description = "Convert between image formats."
 
-from typing import Dict, Tuple
+from typing import Dict, Tuple, Optional, Type
 
 import sys, copy
 
 import greaseweazle.tools.read
 from greaseweazle.tools import util
 from greaseweazle import error
-from greaseweazle.flux import Flux
+from greaseweazle.flux import Flux, HasFlux
 from greaseweazle.codec import codec
+from greaseweazle.track import MasterTrack
+from greaseweazle.image.image import Image
 
 from greaseweazle import track
 plls = track.plls
 
-def open_input_image(args, image_class):
+def open_input_image(args, image_class: Type[Image]) -> Image:
     return image_class.from_file(args.in_file, args.fmt_cls)
 
 
-def open_output_image(args, image_class):
+def open_output_image(args, image_class: Type[Image]) -> Image:
     image = image_class.to_file(args.out_file, args.fmt_cls, args.no_clobber)
     for opt, val in args.out_file_opts.items():
         error.check(hasattr(image, 'opts') and opt in image.opts.settings,
@@ -35,14 +37,19 @@ def open_output_image(args, image_class):
 
 
 class TrackIdentity:
-    def __init__(self, ts, cyl, head):
+    def __init__(self, ts: util.TrackSet, cyl: int, head: int) -> None:
         self.cyl, self.head = cyl, head
         self.physical_cyl, self.physical_head = ts.ch_to_pch(cyl, head)
 
 
-def process_input_track(args, t, in_image):
+def process_input_track(
+        args,
+        t: TrackIdentity,
+        in_image: Image
+) -> Optional[HasFlux]:
 
     cyl, head = t.cyl, t.head
+    dat: Optional[HasFlux]
 
     track = in_image.get_track(t.physical_cyl, t.physical_head)
     if track is None:
@@ -51,6 +58,7 @@ def process_input_track(args, t, in_image):
     if args.adjust_speed is not None:
         if isinstance(track, codec.Codec):
             track = track.master_track()
+        assert isinstance(track, MasterTrack)
         track.scale(args.adjust_speed / track.time_per_rev)
 
     if args.fmt_cls is None or isinstance(track, codec.Codec):
@@ -62,6 +70,7 @@ def process_input_track(args, t, in_image):
             print("T%u.%u: WARNING: out of range for format '%s': Track "
                   "skipped" % (cyl, head, args.format))
             return None
+        assert isinstance(dat, codec.Codec)
         for pll in plls[1:]:
             if dat.nr_missing() == 0:
                 break
@@ -72,9 +81,10 @@ def process_input_track(args, t, in_image):
     return dat
 
 
-def convert(args, in_image, out_image) -> None:
+def convert(args, in_image: Image, out_image: Image) -> None:
 
     summary: Dict[Tuple[int,int],codec.Codec] = dict()
+    dat: Optional[HasFlux]
 
     for t in args.out_tracks:
         cyl, head = t.cyl, t.head
@@ -85,16 +95,17 @@ def convert(args, in_image, out_image) -> None:
                 args, TrackIdentity(args.tracks, cyl, head), in_image)
             if dat is None:
                 continue
-            summary[cyl,head] = dat
+            if args.fmt_cls is not None:
+                assert isinstance(dat, codec.Codec)
+                summary[cyl,head] = dat
         else:
             continue
         out_image.emit_track(t.physical_cyl, t.physical_head, dat)
 
-    if args.fmt_cls is not None:
-        greaseweazle.tools.read.print_summary(args, summary)
+    greaseweazle.tools.read.print_summary(args, summary)
 
 
-def main(argv):
+def main(argv) -> None:
 
     epilog = (util.speed_desc + "\n" + util.tspec_desc
               + "\n" + util.pllspec_desc

@@ -17,12 +17,12 @@ import sys, time
 from greaseweazle.tools import util
 from greaseweazle import usb as USB
 
-def seek(cyl, usb, args):
+def seek(cyl: int, usb: USB.Unit, args) -> None:
     c = min(cyl, args.cyls - 1)
     print("%d " % c, end='', flush=True)
     usb.seek(c, 0)
 
-def clean(usb, args):
+def clean(usb: USB.Unit, args) -> None:
     step = max(args.cyls // 8, 2)
     for p in range(args.passes):
         print('Pass %d: ' % p, end='', flush=True)
@@ -33,13 +33,13 @@ def clean(usb, args):
             time.sleep(args.linger / 1000)
         print()
 
-def main(argv):
+def main(argv) -> None:
 
     epilog = (util.drive_desc)
     parser = util.ArgumentParser(usage='%(prog)s [options]',
                                  epilog=epilog)
     parser.add_argument("--device", help="device name (COM/serial port)")
-    parser.add_argument("--drive", type=util.drive_letter, default='A',
+    parser.add_argument("--drive", type=util.Drive(), default='A',
                         help="drive to read")
     parser.add_argument("--cyls", type=util.uint, default=80, metavar="N",
                         help="number of drive cylinders")
@@ -53,7 +53,7 @@ def main(argv):
 
     try:
         usb = util.usb_open(args.device)
-        util.with_drive_selected(clean, usb, args)
+        util.with_drive_selected(lambda: clean(usb, args), usb, args.drive)
     except USB.CmdError as error:
         print("Command Failed: %s" % error)
 

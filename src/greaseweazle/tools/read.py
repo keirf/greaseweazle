@@ -9,21 +9,21 @@
 
 description = "Read a disk to the specified image file."
 
-from typing import Dict, Tuple
+from typing import Dict, Tuple, List, Type, Optional
 
 import sys, copy
 
 from greaseweazle.tools import util
 from greaseweazle import error
 from greaseweazle import usb as USB
-from greaseweazle.flux import Flux
+from greaseweazle.flux import Flux, HasFlux
 from greaseweazle.codec import codec
 from greaseweazle.image import image
 
 from greaseweazle import track
 plls = track.plls
 
-def open_image(args, image_class):
+def open_image(args, image_class: Type[image.Image]) -> image.Image:
     image = image_class.to_file(
         args.file, None if args.raw else args.fmt_cls, args.no_clobber)
     for opt, val in args.file_opts.items():
@@ -52,7 +52,7 @@ def read_and_normalise(usb, args, revs, ticks=0):
     return flux
 
 
-def read_with_retry(usb, args, t):
+def read_with_retry(usb: USB.Unit, args, t) -> Tuple[Flux, Optional[HasFlux]]:
 
     cyl, head = t.cyl, t.head
 
@@ -103,7 +103,7 @@ def read_with_retry(usb, args, t):
     return flux, dat
 
 
-def print_summary(args, summary: Dict[Tuple[int,int],codec.Codec]):
+def print_summary(args, summary: Dict[Tuple[int,int],codec.Codec]) -> None:
     if not summary:
         return
     nsec = max((summary[x].nsec for x in summary), default = None)
@@ -141,7 +141,7 @@ def print_summary(args, summary: Dict[Tuple[int,int],codec.Codec]):
               (good_sec, tot_sec, good_sec*100/tot_sec))
 
 
-def read_to_image(usb, args, image: image.Image) -> None:
+def read_to_image(usb: USB.Unit, args, image: image.Image) -> None:
     """Reads a floppy disk and dumps it into a new image file.
     """
 
@@ -168,6 +168,7 @@ def read_to_image(usb, args, image: image.Image) -> None:
         cyl, head = t.cyl, t.head
         flux, dat = read_with_retry(usb, args, t)
         if args.fmt_cls is not None and dat is not None:
+            assert isinstance(dat, codec.Codec)
             summary[cyl,head] = dat
         if args.raw:
             image.emit_track(cyl, head, flux)
@@ -178,7 +179,7 @@ def read_to_image(usb, args, image: image.Image) -> None:
         print_summary(args, summary)
 
 
-def main(argv):
+def main(argv) -> None:
 
     epilog = (util.drive_desc + "\n"
               + util.speed_desc + "\n" + util.tspec_desc
@@ -189,7 +190,7 @@ def main(argv):
     parser = util.ArgumentParser(usage='%(prog)s [options] file',
                                  epilog=epilog)
     parser.add_argument("--device", help="device name (COM/serial port)")
-    parser.add_argument("--drive", type=util.drive_letter, default='A',
+    parser.add_argument("--drive", type=util.Drive(), default='A',
                         help="drive to read")
     parser.add_argument("--diskdefs", help="disk definitions file")
     parser.add_argument("--format", help="disk format (output is converted unless --raw)")
@@ -255,7 +256,8 @@ Known formats:\n%s"""
                 prev_pin2 = usb.get_pin(2)
                 usb.set_pin(2, args.dd)
             with open_image(args, image_class) as image:
-                util.with_drive_selected(read_to_image, usb, args, image)
+                util.with_drive_selected(
+                    lambda: read_to_image(usb, args, image), usb, args.drive)
         finally:
             if args.dd is not None:
                 usb.set_pin(2, prev_pin2)

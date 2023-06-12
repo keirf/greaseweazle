@@ -449,7 +449,7 @@ class Unit:
 
     ## read_track:
     ## Read and decode flux and index timings for the current track.
-    def read_track(self, revs, ticks=0, nr_retries=5) -> Flux:
+    def read_track(self, revs:int, ticks:int=0, nr_retries:int=5) -> Flux:
 
         retry = 0
         while True:

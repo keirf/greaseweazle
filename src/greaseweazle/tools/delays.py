@@ -14,7 +14,7 @@ import sys
 from greaseweazle.tools import util
 from greaseweazle import usb as USB
 
-def main(argv):
+def main(argv) -> None:
 
     parser = util.ArgumentParser(usage='%(prog)s [options]')
     parser.add_argument("--device", help="device name (COM/serial port)")

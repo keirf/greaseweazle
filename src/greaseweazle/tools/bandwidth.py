@@ -16,7 +16,7 @@ from timeit import default_timer as timer
 from greaseweazle.tools import util
 from greaseweazle import usb as USB
 
-def generate_random_buffer(nr, seed):
+def generate_random_buffer(nr: int, seed: int) -> bytes:
     dat = bytearray()
     r = seed
     for i in range(nr):
@@ -27,7 +27,7 @@ def generate_random_buffer(nr, seed):
             r >>= 1
     return dat
 
-def measure_bandwidth(usb, args):
+def measure_bandwidth(usb, args) -> None:
     print()
     print("%19s%-7s/   %-7s/   %-7s" % ("", "Min.", "Mean", "Max."))
 
@@ -72,7 +72,7 @@ def measure_bandwidth(usb, args):
         print(" -> Min. Ave. Flux: %.3f us"
               % (1e6 / max_flux_rate))
 
-def main(argv):
+def main(argv) -> None:
 
     parser = util.ArgumentParser(usage='%(prog)s [options]')
     parser.add_argument("--device", help="device name (COM/serial port)")
