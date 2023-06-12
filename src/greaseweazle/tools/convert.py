@@ -58,7 +58,8 @@ def process_input_track(
     if args.adjust_speed is not None:
         if isinstance(track, codec.Codec):
             track = track.master_track()
-        assert isinstance(track, MasterTrack)
+        if not isinstance(track, MasterTrack):
+            track = track.flux()
         track.scale(args.adjust_speed / track.time_per_rev)
 
     if args.fmt_cls is None or isinstance(track, codec.Codec):
