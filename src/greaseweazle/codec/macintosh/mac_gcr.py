@@ -42,7 +42,6 @@ bad_sector = b'-=[BAD SECTOR]=-' * 32
 
 class MacGCR(codec.Codec):
 
-    nsec: int
     time_per_rev = 0.2
 
     verify_revs = default_revs
@@ -50,7 +49,6 @@ class MacGCR(codec.Codec):
     def __init__(self, cyl: int, head: int, config):
         self.cyl, self.head = cyl, head
         self.config = config
-        self.nsec = config.secs
         self.clock = config.clock
         self.sector: List[Optional[bytes]]
         self.sector = [None] * self.nsec
@@ -63,6 +61,10 @@ class MacGCR(codec.Codec):
         self.sec_map = sec_map
         error.check(optimised.enabled,
                     'Macintosh GCR requires optimised C extension')
+
+    @property
+    def nsec(self) -> int:
+        return self.config.secs
 
     def summary_string(self) -> str:
         nsec, nbad = self.nsec, self.nr_missing()

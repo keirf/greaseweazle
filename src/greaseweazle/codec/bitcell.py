@@ -20,13 +20,12 @@ default_revs = 1
 
 class BitcellTrack(codec.Codec):
 
-    nsec: int
+    nsec = 0
     
     def __init__(self, cyl: int, head: int, config):
         self.cyl, self.head = cyl, head
         self.config = config
         self.clock = config.clock
-        self.nsec = 0
         self.raw: Optional[PLLTrack] = None
 
     @property
