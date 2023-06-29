@@ -25,12 +25,9 @@ def erase(usb: USB.Unit, args) -> None:
         drive_ticks = usb.read_track(2).ticks_per_rev
 
     for t in args.tracks:
-        cyl, head = t.cyl, t.head
+        print('T%u.%u: Erasing Track' % (t.cyl, t.head))
         usb.seek(t.physical_cyl, t.physical_head)
         for rev in range(args.revs):
-            print("T%u.%u: Erasing Track (Pass %u/%u)"
-                  % (cyl, head, rev+1, args.revs))
-            usb.seek(t.physical_cyl, t.physical_head)
             if args.hfreq:
                 usb.write_track(flux_list = [ round(drive_ticks * 1.1) ],
                                 cue_at_index = False,
@@ -66,7 +63,7 @@ def main(argv) -> None:
         if args.tracks is not None:
             tracks.update_from_trackspec(args.tracks.trackspec)
         args.tracks = tracks
-        print("Erasing %s" % (args.tracks))
+        print(f'Erasing {args.tracks}, revs={args.revs}')
         util.with_drive_selected(lambda: erase(usb, args), usb, args.drive)
     except USB.CmdError as err:
         print("Command Failed: %s" % err)
