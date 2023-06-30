@@ -138,21 +138,6 @@ jobs:
       with:
         name: greaseweazle.ci.${{ steps.vars.outputs.ver }}
 
-    - name: Fix up Win32 distribution
-      run: |
-        P=greaseweazle
-        V=${{ steps.vars.outputs.ver }}
-        unzip $P-$V-win32.zip
-        find $P-$V -name 'api-ms-*' | xargs rm -f
-        find $P-$V/lib -name 'python*.dll' | xargs rm -f
-        find $P-$V/lib -name 'vcruntime140.dll' | xargs rm -f
-        wget https://github.com/keirf/$P/releases/download/v1.12/$P-1.12-win.zip
-        unzip $P-1.12-win.zip
-        cp $P-1.12/api-ms*.dll $P-$V/
-        cp $P-1.12/ucrtbase.dll $P-$V/
-        rm $P-$V-win32.zip
-        zip -r $P-$V-win32.zip $P-$V
-
     - name: Create Release
       id: create_release
       uses: ncipollo/release-action@v1
