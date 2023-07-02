@@ -7,7 +7,7 @@
  - Windows 64-bit: Install correct 64-bit version of CAPS/SPS IPF library
  - Windows 32-bit: Install 32-bit versions of required MSVCR DLLs
  - Now require Python 3.8 or later
- - TD0: Support advanced compresison blocks
+ - TD0: Support advanced compression blocks
 
 ** v1.13 - 4 June 2023
  - Generate a x64 Windows build in addition to x32

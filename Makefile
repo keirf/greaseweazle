@@ -34,7 +34,6 @@ windist: install
 	cp -a README $(PROJ)-$(VER)/
 	cp -a RELEASE_NOTES $(PROJ)-$(VER)/
 	echo $(VER) >$(PROJ)-$(VER)/VERSION
-	rm -rf ipf ipf.zip
 	cd scripts/win && $(PYTHON) setup.py build
 	cp -a scripts/win/build/exe.win*/* $(PROJ)-$(VER)/
 
