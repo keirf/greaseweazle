@@ -86,8 +86,13 @@ jobs:
     - name: Build dist
       shell: bash
       run: |
+        export GW=greaseweazle-${{ steps.vars.outputs.ver }}
         make windist
-        mv greaseweazle-${{ steps.vars.outputs.ver }}-win.zip greaseweazle-${{ steps.vars.outputs.ver }}-win32.zip
+        curl -L http://softpres.org/_media/files:spsdeclib_5.1_windows.zip --output ipf.zip
+        7z x -oipf ipf.zip
+        cp -a ipf/capsimg_binary/CAPSImg.dll $GW/
+        rm -rf ipf ipf.zip
+        7z a $GW-win32.zip $GW
 
     - name: Upload artifacts
       uses: actions/upload-artifact@v3
@@ -123,8 +128,13 @@ jobs:
     - name: Build dist
       shell: bash
       run: |
+        export GW=greaseweazle-${{ steps.vars.outputs.ver }}
         make windist
-        mv greaseweazle-${{ steps.vars.outputs.ver }}-win.zip greaseweazle-${{ steps.vars.outputs.ver }}-win64.zip
+        curl -L http://softpres.org/_media/files:spsdeclib_5.1_windows.zip --output ipf.zip
+        7z x -oipf ipf.zip
+        cp -a ipf/capsimg_binary/x64/CAPSImg.dll $GW/
+        rm -rf ipf ipf.zip
+        7z a $GW-win64.zip $GW
 
     - name: Upload artifacts
       uses: actions/upload-artifact@v3

@@ -37,11 +37,6 @@ windist: install
 	rm -rf ipf ipf.zip
 	cd scripts/win && $(PYTHON) setup.py build
 	cp -a scripts/win/build/exe.win*/* $(PROJ)-$(VER)/
-	curl -L http://softpres.org/_media/files:spsdeclib_5.1_windows.zip --output ipf.zip
-	$(UNZIP) -oipf ipf.zip
-	cp -a ipf/capsimg_binary/CAPSImg.dll $(PROJ)-$(VER)/
-	rm -rf ipf ipf.zip
-	$(ZIP) $(PROJ)-$(VER)-win.zip $(PROJ)-$(VER)
 
 # mypy testing
 src/greaseweazle/__init__.py:
