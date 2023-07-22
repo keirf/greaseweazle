@@ -3,6 +3,9 @@
 ** Keir Fraser <keir.xen@gmail.com>
 ************************************
 
+** v1.15 - 22 July 2023
+ - New board type: V4.1 (AT32F4xx, USB-C)
+
 ** v1.14 - 2 July 2023
  - Windows 64-bit: Install correct 64-bit version of CAPS/SPS IPF library
  - Windows 32-bit: Install 32-bit versions of required MSVCR DLLs
