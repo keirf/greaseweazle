@@ -22,8 +22,9 @@ diff -u a1.img olivetti_m20.img
 
 # Amiga
 dd if=/dev/urandom of=a.adf bs=1024 count=880
-$GW convert a.adf a.scp
-$GW convert a.scp b.adf
+mkdir a
+$GW convert a.adf a/00.0.raw
+$GW convert a/00.0.raw b.adf
 diff -u a.adf b.adf
 
 # C64
