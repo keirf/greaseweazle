@@ -5,6 +5,7 @@
 
 ** v1.15 - 22 July 2023
  - New board type: V4.1 (AT32F4xx, USB-C)
+ - Fix import of Kryoflux raw files (broken in v1.14)
 
 ** v1.14 - 2 July 2023
  - Windows 64-bit: Install correct 64-bit version of CAPS/SPS IPF library
