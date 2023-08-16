@@ -272,8 +272,12 @@ class MasterTrack:
                 terminate_at_index = splice_at_index)
 
         # Package up Flux.
-        flux_list = flux_list + [flux_ticks+flux_list[0]] + flux_list[1:]
-        flux = Flux([ticks_to_index]*2, flux_list,
+        index_list = [ticks_to_index]
+        if not splice_at_index:
+            # Emit two revolutions if track data crosses the index.
+            flux_list = flux_list + [flux_ticks+flux_list[0]] + flux_list[1:]
+            index_list *= 2
+        flux = Flux(index_list, flux_list,
                     sample_freq = ticks_to_index / self.time_per_rev,
                     index_cued = True)
         flux.splice = sum(bit_ticks[:self.splice])
