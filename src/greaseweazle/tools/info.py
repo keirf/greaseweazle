@@ -97,9 +97,9 @@ def main(argv) -> None:
         if usb.mcu_id != 0:
             mcu_strs.append('Unknown (0x%02X)' % usb.mcu_id)
     if usb.mcu_mhz:
-        mcu_strs.append('%uMHz' % usb.mcu_mhz)
+        mcu_strs.append(f'{usb.mcu_mhz}MHz')
     if usb.mcu_sram_kb:
-        mcu_strs.append('%ukB SRAM' % usb.mcu_sram_kb)
+        mcu_strs.append(f'{usb.mcu_sram_kb}kB SRAM')
     if mcu_strs:
         print_info_line('MCU', ', '.join(mcu_strs), tab=2)
 
@@ -111,11 +111,15 @@ def main(argv) -> None:
     print_info_line('Serial', port.serial_number if port.serial_number
                     else 'Unknown', tab=2)
 
+    usb_strs = list()
     try:
-        speed = speed_id[usb.usb_speed]
+        usb_strs.append(speed_id[usb.usb_speed])
     except KeyError:
-        speed = 'Unknown (0x%02X)' % usb.usb_speed
-    print_info_line('USB Rate', speed, tab=2)
+        usb_strs.append('Unknown (0x%02X)' % usb.usb_speed)
+    if usb.usb_buf_kb:
+        usb_strs.append(f'{usb.usb_buf_kb}kB Buffer')
+    if usb_strs:
+        print_info_line('USB', ', '.join(usb_strs), tab=2)
 
     usb_update_mode, usb_version = usb.update_mode, usb.version
 
