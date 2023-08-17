@@ -34,7 +34,7 @@ class OOB:
 class KryoFlux(Image):
 
     def __init__(self, name):
-        m = re.search("\d{2}.[01].raw$", name, flags=re.IGNORECASE)
+        m = re.search(r'\d{2}\.[01]\.raw$', name, flags=re.IGNORECASE)
         error.check(
             m is not None,
             '''\
