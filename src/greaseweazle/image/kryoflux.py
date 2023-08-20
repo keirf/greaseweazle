@@ -47,6 +47,7 @@ class KryoFlux(Image):
     @classmethod
     def to_file(cls, name, fmt, noclobber):
         kf = cls(name)
+        kf.namepattern = name
         kf.noclobber = noclobber
         return kf
 
@@ -251,6 +252,7 @@ class KryoFlux(Image):
 
 
     def __enter__(self):
+        os.makedirs(os.path.dirname(self.namepattern), exist_ok=True)
         return self
     def __exit__(self, type, value, tb):
         pass
