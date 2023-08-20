@@ -23,6 +23,7 @@ class Image:
     ## Context manager for image objects created using .to_file()
 
     def __enter__(self):
+        os.makedirs(os.path.dirname(self.filename), exist_ok=True)
         self.file = open(self.filename, ('wb','xb')[self.noclobber])
         return self
 
