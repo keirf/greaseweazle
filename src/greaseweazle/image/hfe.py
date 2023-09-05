@@ -203,7 +203,8 @@ class HFE(Image):
                 if version == 1:
                     hfe.to_track[cyl,side] = track_v1
                 else:
-                    hfe.to_track[cyl,side] = hfev3_mk_track(track_v1)
+                    hfe.to_track[cyl,side] = hfev3_mk_track(
+                        cyl, side, track_v1)
 
         return hfe
 
@@ -360,7 +361,7 @@ class HFEv3_Range:
     def e(self) -> int:
         return self.s + self.n
 
-def hfev3_mk_track(track_v1: HFETrack) -> HFETrack:
+def hfev3_mk_track(cyl: int, head: int, track_v1: HFETrack) -> HFETrack:
 
     def add_weak(weak: List[HFEv3_Range], pos: int, nr: int) -> None:
         if len(weak) != 0:
@@ -386,19 +387,26 @@ def hfev3_mk_track(track_v1: HFETrack) -> HFETrack:
         elif x == HFEv3_Op.Index:
             pass # TODO: Support hard-sector images
         elif x == HFEv3_Op.Bitrate:
-            error.check(i+1 <= len(tdat), 'HFEv3: Short track data')
+            if i+1 > len(tdat):
+                # Non fatal: This has been observed in HFEv3 images created
+                # by HxC tools (see issue #346).
+                print(f'T{cyl}.{head}: HFEv3: Truncated bitrate opcode')
+                break
             rate, i = tdat[i], i+1
         elif x == HFEv3_Op.SkipBits:
-            error.check(i+2 <= len(tdat), 'HFEv3: Short track data')
+            error.check(i+2 <= len(tdat),
+                        f'T{cyl}.{head}: HFEv3: Truncated skipbits opcode')
             nr, x, i = tdat[i], tdat[i+1], i+2
-            error.check(0 < nr < 8, 'HFEv3: Bad skipbits value: %d' % nr)
+            error.check(0 < nr < 8,
+                        f'T{cyl}.{head}: HFEv3: Bad skipbits value: {nr}')
             if x == HFEv3_Op.Rand:
                 add_weak(weak, len(bits), 8-nr)
                 x = 0
             try:
                 bits.frombytes(bytes([x << nr]))
             except ValueError:
-                raise error.Fatal('HFEv3: Bad skipbits: %02x/%d' % (x, nr))
+                raise error.Fatal(f'T{cyl}.{head}: HFEv3: Bad skipbits: '
+                                  f'0x{x:02x}<<{nr} = 0x{x<<nr:04x}')
             bits = bits[:-nr]
             ticks += [rate]*(8-nr)
         elif x == HFEv3_Op.Rand:
