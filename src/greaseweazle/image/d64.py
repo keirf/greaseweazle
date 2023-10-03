@@ -31,7 +31,8 @@ class D64(IMG):
         return disk_id
 
     @classmethod
-    def from_file(cls, name: str, fmt: Optional[codec.DiskDef]) -> Image:
+    def from_file(cls, name: str, fmt: Optional[codec.DiskDef],
+                  _index: int = -1) -> Image:
         img = super().from_file(name, fmt)
         assert isinstance(img, D64)
         disk_id = img.get_disk_id()

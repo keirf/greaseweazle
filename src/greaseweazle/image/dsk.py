@@ -12,7 +12,7 @@ from greaseweazle.image.edsk import EDSK
 class DSK(IMG):
     
     @classmethod
-    def from_file(cls, name: str, fmt) -> Image:
+    def from_file(cls, name: str, fmt, _index: int = -1) -> Image:
 
         with open(name, "rb") as f:
             sig = f.read(16)

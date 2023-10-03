@@ -106,7 +106,7 @@ class A2R(Image):
     
 
     @classmethod
-    def from_file(cls, name: str, _fmt) -> Image:
+    def from_file(cls, name: str, _fmt, _index: int = -1) -> Image:
 
         splices = None
 

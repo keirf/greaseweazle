@@ -27,7 +27,7 @@ class TD0(Image):
 
 
     @classmethod
-    def from_file(cls, name: str, _fmt) -> Image:
+    def from_file(cls, name: str, _fmt, _index = -1) -> Image:
 
         with open(name, "rb") as f:
             dat = f.read()

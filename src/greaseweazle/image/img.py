@@ -41,7 +41,7 @@ Sector image requires a disk format to be specified""")
 
 
     @classmethod
-    def from_file(cls, name: str, fmt: Optional[codec.DiskDef]) -> Image:
+    def from_file(cls, name: str, fmt: Optional[codec.DiskDef], _index: int = -1) -> Image:
 
         with open(name, "rb") as f:
             dat = f.read()

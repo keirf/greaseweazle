@@ -51,7 +51,7 @@ class KryoFlux(Image):
         return kf
 
     @classmethod
-    def from_file(cls, name, _fmt):
+    def from_file(cls, name, _fmt, _index = -1):
         # Check that the specified raw file actually exists.
         with open(name, 'rb') as _:
             pass

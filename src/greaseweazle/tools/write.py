@@ -22,7 +22,7 @@ from greaseweazle.track import HasVerify, MasterTrack
 
 # Read and parse the image file.
 def open_image(args, image_class: Type[image.Image]) -> image.Image:
-    return image_class.from_file(args.file, args.fmt_cls)
+    return image_class.from_file(args.file, args.fmt_cls, int(args.disk_index))
 
 # write_from_image:
 # Writes the specified image file to floppy disk.
@@ -188,6 +188,8 @@ def main(argv) -> None:
                         help="drive to read")
     parser.add_argument("--diskdefs", help="disk definitions file")
     parser.add_argument("--format", help="disk format")
+    parser.add_argument("--disk-index", help="disk index within image file",
+                        default=-1)
     parser.add_argument("--tracks", type=util.TrackSet, metavar="TSPEC",
                         help="which tracks to write")
     parser.add_argument("--pre-erase", action="store_true",

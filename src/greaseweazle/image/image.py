@@ -67,7 +67,8 @@ class Image:
 
     ## Read support:
     @classmethod
-    def from_file(cls, name: str, fmt: Optional[codec.DiskDef]) -> Image:
+    def from_file(cls, name: str, fmt: Optional[codec.DiskDef],
+                  index: int = -1) -> Image:
         raise NotImplementedError
 
     def get_track(self, cyl: int, side: int) -> Optional[HasFlux]:

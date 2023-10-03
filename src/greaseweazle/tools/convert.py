@@ -23,7 +23,7 @@ from greaseweazle import track
 plls = track.plls
 
 def open_input_image(args, image_class: Type[Image]) -> Image:
-    return image_class.from_file(args.in_file, args.fmt_cls)
+    return image_class.from_file(args.in_file, args.fmt_cls, int(args.disk_index))
 
 
 def open_output_image(args, image_class: Type[Image]) -> Image:
@@ -117,6 +117,8 @@ def main(argv) -> None:
                                  epilog=epilog)
     parser.add_argument("--diskdefs", help="disk definitions file")
     parser.add_argument("--format", help="disk format")
+    parser.add_argument("--disk-index", help="disk index within input "
+                        "image file", default=-1)
     parser.add_argument("--tracks", type=util.TrackSet,
                         help="which tracks to read & convert from input",
                         metavar="TSPEC")
