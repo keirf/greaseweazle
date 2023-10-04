@@ -106,29 +106,19 @@ class A2R(Image):
             t.add_cap(dat[start:i])
     
 
-    @classmethod
-    def from_file(cls, name: str, _fmt) -> Image:
-
-        splices = None
-
-        with open(name, "rb") as f:
-            dat = f.read()
+    def from_bytes(self, dat: bytes) -> None:
 
         error.check(dat[:8] == b'A2R3\xff\x0a\x0d\x0a',
                     'A2R: Invalid signature')
         dat = dat[8:]
-
-        a2r = cls(name, _fmt)
 
         # Extract the RWCP chunk(s).
         while len(dat) > 8:
             id, sz = struct.unpack('<4sI', dat[:8])
             dat = dat[8:]
             if id == b'RWCP':
-                a2r.process_rwcp(dat)
+                self.process_rwcp(dat)
             dat = dat[sz:]
-        
-        return a2r
 
 
     def get_track(self, cyl: int, side: int) -> Optional[Flux]:

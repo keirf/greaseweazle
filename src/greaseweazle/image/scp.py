@@ -126,13 +126,9 @@ class SCP(Image):
         return s
 
 
-    @classmethod
-    def from_file(cls, name: str, _fmt) -> Image:
+    def from_bytes(self, dat: bytes) -> None:
 
         splices = None
-
-        with open(name, "rb") as f:
-            dat = f.read()
 
         (sig, _, disk_type, nr_revs, _, _, flags, _, single_sided, _,
          checksum) = struct.unpack("<3s9BI", dat[0:16])
@@ -181,8 +177,6 @@ class SCP(Image):
                     splices = struct.unpack('<168I', dat[pos+4:pos+169*4])
                 pos += chk_len
 
-        scp = cls(name, _fmt)
-
         for trknr in range(len(trk_offs)):
             
             trk_off = trk_offs[trknr]
@@ -222,9 +216,9 @@ class SCP(Image):
             track = SCPTrack(thdr, tdat)
             if splices is not None:
                 track.splice = splices[trknr]
-            scp.to_track[trknr] = track
+            self.to_track[trknr] = track
 
-        s = scp.side_count()
+        s = self.side_count()
 
         # C64 images with halftracks are genberated by Supercard Pro using
         # consecutive track numbers. That needs fixup here for our layout.
@@ -238,12 +232,10 @@ class SCP(Image):
         # consecutive entries in the TLUT. This needs fixing up.
         if single_sided and s[0] and s[1]:
             new_dict = dict()
-            for tnr in scp.to_track:
-                new_dict[tnr*2+single_sided-1] = scp.to_track[tnr]
-            scp.to_track = new_dict
+            for tnr in self.to_track:
+                new_dict[tnr*2+single_sided-1] = self.to_track[tnr]
+            self.to_track = new_dict
             print('SCP: Imported legacy single-sided image')
-
-        return scp
 
 
     def get_track(self, cyl: int, side: int) -> Optional[Flux]:

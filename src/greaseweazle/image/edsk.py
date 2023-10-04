@@ -287,13 +287,7 @@ class EDSK(Image):
                 t += ibm.encode(bytes([track.gapbyte] * 80))
         return track
 
-    @classmethod
-    def from_file(cls, name: str, _fmt) -> Image:
-
-        with open(name, "rb") as f:
-            dat = f.read()
-
-        edsk = cls(name, _fmt)
+    def from_bytes(self, dat: bytes) -> None:
 
         sig, creator, ncyls, nsides, track_sz = struct.unpack(
             '<34s14s2BH', dat[:52])
@@ -318,7 +312,7 @@ class EDSK(Image):
                 '<12s4x2B2x4B', dat[o:o+24])
             error.check(sig == b'Track-Info\r\n',
                         'EDSK: Missing track header')
-            error.check((cyl, head) not in edsk.to_track,
+            error.check((cyl, head) not in self.to_track,
                         'EDSK: Track specified twice')
             bad_crc_clip_data = False
             while True:
@@ -478,10 +472,8 @@ class EDSK(Image):
             track.bits.frombytes(ibm.mfm_encode(track.bytes))
 
             # Register the track
-            edsk.to_track[cyl,head] = track
+            self.to_track[cyl,head] = track
             o += track_size
-
-        return edsk
 
 
     def get_track(self, cyl: int, side: int) -> Optional[MasterTrack]:

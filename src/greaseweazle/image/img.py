@@ -39,25 +39,15 @@ Sector image requires a disk format to be specified""")
         return l
 
 
-    @classmethod
-    def from_file(cls, name: str, fmt: Optional[codec.DiskDef]) -> Image:
-
-        with open(name, "rb") as f:
-            dat = f.read()
-
-        img = cls(name, fmt)
-        assert fmt is not None
-
+    def from_bytes(self, dat: bytes) -> None:
         pos = 0
-        for (cyl, head) in img.track_list():
-            if img.sides_swapped:
+        for (cyl, head) in self.track_list():
+            if self.sides_swapped:
                 head ^= 1
-            track = fmt.mk_track(cyl, head)
+            track = self.fmt.mk_track(cyl, head)
             if track is not None:
                 pos += track.set_img_track(dat[pos:])
-                img.to_track[cyl,head] = track
-
-        return img
+                self.to_track[cyl,head] = track
 
 
     def get_track(self, cyl: int, side: int) -> Optional[codec.Codec]:

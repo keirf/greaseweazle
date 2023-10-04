@@ -10,7 +10,7 @@ from greaseweazle.image.img import IMG
 from greaseweazle.image.edsk import EDSK
 
 class DSK(IMG):
-    
+
     @classmethod
     def from_file(cls, name: str, fmt) -> Image:
 

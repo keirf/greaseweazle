@@ -16,33 +16,29 @@ class DCP(IMG):
 
     read_only = True
 
-    @classmethod
-    def from_file(cls, name, fmt):
+    def from_bytes(self, dat: bytes) -> None:
 
-        with open(name, "rb") as f:
-            header = f.read(162)
-            format_str = 'pc98.2hd'
-            fmt = codec.get_diskdef(format_str)
-            dat = f.read()
+        header = dat[:162]
+        pos = 162
+        format_str = 'pc98.2hd'
+        fmt = codec.get_diskdef(format_str)
+        assert fmt is not None # mypy
 
-        img = cls(name, fmt)
-
-        pos = 0
-        for t in fmt.max_tracks:
+        for t in self.track_list():
             cyl, head = t.cyl, t.head
-            if img.sides_swapped:
+            if self.sides_swapped:
                 head ^= 1
-            track = fmt.fmt(cyl, head)
+            track = fmt.mk_track(cyl, head)
+            if track is None:
+                continue
             if cyl > 80:
                 break
             if header[cyl * 2 + head] == 1:
                 pos += track.set_img_track(dat[pos:])
-                img.to_track[cyl,head] = track
+                self.to_track[cyl,head] = track
             elif header[cyl * 2 + head] != 0:
                 raise error.Fatal("DCP: Corrupt header.")
-        img.format_str = format_str
-
-        return img
+        self.format_str = format_str
 
 # Local variables:
 # python-indent: 4

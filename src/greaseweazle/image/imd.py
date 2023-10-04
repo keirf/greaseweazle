@@ -29,13 +29,7 @@ class IMD(Image):
         self.filename = name
 
 
-    @classmethod
-    def from_file(cls, name: str, _fmt) -> Image:
-
-        with open(name, "rb") as f:
-            dat = f.read()
-
-        imd = cls(name, _fmt)
+    def from_bytes(self, dat: bytes) -> None:
 
         # Check and strip the header
         sig, = struct.unpack('4s', dat[:4])
@@ -108,9 +102,7 @@ class IMD(Image):
                 if rec&2:
                     s.dam.mark = ibm.Mark.DDAM
 
-            imd.to_track[cyl,head] = t
-
-        return imd
+            self.to_track[cyl,head] = t
 
 
     def get_track(self, cyl: int, side: int) -> Optional[ibm.IBMTrack_Fixed]:

@@ -168,11 +168,7 @@ class HFE(Image):
         self.to_track: Dict[Tuple[int,int], HFETrack] = dict()
 
 
-    @classmethod
-    def from_file(cls, name: str, _fmt):
-
-        with open(name, "rb") as f:
-            dat = f.read()
+    def from_bytes(self, dat: bytes) -> None:
 
         (sig, f_rev, n_cyl, n_side, t_enc, bitrate,
          _, _, _, tlut_base) = struct.unpack("<8s4B2H2BH", dat[:20])
@@ -185,9 +181,8 @@ class HFE(Image):
         error.check(0 < n_cyl, "HFE: Invalid #cyls")
         error.check(0 < n_side < 3, "HFE: Invalid #sides")
 
-        hfe = cls(name, _fmt)
-        hfe.opts.bitrate = bitrate
-        hfe.opts.version = version
+        self.opts.bitrate = bitrate
+        self.opts.version = version
 
         tlut = dat[tlut_base*512:tlut_base*512+n_cyl*4]
         
@@ -204,12 +199,10 @@ class HFE(Image):
                     offset += 1
                 track_v1 = HFETrack.from_hfe_bytes(tdat, bitrate)
                 if version == 1:
-                    hfe.to_track[cyl,side] = track_v1
+                    self.to_track[cyl,side] = track_v1
                 else:
-                    hfe.to_track[cyl,side] = hfev3_mk_track(
+                    self.to_track[cyl,side] = hfev3_mk_track(
                         cyl, side, track_v1)
-
-        return hfe
 
 
     def get_track(self, cyl: int, side: int) -> Optional[MasterTrack]:

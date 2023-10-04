@@ -42,6 +42,9 @@ class Image:
     write_on_ctrl_c = False
     opts = ImageOpts() # empty
 
+    def __init__(self, name: str, fmt) -> None:
+        raise NotImplementedError
+    
     ## Context manager for image objects created using .to_file()
 
     def __enter__(self) -> Image:
@@ -64,12 +67,26 @@ class Image:
 
     ## Default .to_file() constructor
     @classmethod
-    def to_file(cls, name, fmt, noclobber):
+    def to_file(cls, name: str, fmt: Optional[codec.DiskDef],
+                noclobber: bool) -> Image:
         error.check(not cls.read_only,
                     "%s: Cannot create %s image files" % (name, cls.__name__))
         obj = cls(name, fmt)
         obj.noclobber = noclobber
         return obj
+
+    ## Default .from_file() constructor
+    @classmethod
+    def from_file(cls, name: str, fmt: Optional[codec.DiskDef]) -> Image:
+
+        obj = cls(name, fmt)
+        with open(name, "rb") as f:
+            obj.from_bytes(f.read())
+        return obj
+
+    ## Used by default .from_file constructor
+    def from_bytes(self, dat: bytes) -> None:
+        raise NotImplementedError
 
     # Maximum non-empty cylinder on each head, or -1 if no cylinders exist.
     # Returns a list of integers, indexed by head.
@@ -84,11 +101,6 @@ class Image:
 
     ## Above methods and class variables can be overridden by subclasses.
     ## Additionally, subclasses must provide following public interfaces:
-
-    ## Read support:
-    @classmethod
-    def from_file(cls, name: str, fmt: Optional[codec.DiskDef]) -> Image:
-        raise NotImplementedError
 
     def get_track(self, cyl: int, side: int) -> Optional[HasFlux]:
         raise NotImplementedError

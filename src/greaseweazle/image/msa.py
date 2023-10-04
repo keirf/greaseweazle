@@ -15,17 +15,12 @@ from .image import Image
 
 class MSA(Image):
 
-    def __init__(self, name: str, fmt=None):
+    def __init__(self, name: str, _fmt):
         self.to_track: Dict[Tuple[int,int],ibm.IBMTrack_Fixed] = dict()
         self.filename = name
-        self.fmt = fmt
 
 
-    @classmethod
-    def from_file(cls, name: str, _fmt) -> Image:
-
-        with open(name, "rb") as f:
-            dat = f.read()
+    def from_bytes(self, dat: bytes) -> None:
 
         id, spt, nsides, st, et = struct.unpack('>2s4H', dat[0:10])
 
@@ -33,8 +28,6 @@ class MSA(Image):
 
         nsides += 1 
         error.check(1 <= nsides <= 2, f'MSA: Bad number of sides: {nsides}')
-
-        msa = MSA(name)
 
         idx = 10
         for cyl in range(st, et+1):
@@ -84,9 +77,7 @@ class MSA(Image):
                     s.idam.c, s.idam.h, s.idam.r, s.idam.n = cyl, head, n+1, 2
                     s.dam.data = tdat[n*512:(n+1)*512]
 
-                msa.to_track[cyl, head] = t
-
-        return msa
+                self.to_track[cyl, head] = t
 
 
     def get_track(self, cyl: int, side: int) -> Optional[ibm.IBMTrack_Fixed]:

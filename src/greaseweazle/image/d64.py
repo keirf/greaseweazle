@@ -30,19 +30,16 @@ class D64(IMG):
         disk_id, = struct.unpack('<H', dat[162:164])
         return disk_id
 
-    @classmethod
-    def from_file(cls, name: str, fmt: Optional[codec.DiskDef]) -> Image:
-        img = super().from_file(name, fmt)
-        assert isinstance(img, D64)
-        disk_id = img.get_disk_id()
-        for _, t in img.to_track.items():
+    def from_bytes(self, dat: bytes) -> None:
+        super().from_bytes(dat)
+        disk_id = self.get_disk_id()
+        for _, t in self.to_track.items():
             error.check(isinstance(t, c64_gcr.C64GCR),
-                        f'{cls.__name__}: Only {cls.default_format} format '
-                        f'is supported')
+                        f'{self.__class__.__name__}: '
+                        f'Only {self.default_format} format is supported')
             assert isinstance(t, c64_gcr.C64GCR) # mypy
             if disk_id is not None:
                 t.set_disk_id(disk_id)
-        return img
 
 class D71(D64):
     default_format = 'commodore.1571'
