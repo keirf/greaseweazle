@@ -6,13 +6,15 @@
 # See the file COPYING for more details, or visit <http://unlicense.org>.
 
 from __future__ import annotations
-from typing import Optional, List
+from typing import Optional, List, Dict
 
 import os
 
 from greaseweazle import error
 from greaseweazle.codec import codec
 from greaseweazle.flux import HasFlux
+
+OptDict = Dict[str,str]
 
 class ImageOpts:
     r_settings: List[str] = [] # r_set()
@@ -44,6 +46,14 @@ class Image:
 
     def __init__(self, name: str, fmt) -> None:
         raise NotImplementedError
+
+    def apply_r_opts(self, opts: OptDict) -> None:
+        for opt, val in opts.items():
+            self.opts.r_set(self.filename, opt, val)
+    
+    def apply_w_opts(self, opts: OptDict) -> None:
+        for opt, val in opts.items():
+            self.opts.w_set(self.filename, opt, val)
     
     ## Context manager for image objects created using .to_file()
 
@@ -68,18 +78,20 @@ class Image:
     ## Default .to_file() constructor
     @classmethod
     def to_file(cls, name: str, fmt: Optional[codec.DiskDef],
-                noclobber: bool) -> Image:
+                noclobber: bool, opts: OptDict) -> Image:
         error.check(not cls.read_only,
                     "%s: Cannot create %s image files" % (name, cls.__name__))
         obj = cls(name, fmt)
         obj.noclobber = noclobber
+        obj.apply_w_opts(opts)
         return obj
 
     ## Default .from_file() constructor
     @classmethod
-    def from_file(cls, name: str, fmt: Optional[codec.DiskDef]) -> Image:
-
+    def from_file(cls, name: str, fmt: Optional[codec.DiskDef],
+                  opts: OptDict) -> Image:
         obj = cls(name, fmt)
+        obj.apply_r_opts(opts)
         with open(name, "rb") as f:
             obj.from_bytes(f.read())
         return obj

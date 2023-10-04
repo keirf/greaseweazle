@@ -11,7 +11,7 @@ import itertools as it
 from greaseweazle import __version__
 from greaseweazle import error
 from greaseweazle.flux import Flux
-from .image import Image
+from .image import Image, OptDict
 
 def_mck = 18432000 * 73 / 14 / 2
 def_sck = def_mck / 2
@@ -47,11 +47,13 @@ class KryoFlux(Image):
 
 
     @classmethod
-    def from_file(cls, name, _fmt):
+    def from_file(cls, name: str, _fmt, opts: OptDict) -> Image:
         # Check that the specified raw file actually exists.
         with open(name, 'rb') as _:
             pass
-        return cls(name, _fmt)
+        obj = cls(name, _fmt)
+        obj.apply_r_opts(opts)
+        return obj
 
 
     def get_track(self, cyl, side):

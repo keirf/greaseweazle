@@ -12,7 +12,7 @@ import os
 
 from greaseweazle import error
 from greaseweazle.codec.ibm import ibm
-from .image import Image, ImageOpts
+from .image import Image, ImageOpts, OptDict
 
 TrackDict = Dict[Tuple[int,int],ibm.IBMTrack_Fixed]
 
@@ -169,9 +169,10 @@ class D88(Image):
         return to_track
 
     @classmethod
-    def from_file(cls, name: str, _fmt) -> Image:
+    def from_file(cls, name: str, _fmt, opts: OptDict) -> Image:
 
         d88 = cls(name, _fmt)
+        d88.apply_r_opts(opts)
 
         with open(name, "rb") as f:
             f.seek(0, os.SEEK_END)

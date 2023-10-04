@@ -23,18 +23,12 @@ from greaseweazle import track
 plls = track.plls
 
 def open_input_image(args, image_class: Type[Image]) -> Image:
-    image = image_class.from_file(args.in_file, args.fmt_cls)
-    for opt, val in args.in_file_opts.items():
-        image.opts.r_set(args.in_file, opt, val)
-    return image
+    return image_class.from_file(args.in_file, args.fmt_cls, args.in_file_opts)
 
 
 def open_output_image(args, image_class: Type[Image]) -> Image:
-    image = image_class.to_file(args.out_file, args.fmt_cls, args.no_clobber)
-    for opt, val in args.out_file_opts.items():
-        image.opts.w_set(args.out_file, opt, val)
-    return image
-
+    return image_class.to_file(args.out_file, args.fmt_cls, args.no_clobber,
+                               args.out_file_opts)
 
 class TrackIdentity:
     def __init__(self, ts: util.TrackSet, cyl: int, head: int) -> None:

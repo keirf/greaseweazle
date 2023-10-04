@@ -16,7 +16,7 @@ from bitarray import bitarray
 from greaseweazle.track import MasterTrack, PLLTrack
 from greaseweazle.flux import Flux
 from greaseweazle import error
-from .image import Image
+from .image import Image, OptDict
 
 class CapsDateTimeExt(ct.Structure):
     _pack_ = 1
@@ -185,9 +185,10 @@ class CAPS(Image):
         raise NotImplementedError
 
     @classmethod
-    def from_file(cls, name: str, _fmt) -> Image:
+    def from_file(cls, name: str, _fmt, opts: OptDict) -> Image:
 
         caps = cls(name, _fmt)
+        caps.apply_r_opts(opts)
         errprefix = f'CAPS: {cls.imagetype}'
 
         caps.iid = caps.lib.CAPSAddImage()

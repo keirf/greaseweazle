@@ -22,10 +22,7 @@ from greaseweazle.track import HasVerify, MasterTrack
 
 # Read and parse the image file.
 def open_image(args, image_class: Type[image.Image]) -> image.Image:
-    image = image_class.from_file(args.file, args.fmt_cls)
-    for opt, val in args.file_opts.items():
-        image.opts.r_set(args.file, opt, val)
-    return image
+    return image_class.from_file(args.file, args.fmt_cls, args.file_opts)
 
 # write_from_image:
 # Writes the specified image file to floppy disk.
