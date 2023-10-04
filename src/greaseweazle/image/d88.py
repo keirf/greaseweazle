@@ -45,7 +45,7 @@ class D88(Image):
 
     def __init__(self, name: str, _fmt):
         self.opts = D88Opts()
-        self.to_track: List[TrackDict] = list()
+        self.to_track: TrackDict = dict()
         self.filename = name
 
     @staticmethod
@@ -178,27 +178,33 @@ class D88(Image):
             f.seek(0, os.SEEK_END)
             file_size = f.tell()
             f.seek(0)
-            disk_offset = 0
+            disk_offset, disk_index = 0, 0
             while disk_offset < file_size:
-                d88.to_track.append(D88.disk_from_file(f, disk_offset))
+                if disk_index == d88.opts.index:
+                    d88.to_track = D88.disk_from_file(f, disk_offset)
                 f.seek(disk_offset)
                 header = struct.unpack('<16sB9xBBL', f.read(32))
                 _, _, _, _, disk_size = header
                 disk_offset += disk_size
+                disk_index += 1
 
-        error.check(len(d88.to_track) > 0, f'D88: {name}: No valid disk found')
-        if len(d88.to_track) > 1:
-            print(f'D88: {name}: {len(d88.to_track)} disks in file')
+        error.check(disk_index > 0,
+                    f'D88: {d88.filename}: No valid disk found')
+
+        if disk_index > 1:
+            print(f'D88: {d88.filename}: {disk_index} disks in file; '
+                  f'reading disk with index {d88.opts.index}')
+
+        error.check(d88.opts.index < disk_index,
+                    f'D88: {d88.filename}: No disk with index '
+                    f'{d88.opts.index} (valid indexes 0-{disk_index-1})')
 
         return d88
 
     def get_track(self, cyl: int, side: int) -> Optional[ibm.IBMTrack_Fixed]:
-        index = self.opts.index
-        error.check(index < len(self.to_track),
-                    f'D88: {self.filename}: No disk with index {index}')
-        if (cyl,side) not in self.to_track[index]:
+        if (cyl,side) not in self.to_track:
             return None
-        return self.to_track[index][cyl,side]
+        return self.to_track[cyl,side]
 
 # Local variables:
 # python-indent: 4
