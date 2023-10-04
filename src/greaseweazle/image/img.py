@@ -18,13 +18,12 @@ class IMG(Image):
     sequential = False
     min_cyls: Optional[int] = None
 
-    def __init__(self, name: str, fmt, noclobber=False):
+    def __init__(self, name: str, fmt):
         self.to_track: Dict[Tuple[int,int],codec.Codec] = dict()
         error.check(fmt is not None, """\
 Sector image requires a disk format to be specified""")
         self.filename = name
         self.fmt: codec.DiskDef = fmt
-        self.noclobber = noclobber
 
 
     def track_list(self):
@@ -65,7 +64,9 @@ Sector image requires a disk format to be specified""")
     def to_file(cls, name: str, fmt, noclobber: bool) -> Image:
         error.check(not cls.read_only,
                     "%s: Cannot create %s image files" % (name, cls.__name__))
-        return cls(name, fmt, noclobber=noclobber)
+        obj = cls(name, fmt)
+        obj.noclobber = noclobber
+        return obj
 
 
     def get_track(self, cyl: int, side: int) -> Optional[codec.Codec]:

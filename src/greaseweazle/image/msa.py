@@ -15,11 +15,10 @@ from .image import Image
 
 class MSA(Image):
 
-    def __init__(self, name: str, fmt=None, noclobber=False):
+    def __init__(self, name: str, fmt=None):
         self.to_track: Dict[Tuple[int,int],ibm.IBMTrack_Fixed] = dict()
         self.filename = name
         self.fmt = fmt
-        self.noclobber = noclobber
 
 
     @classmethod
@@ -92,7 +91,9 @@ class MSA(Image):
 
     @classmethod
     def to_file(cls, name: str, fmt, noclobber: bool) -> Image:
-        return cls(name, fmt, noclobber)
+        obj = cls(name, fmt)
+        obj.noclobber = noclobber
+        return obj
 
 
     def get_track(self, cyl: int, side: int) -> Optional[ibm.IBMTrack_Fixed]:

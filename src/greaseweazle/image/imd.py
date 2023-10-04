@@ -24,10 +24,9 @@ class IMDMode:
 
 class IMD(Image):
 
-    def __init__(self, name: str, noclobber=False):
+    def __init__(self, name: str):
         self.to_track: Dict[Tuple[int,int],ibm.IBMTrack_Fixed] = dict()
         self.filename = name
-        self.noclobber = noclobber
 
 
     @classmethod
@@ -116,7 +115,9 @@ class IMD(Image):
 
     @classmethod
     def to_file(cls, name: str, fmt, noclobber: bool) -> Image:
-        return cls(name, noclobber=noclobber)
+        obj = cls(name)
+        obj.noclobber = noclobber
+        return obj
 
 
     def get_track(self, cyl: int, side: int) -> Optional[ibm.IBMTrack_Fixed]:

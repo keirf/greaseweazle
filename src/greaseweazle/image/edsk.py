@@ -162,9 +162,10 @@ class EDSKTrack:
 
 class EDSK(Image):
 
-    def __init__(self) -> None:
+    def __init__(self, name: str) -> None:
         self.to_track: Dict[Tuple[int,int],
                             Union[ibm.IBMTrack,EDSKTrack]] = dict()
+        self.filename = name
 
     # Find all weak ranges in the given sector data copies.
     @staticmethod
@@ -292,7 +293,7 @@ class EDSK(Image):
         with open(name, "rb") as f:
             dat = f.read()
 
-        edsk = cls()
+        edsk = cls(name)
 
         sig, creator, ncyls, nsides, track_sz = struct.unpack(
             '<34s14s2BH', dat[:52])
@@ -353,7 +354,7 @@ class EDSK(Image):
                         num_copies = (3 if data_size == 49152
                                       else data_size // native_size)
                         data_size //= num_copies
-                        weak = cls().find_weak_ranges(sec_data, data_size)
+                        weak = EDSK.find_weak_ranges(sec_data, data_size)
                         sec_data = sec_data[:data_size]
                     sectors.append((c,h,r,n,errs,sec_data))
                     # IDAM
@@ -434,9 +435,9 @@ class EDSK(Image):
                         ngap3 += 1
 
                 # Special track handlers
-                special_track = cls()._build_8k_track(sectors)
+                special_track = EDSK._build_8k_track(sectors)
                 if special_track is None:
-                    special_track = cls()._build_kbi19_track(sectors)
+                    special_track = EDSK._build_kbi19_track(sectors)
                 if special_track is not None:
                     track = special_track
                     break

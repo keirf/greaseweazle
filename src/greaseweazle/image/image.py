@@ -35,6 +35,8 @@ class ImageOpts:
 
 class Image:
 
+    filename: str
+    noclobber = False
     default_format: Optional[str] = None
     read_only = False
     write_on_ctrl_c = False
@@ -42,7 +44,7 @@ class Image:
 
     ## Context manager for image objects created using .to_file()
 
-    def __enter__(self):
+    def __enter__(self) -> Image:
         self.file = open(self.filename, ('wb','xb')[self.noclobber])
         return self
 
@@ -65,8 +67,7 @@ class Image:
     def to_file(cls, name, fmt, noclobber):
         error.check(not cls.read_only,
                     "%s: Cannot create %s image files" % (name, cls.__name__))
-        obj = cls()
-        obj.filename = name
+        obj = cls(name)
         obj.fmt = fmt
         obj.noclobber = noclobber
         return obj

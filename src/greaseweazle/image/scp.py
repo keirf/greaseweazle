@@ -111,11 +111,12 @@ class SCP(Image):
     opts: SCPOpts
 
 
-    def __init__(self) -> None:
+    def __init__(self, name: str) -> None:
         self.opts = SCPOpts()
         self.nr_revs: Optional[int] = None
         self.to_track: Dict[int, SCPTrack] = dict()
         self.index_cued = True
+        self.filename = name
 
     
     def side_count(self) -> List[int]:
@@ -180,7 +181,7 @@ class SCP(Image):
                     splices = struct.unpack('<168I', dat[pos+4:pos+169*4])
                 pos += chk_len
 
-        scp = cls()
+        scp = cls(name)
 
         for trknr in range(len(trk_offs)):
             

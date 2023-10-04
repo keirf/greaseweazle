@@ -74,9 +74,10 @@ class A2R(Image):
     read_only = True
 
 
-    def __init__(self) -> None:
+    def __init__(self, name: str) -> None:
         self.to_track: Dict[Tuple[int,int], A2RTrack] = dict()
-    
+        self.filename = name
+
 
     def process_rwcp(self, dat: bytes) -> None:
 
@@ -117,7 +118,7 @@ class A2R(Image):
                     'A2R: Invalid signature')
         dat = dat[8:]
 
-        a2r = cls()
+        a2r = cls(name)
 
         # Extract the RWCP chunk(s).
         while len(dat) > 8:

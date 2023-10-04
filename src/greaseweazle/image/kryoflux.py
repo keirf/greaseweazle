@@ -33,7 +33,7 @@ class OOB:
 
 class KryoFlux(Image):
 
-    def __init__(self, name):
+    def __init__(self, name: str) -> None:
         m = re.search(r'\d{2}\.[01]\.raw$', name, flags=re.IGNORECASE)
         error.check(
             m is not None,
@@ -41,7 +41,9 @@ class KryoFlux(Image):
             Bad Kryoflux image name pattern '%s'
             Name pattern must be path/to/nameNN.N.raw (N is a digit)'''
             % name)
+        assert m is not None # mypy
         self.basename = name[:m.start()]
+        self.filename = name
 
 
     @classmethod

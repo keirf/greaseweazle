@@ -22,8 +22,9 @@ class TD0(Image):
 
     read_only = True
 
-    def __init__(self) -> None:
+    def __init__(self, name: str) -> None:
         self.to_track: Dict[Tuple[int,int],ibm.IBMTrack_Fixed] = dict()
+        self.filename = name
 
 
     @classmethod
@@ -32,7 +33,7 @@ class TD0(Image):
         with open(name, "rb") as f:
             dat = f.read()
 
-        td0 = cls()
+        td0 = cls(name)
 
         # Check and strip the header
         sig, td_ver, data_rate, stepping, n_sides, crc = struct.unpack(
