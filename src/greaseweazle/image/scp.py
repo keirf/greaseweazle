@@ -14,7 +14,7 @@ from greaseweazle import __version__
 from greaseweazle import error
 from greaseweazle.flux import Flux
 from greaseweazle.tools import util
-from .image import Image
+from .image import Image, ImageOpts
 
 #  SCP image specification can be found at Jim Drew's site:
 #  https://www.cbmstuff.com/downloads/scp/scp_image_specs.txt
@@ -68,19 +68,19 @@ class SCPHeaderFlags(IntFlag):
     FLUX_CREATOR  = 1<<7  # image was created by a non SuperCard Pro Device
 
 
-class SCPOpts:
+class SCPOpts(ImageOpts):
     """legacy_ss: Set to True to generate (incorrect) legacy single-sided
     SCP image.
     """
 
-    settings = [ 'disktype', 'legacy_ss' ]
+    w_settings = [ 'disktype', 'legacy_ss' ]
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.legacy_ss = False
         self._disktype = 0x80 # Other
 
     @property
-    def disktype(self):
+    def disktype(self) -> int:
         return self._disktype
     @disktype.setter
     def disktype(self, disktype):
@@ -108,6 +108,7 @@ class SCP(Image):
 
     # 40MHz
     sample_freq = 40000000
+    opts: SCPOpts
 
 
     def __init__(self) -> None:

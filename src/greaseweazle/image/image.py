@@ -6,7 +6,7 @@
 # See the file COPYING for more details, or visit <http://unlicense.org>.
 
 from __future__ import annotations
-from typing import Optional
+from typing import Optional, List
 
 import os
 
@@ -14,11 +14,31 @@ from greaseweazle import error
 from greaseweazle.codec import codec
 from greaseweazle.flux import HasFlux
 
+class ImageOpts:
+    r_settings: List[str] = [] # r_set()
+    w_settings: List[str] = [] # w_set()
+    a_settings: List[str] = [] # r_set(), w_set()
+
+    def _set(self, filename: str, opt: str, val: str,
+             settings: List[str]) -> None:
+        error.check(opt in settings,
+                    "%s: Invalid file option: %s\n" % (filename, opt)
+                    + 'Valid options: '
+                    + (', '.join(settings) if settings else '<none>'))
+        setattr(self, opt, val)
+
+    def r_set(self, filename: str, opt: str, val: str) -> None:
+        self._set(filename, opt, val, self.a_settings + self.r_settings)
+
+    def w_set(self, filename: str, opt: str, val: str) -> None:
+        self._set(filename, opt, val, self.a_settings + self.w_settings)
+
 class Image:
 
     default_format: Optional[str] = None
     read_only = False
     write_on_ctrl_c = False
+    opts = ImageOpts() # empty
 
     ## Context manager for image objects created using .to_file()
 

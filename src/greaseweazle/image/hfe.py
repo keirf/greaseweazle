@@ -17,7 +17,7 @@ from greaseweazle.codec import codec
 from greaseweazle.codec.ibm import ibm
 from greaseweazle.track import MasterTrack, PLLTrack
 from bitarray import bitarray
-from .image import Image
+from .image import Image, ImageOpts
 
 InterfaceMode = {
     'IBMPC_DD':             0x00,
@@ -65,11 +65,11 @@ EncodingType = {
     'UNKNOWN':              0xFF
 }
 
-class HFEOpts:
+class HFEOpts(ImageOpts):
     """bitrate: Bitrate of new HFE image file.
     """
 
-    settings = [ 'bitrate', 'version', 'interface', 'encoding' ]
+    w_settings = [ 'bitrate', 'version', 'interface', 'encoding' ]
     
     def __init__(self) -> None:
         self._bitrate: Optional[int] = None
@@ -157,6 +157,8 @@ class HFETrack:
 
 
 class HFE(Image):
+
+    opts: HFEOpts
 
     def __init__(self) -> None:
         self.opts = HFEOpts()
