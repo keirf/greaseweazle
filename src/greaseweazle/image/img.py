@@ -60,15 +60,6 @@ Sector image requires a disk format to be specified""")
         return img
 
 
-    @classmethod
-    def to_file(cls, name: str, fmt, noclobber: bool) -> Image:
-        error.check(not cls.read_only,
-                    "%s: Cannot create %s image files" % (name, cls.__name__))
-        obj = cls(name, fmt)
-        obj.noclobber = noclobber
-        return obj
-
-
     def get_track(self, cyl: int, side: int) -> Optional[codec.Codec]:
         if (cyl,side) not in self.to_track:
             return None

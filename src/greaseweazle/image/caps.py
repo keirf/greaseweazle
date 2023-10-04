@@ -165,7 +165,7 @@ class CAPS(Image):
 
     read_only = True
 
-    def __init__(self, name: str) -> None:
+    def __init__(self, name: str, _fmt) -> None:
         self.filename = name
         self.lib = get_libcaps()
 
@@ -187,7 +187,7 @@ class CAPS(Image):
     @classmethod
     def from_file(cls, name: str, _fmt) -> Image:
 
-        caps = cls(name)
+        caps = cls(name, _fmt)
         errprefix = f'CAPS: {cls.imagetype}'
 
         caps.iid = caps.lib.CAPSAddImage()

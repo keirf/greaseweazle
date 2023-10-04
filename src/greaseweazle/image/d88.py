@@ -43,7 +43,7 @@ class D88(Image):
 
     read_only = True
 
-    def __init__(self, name: str):
+    def __init__(self, name: str, _fmt):
         self.opts = D88Opts()
         self.to_track: List[TrackDict] = list()
         self.filename = name
@@ -171,7 +171,7 @@ class D88(Image):
     @classmethod
     def from_file(cls, name: str, _fmt) -> Image:
 
-        d88 = cls(name)
+        d88 = cls(name, _fmt)
 
         with open(name, "rb") as f:
             f.seek(0, os.SEEK_END)

@@ -160,7 +160,7 @@ class HFE(Image):
 
     opts: HFEOpts
 
-    def __init__(self, name: str) -> None:
+    def __init__(self, name: str, _fmt) -> None:
         self.opts = HFEOpts()
         self.filename = name
         # Each track is (bitlen, rawbytes).
@@ -185,7 +185,7 @@ class HFE(Image):
         error.check(0 < n_cyl, "HFE: Invalid #cyls")
         error.check(0 < n_side < 3, "HFE: Invalid #sides")
 
-        hfe = cls(name)
+        hfe = cls(name, _fmt)
         hfe.opts.bitrate = bitrate
         hfe.opts.version = version
 

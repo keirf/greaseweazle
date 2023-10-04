@@ -67,8 +67,7 @@ class Image:
     def to_file(cls, name, fmt, noclobber):
         error.check(not cls.read_only,
                     "%s: Cannot create %s image files" % (name, cls.__name__))
-        obj = cls(name)
-        obj.fmt = fmt
+        obj = cls(name, fmt)
         obj.noclobber = noclobber
         return obj
 

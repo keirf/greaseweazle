@@ -89,13 +89,6 @@ class MSA(Image):
         return msa
 
 
-    @classmethod
-    def to_file(cls, name: str, fmt, noclobber: bool) -> Image:
-        obj = cls(name, fmt)
-        obj.noclobber = noclobber
-        return obj
-
-
     def get_track(self, cyl: int, side: int) -> Optional[ibm.IBMTrack_Fixed]:
         if (cyl,side) not in self.to_track:
             return None

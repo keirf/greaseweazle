@@ -33,7 +33,7 @@ class OOB:
 
 class KryoFlux(Image):
 
-    def __init__(self, name: str) -> None:
+    def __init__(self, name: str, _fmt) -> None:
         m = re.search(r'\d{2}\.[01]\.raw$', name, flags=re.IGNORECASE)
         error.check(
             m is not None,
@@ -47,17 +47,11 @@ class KryoFlux(Image):
 
 
     @classmethod
-    def to_file(cls, name, fmt, noclobber):
-        kf = cls(name)
-        kf.noclobber = noclobber
-        return kf
-
-    @classmethod
     def from_file(cls, name, _fmt):
         # Check that the specified raw file actually exists.
         with open(name, 'rb') as _:
             pass
-        return cls(name)
+        return cls(name, _fmt)
 
 
     def get_track(self, cyl, side):

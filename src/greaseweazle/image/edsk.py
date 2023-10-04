@@ -162,7 +162,7 @@ class EDSKTrack:
 
 class EDSK(Image):
 
-    def __init__(self, name: str) -> None:
+    def __init__(self, name: str, _fmt) -> None:
         self.to_track: Dict[Tuple[int,int],
                             Union[ibm.IBMTrack,EDSKTrack]] = dict()
         self.filename = name
@@ -293,7 +293,7 @@ class EDSK(Image):
         with open(name, "rb") as f:
             dat = f.read()
 
-        edsk = cls(name)
+        edsk = cls(name, _fmt)
 
         sig, creator, ncyls, nsides, track_sz = struct.unpack(
             '<34s14s2BH', dat[:52])
