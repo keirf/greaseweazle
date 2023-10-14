@@ -162,9 +162,10 @@ class EDSKTrack:
 
 class EDSK(Image):
 
-    def __init__(self) -> None:
+    def __init__(self, name: str, _fmt) -> None:
         self.to_track: Dict[Tuple[int,int],
                             Union[ibm.IBMTrack,EDSKTrack]] = dict()
+        self.filename = name
 
     # Find all weak ranges in the given sector data copies.
     @staticmethod
@@ -286,13 +287,7 @@ class EDSK(Image):
                 t += ibm.encode(bytes([track.gapbyte] * 80))
         return track
 
-    @classmethod
-    def from_file(cls, name: str, _fmt) -> Image:
-
-        with open(name, "rb") as f:
-            dat = f.read()
-
-        edsk = cls()
+    def from_bytes(self, dat: bytes) -> None:
 
         sig, creator, ncyls, nsides, track_sz = struct.unpack(
             '<34s14s2BH', dat[:52])
@@ -317,7 +312,7 @@ class EDSK(Image):
                 '<12s4x2B2x4B', dat[o:o+24])
             error.check(sig == b'Track-Info\r\n',
                         'EDSK: Missing track header')
-            error.check((cyl, head) not in edsk.to_track,
+            error.check((cyl, head) not in self.to_track,
                         'EDSK: Track specified twice')
             bad_crc_clip_data = False
             while True:
@@ -353,7 +348,7 @@ class EDSK(Image):
                         num_copies = (3 if data_size == 49152
                                       else data_size // native_size)
                         data_size //= num_copies
-                        weak = cls().find_weak_ranges(sec_data, data_size)
+                        weak = EDSK.find_weak_ranges(sec_data, data_size)
                         sec_data = sec_data[:data_size]
                     sectors.append((c,h,r,n,errs,sec_data))
                     # IDAM
@@ -434,9 +429,9 @@ class EDSK(Image):
                         ngap3 += 1
 
                 # Special track handlers
-                special_track = cls()._build_8k_track(sectors)
+                special_track = EDSK._build_8k_track(sectors)
                 if special_track is None:
-                    special_track = cls()._build_kbi19_track(sectors)
+                    special_track = EDSK._build_kbi19_track(sectors)
                 if special_track is not None:
                     track = special_track
                     break
@@ -477,10 +472,8 @@ class EDSK(Image):
             track.bits.frombytes(ibm.mfm_encode(track.bytes))
 
             # Register the track
-            edsk.to_track[cyl,head] = track
+            self.to_track[cyl,head] = track
             o += track_size
-
-        return edsk
 
 
     def get_track(self, cyl: int, side: int) -> Optional[MasterTrack]:

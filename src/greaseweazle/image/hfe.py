@@ -17,7 +17,7 @@ from greaseweazle.codec import codec
 from greaseweazle.codec.ibm import ibm
 from greaseweazle.track import MasterTrack, PLLTrack
 from bitarray import bitarray
-from .image import Image
+from .image import Image, ImageOpts
 
 InterfaceMode = {
     'IBMPC_DD':             0x00,
@@ -65,11 +65,11 @@ EncodingType = {
     'UNKNOWN':              0xFF
 }
 
-class HFEOpts:
+class HFEOpts(ImageOpts):
     """bitrate: Bitrate of new HFE image file.
     """
 
-    settings = [ 'bitrate', 'version', 'interface', 'encoding' ]
+    w_settings = [ 'bitrate', 'version', 'interface', 'encoding' ]
     
     def __init__(self) -> None:
         self._bitrate: Optional[int] = None
@@ -158,18 +158,17 @@ class HFETrack:
 
 class HFE(Image):
 
-    def __init__(self) -> None:
+    opts: HFEOpts
+
+    def __init__(self, name: str, _fmt) -> None:
         self.opts = HFEOpts()
+        self.filename = name
         # Each track is (bitlen, rawbytes).
         # rawbytes is a bytes() object in little-endian bit order.
         self.to_track: Dict[Tuple[int,int], HFETrack] = dict()
 
 
-    @classmethod
-    def from_file(cls, name: str, _fmt):
-
-        with open(name, "rb") as f:
-            dat = f.read()
+    def from_bytes(self, dat: bytes) -> None:
 
         (sig, f_rev, n_cyl, n_side, t_enc, bitrate,
          _, _, _, tlut_base) = struct.unpack("<8s4B2H2BH", dat[:20])
@@ -182,9 +181,8 @@ class HFE(Image):
         error.check(0 < n_cyl, "HFE: Invalid #cyls")
         error.check(0 < n_side < 3, "HFE: Invalid #sides")
 
-        hfe = cls()
-        hfe.opts.bitrate = bitrate
-        hfe.opts.version = version
+        self.opts.bitrate = bitrate
+        self.opts.version = version
 
         tlut = dat[tlut_base*512:tlut_base*512+n_cyl*4]
         
@@ -201,11 +199,10 @@ class HFE(Image):
                     offset += 1
                 track_v1 = HFETrack.from_hfe_bytes(tdat, bitrate)
                 if version == 1:
-                    hfe.to_track[cyl,side] = track_v1
+                    self.to_track[cyl,side] = track_v1
                 else:
-                    hfe.to_track[cyl,side] = hfev3_mk_track(track_v1)
-
-        return hfe
+                    self.to_track[cyl,side] = hfev3_mk_track(
+                        cyl, side, track_v1)
 
 
     def get_track(self, cyl: int, side: int) -> Optional[MasterTrack]:
@@ -360,7 +357,7 @@ class HFEv3_Range:
     def e(self) -> int:
         return self.s + self.n
 
-def hfev3_mk_track(track_v1: HFETrack) -> HFETrack:
+def hfev3_mk_track(cyl: int, head: int, track_v1: HFETrack) -> HFETrack:
 
     def add_weak(weak: List[HFEv3_Range], pos: int, nr: int) -> None:
         if len(weak) != 0:
@@ -386,19 +383,26 @@ def hfev3_mk_track(track_v1: HFETrack) -> HFETrack:
         elif x == HFEv3_Op.Index:
             pass # TODO: Support hard-sector images
         elif x == HFEv3_Op.Bitrate:
-            error.check(i+1 <= len(tdat), 'HFEv3: Short track data')
+            if i+1 > len(tdat):
+                # Non fatal: This has been observed in HFEv3 images created
+                # by HxC tools (see issue #346).
+                print(f'T{cyl}.{head}: HFEv3: Truncated bitrate opcode')
+                break
             rate, i = tdat[i], i+1
         elif x == HFEv3_Op.SkipBits:
-            error.check(i+2 <= len(tdat), 'HFEv3: Short track data')
+            error.check(i+2 <= len(tdat),
+                        f'T{cyl}.{head}: HFEv3: Truncated skipbits opcode')
             nr, x, i = tdat[i], tdat[i+1], i+2
-            error.check(0 < nr < 8, 'HFEv3: Bad skipbits value: %d' % nr)
+            error.check(0 < nr < 8,
+                        f'T{cyl}.{head}: HFEv3: Bad skipbits value: {nr}')
             if x == HFEv3_Op.Rand:
                 add_weak(weak, len(bits), 8-nr)
                 x = 0
             try:
                 bits.frombytes(bytes([x << nr]))
             except ValueError:
-                raise error.Fatal('HFEv3: Bad skipbits: %02x/%d' % (x, nr))
+                raise error.Fatal(f'T{cyl}.{head}: HFEv3: Bad skipbits: '
+                                  f'0x{x:02x}<<{nr} = 0x{x<<nr:04x}')
             bits = bits[:-nr]
             ticks += [rate]*(8-nr)
         elif x == HFEv3_Op.Rand:

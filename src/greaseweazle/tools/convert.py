@@ -23,18 +23,12 @@ from greaseweazle import track
 plls = track.plls
 
 def open_input_image(args, image_class: Type[Image]) -> Image:
-    return image_class.from_file(args.in_file, args.fmt_cls)
+    return image_class.from_file(args.in_file, args.fmt_cls, args.in_file_opts)
 
 
 def open_output_image(args, image_class: Type[Image]) -> Image:
-    image = image_class.to_file(args.out_file, args.fmt_cls, args.no_clobber)
-    for opt, val in args.out_file_opts.items():
-        error.check(hasattr(image, 'opts') and opt in image.opts.settings,
-                    "%s: Invalid file option: %s\n" % (args.out_file, opt)
-                    + 'Valid options: ' + ', '.join(image.opts.settings))
-        setattr(image.opts, opt, val)
-    return image
-
+    return image_class.to_file(args.out_file, args.fmt_cls, args.no_clobber,
+                               args.out_file_opts)
 
 class TrackIdentity:
     def __init__(self, ts: util.TrackSet, cyl: int, head: int) -> None:
@@ -135,6 +129,7 @@ def main(argv) -> None:
     parser.prog += ' ' + argv[1]
     args = parser.parse_args(argv[2:])
 
+    args.in_file, args.in_file_opts = util.split_opts(args.in_file)
     args.out_file, args.out_file_opts = util.split_opts(args.out_file)
 
     if args.pll is not None:

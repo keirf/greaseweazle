@@ -11,7 +11,7 @@ import itertools as it
 from greaseweazle import __version__
 from greaseweazle import error
 from greaseweazle.flux import Flux
-from .image import Image
+from .image import Image, OptDict
 
 def_mck = 18432000 * 73 / 14 / 2
 def_sck = def_mck / 2
@@ -33,7 +33,7 @@ class OOB:
 
 class KryoFlux(Image):
 
-    def __init__(self, name):
+    def __init__(self, name: str, _fmt) -> None:
         m = re.search(r'\d{2}\.[01]\.raw$', name, flags=re.IGNORECASE)
         error.check(
             m is not None,
@@ -41,22 +41,19 @@ class KryoFlux(Image):
             Bad Kryoflux image name pattern '%s'
             Name pattern must be path/to/nameNN.N.raw (N is a digit)'''
             % name)
+        assert m is not None # mypy
         self.basename = name[:m.start()]
+        self.filename = name
 
 
     @classmethod
-    def to_file(cls, name, fmt, noclobber):
-        kf = cls(name)
-        kf.namepattern = name
-        kf.noclobber = noclobber
-        return kf
-
-    @classmethod
-    def from_file(cls, name, _fmt):
+    def from_file(cls, name: str, _fmt, opts: OptDict) -> Image:
         # Check that the specified raw file actually exists.
         with open(name, 'rb') as _:
             pass
-        return cls(name)
+        obj = cls(name, _fmt)
+        obj.apply_r_opts(opts)
+        return obj
 
 
     def get_track(self, cyl, side):
@@ -252,7 +249,7 @@ class KryoFlux(Image):
 
 
     def __enter__(self):
-        os.makedirs(os.path.dirname(self.namepattern), exist_ok=True)
+        os.makedirs(os.path.dirname(self.filename), exist_ok=True)
         return self
     def __exit__(self, type, value, tb):
         pass

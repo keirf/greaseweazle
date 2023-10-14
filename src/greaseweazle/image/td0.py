@@ -22,17 +22,12 @@ class TD0(Image):
 
     read_only = True
 
-    def __init__(self) -> None:
+    def __init__(self, name: str, _fmt) -> None:
         self.to_track: Dict[Tuple[int,int],ibm.IBMTrack_Fixed] = dict()
+        self.filename = name
 
 
-    @classmethod
-    def from_file(cls, name: str, _fmt) -> Image:
-
-        with open(name, "rb") as f:
-            dat = f.read()
-
-        td0 = cls()
+    def from_bytes(self, dat: bytes) -> None:
 
         # Check and strip the header
         sig, td_ver, data_rate, stepping, n_sides, crc = struct.unpack(
@@ -132,9 +127,7 @@ class TD0(Image):
                 if flags & 4:
                     s.dam.mark = ibm.Mark.DDAM
 
-            td0.to_track[cyl, head] = t
-
-        return td0
+            self.to_track[cyl, head] = t
 
 
     def get_track(self, cyl: int, side: int) -> Optional[ibm.IBMTrack_Fixed]:

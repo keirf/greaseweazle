@@ -14,7 +14,7 @@ from greaseweazle import __version__
 from greaseweazle import error
 from greaseweazle.flux import Flux
 from greaseweazle.tools import util
-from .image import Image
+from .image import Image, ImageOpts
 
 #  SCP image specification can be found at Jim Drew's site:
 #  https://www.cbmstuff.com/downloads/scp/scp_image_specs.txt
@@ -68,19 +68,19 @@ class SCPHeaderFlags(IntFlag):
     FLUX_CREATOR  = 1<<7  # image was created by a non SuperCard Pro Device
 
 
-class SCPOpts:
+class SCPOpts(ImageOpts):
     """legacy_ss: Set to True to generate (incorrect) legacy single-sided
     SCP image.
     """
 
-    settings = [ 'disktype', 'legacy_ss' ]
+    w_settings = [ 'disktype', 'legacy_ss' ]
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.legacy_ss = False
         self._disktype = 0x80 # Other
 
     @property
-    def disktype(self):
+    def disktype(self) -> int:
         return self._disktype
     @disktype.setter
     def disktype(self, disktype):
@@ -108,15 +108,17 @@ class SCP(Image):
 
     # 40MHz
     sample_freq = 40000000
+    opts: SCPOpts
 
 
-    def __init__(self) -> None:
+    def __init__(self, name: str, _fmt) -> None:
         self.opts = SCPOpts()
         self.nr_revs: Optional[int] = None
         self.to_track: Dict[int, SCPTrack] = dict()
         self.index_cued = True
+        self.filename = name
 
-    
+
     def side_count(self) -> List[int]:
         s = [0,0] # non-empty tracks on each side
         for tnr in self.to_track:
@@ -124,13 +126,9 @@ class SCP(Image):
         return s
 
 
-    @classmethod
-    def from_file(cls, name: str, _fmt) -> Image:
+    def from_bytes(self, dat: bytes) -> None:
 
         splices = None
-
-        with open(name, "rb") as f:
-            dat = f.read()
 
         (sig, _, disk_type, nr_revs, _, _, flags, _, single_sided, _,
          checksum) = struct.unpack("<3s9BI", dat[0:16])
@@ -179,8 +177,6 @@ class SCP(Image):
                     splices = struct.unpack('<168I', dat[pos+4:pos+169*4])
                 pos += chk_len
 
-        scp = cls()
-
         for trknr in range(len(trk_offs)):
             
             trk_off = trk_offs[trknr]
@@ -220,9 +216,9 @@ class SCP(Image):
             track = SCPTrack(thdr, tdat)
             if splices is not None:
                 track.splice = splices[trknr]
-            scp.to_track[trknr] = track
+            self.to_track[trknr] = track
 
-        s = scp.side_count()
+        s = self.side_count()
 
         # C64 images with halftracks are genberated by Supercard Pro using
         # consecutive track numbers. That needs fixup here for our layout.
@@ -236,12 +232,10 @@ class SCP(Image):
         # consecutive entries in the TLUT. This needs fixing up.
         if single_sided and s[0] and s[1]:
             new_dict = dict()
-            for tnr in scp.to_track:
-                new_dict[tnr*2+single_sided-1] = scp.to_track[tnr]
-            scp.to_track = new_dict
+            for tnr in self.to_track:
+                new_dict[tnr*2+single_sided-1] = self.to_track[tnr]
+            self.to_track = new_dict
             print('SCP: Imported legacy single-sided image')
-
-        return scp
 
 
     def get_track(self, cyl: int, side: int) -> Optional[Flux]:

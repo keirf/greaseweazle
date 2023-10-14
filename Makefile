@@ -20,7 +20,7 @@ uninstall:
 clean:
 	rm -rf build dist .mypy_cache src/greaseweazle/__init__.py
 	rm -rf src/*.egg-info src/greaseweazle/optimised/*.so
-	rm -rf $(PROJ)-* ipf ipf.zip
+	rm -rf $(PROJ)-*
 	find . -name __pycache__ | xargs rm -rf
 
 dist:

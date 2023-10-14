@@ -168,9 +168,10 @@ class MasterTrack:
         ticks_to_index = sum(bit_ticks)
 
         # Weak regions need special processing for correct flux representation.
-        for s,n in self.weak:
+        for s, n in self.weak:
+            if n < 2: continue # Too short to reliably weaken
             e = s + n
-            assert 0 < s < e < bitlen
+            assert 0 <= s < e <= bitlen
             pattern = bitarray(endian="big")
             if n < 400 or self.force_random_weak:
                 # Short weak regions are written with no flux transitions.
@@ -194,7 +195,7 @@ class MasterTrack:
             # clocked out a 0.
             bits[s] = not bits[s-1]
             # Similarly modify the last bit of the weak region.
-            bits[e-1] = not(bits[e-2] or bits[e])
+            bits[e-1] = not(bits[e-2] or bits[e % bitlen])
 
         if cue_at_index:
             # Rotate data to start at the index.

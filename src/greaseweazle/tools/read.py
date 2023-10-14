@@ -25,12 +25,8 @@ plls = track.plls
 
 def open_image(args, image_class: Type[image.Image]) -> image.Image:
     image = image_class.to_file(
-        args.file, None if args.raw else args.fmt_cls, args.no_clobber)
-    for opt, val in args.file_opts.items():
-        error.check(hasattr(image, 'opts') and opt in image.opts.settings,
-                    "%s: Invalid file option: %s\n" % (args.file, opt)
-                    + 'Valid options: ' + ', '.join(image.opts.settings))
-        setattr(image.opts, opt, val)
+        args.file, None if args.raw else args.fmt_cls, args.no_clobber,
+        args.file_opts)
     image.write_on_ctrl_c = True
     return image
 

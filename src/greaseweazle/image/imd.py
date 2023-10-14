@@ -24,19 +24,12 @@ class IMDMode:
 
 class IMD(Image):
 
-    def __init__(self, name: str, noclobber=False):
+    def __init__(self, name: str, _fmt):
         self.to_track: Dict[Tuple[int,int],ibm.IBMTrack_Fixed] = dict()
         self.filename = name
-        self.noclobber = noclobber
 
 
-    @classmethod
-    def from_file(cls, name: str, _fmt) -> Image:
-
-        with open(name, "rb") as f:
-            dat = f.read()
-
-        imd = cls(name)
+    def from_bytes(self, dat: bytes) -> None:
 
         # Check and strip the header
         sig, = struct.unpack('4s', dat[:4])
@@ -109,14 +102,7 @@ class IMD(Image):
                 if rec&2:
                     s.dam.mark = ibm.Mark.DDAM
 
-            imd.to_track[cyl,head] = t
-
-        return imd
-
-
-    @classmethod
-    def to_file(cls, name: str, fmt, noclobber: bool) -> Image:
-        return cls(name, noclobber=noclobber)
+            self.to_track[cyl,head] = t
 
 
     def get_track(self, cyl: int, side: int) -> Optional[ibm.IBMTrack_Fixed]:

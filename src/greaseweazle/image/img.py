@@ -18,13 +18,12 @@ class IMG(Image):
     sequential = False
     min_cyls: Optional[int] = None
 
-    def __init__(self, name: str, fmt, noclobber=False):
+    def __init__(self, name: str, fmt):
         self.to_track: Dict[Tuple[int,int],codec.Codec] = dict()
         error.check(fmt is not None, """\
 Sector image requires a disk format to be specified""")
         self.filename = name
         self.fmt: codec.DiskDef = fmt
-        self.noclobber = noclobber
 
 
     def track_list(self):
@@ -40,32 +39,15 @@ Sector image requires a disk format to be specified""")
         return l
 
 
-    @classmethod
-    def from_file(cls, name: str, fmt: Optional[codec.DiskDef]) -> Image:
-
-        with open(name, "rb") as f:
-            dat = f.read()
-
-        img = cls(name, fmt)
-        assert fmt is not None
-
+    def from_bytes(self, dat: bytes) -> None:
         pos = 0
-        for (cyl, head) in img.track_list():
-            if img.sides_swapped:
+        for (cyl, head) in self.track_list():
+            if self.sides_swapped:
                 head ^= 1
-            track = fmt.mk_track(cyl, head)
+            track = self.fmt.mk_track(cyl, head)
             if track is not None:
                 pos += track.set_img_track(dat[pos:])
-                img.to_track[cyl,head] = track
-
-        return img
-
-
-    @classmethod
-    def to_file(cls, name: str, fmt, noclobber: bool) -> Image:
-        error.check(not cls.read_only,
-                    "%s: Cannot create %s image files" % (name, cls.__name__))
-        return cls(name, fmt, noclobber=noclobber)
+                self.to_track[cyl,head] = track
 
 
     def get_track(self, cyl: int, side: int) -> Optional[codec.Codec]:
