@@ -147,11 +147,11 @@ class D88(Image):
 
         header = struct.unpack('<16sB9xBBL', f.read(32))
         disk_name, terminator, write_prot, media_flag, disk_size = header
-        track_table = [x[0] for x in struct.iter_unpack('<L', f.read(640))]
-        if track_table[0] == 688:
-            track_table.extend([x[0] for x in
-                                struct.iter_unpack('<L', f.read(16))])
-        elif track_table[0] != 672:
+        track_table = list(struct.unpack('<160L', f.read(640)))
+        s_off = min(filter(lambda x: x != 0, track_table), default=672)
+        if s_off == 688:
+            track_table.extend(list(struct.unpack('<4L', f.read(16))))
+        elif s_off != 672:
             raise error.Fatal("D88: Unsupported track table length.")
 
         for track_index, track_offset in enumerate(track_table):
