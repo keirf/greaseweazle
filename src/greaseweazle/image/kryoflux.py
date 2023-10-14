@@ -11,7 +11,7 @@ import itertools as it
 from greaseweazle import __version__
 from greaseweazle import error
 from greaseweazle.flux import Flux
-from .image import Image, OptDict
+from .image import Image, ImageOpts, OptDict
 
 def_mck = 18432000 * 73 / 14 / 2
 def_sck = def_mck / 2
@@ -31,6 +31,31 @@ class OOB:
     KFInfo     =  4
     EOF        = 13
 
+class KFOpts(ImageOpts):
+    """sck: Sample clock to use for flux timings.
+    Suffix 'm' for MHz. For example: sck=72m
+    """
+
+    w_settings = [ 'sck' ]
+
+    def __init__(self) -> None:
+        self._sck: float = def_sck
+
+    @property
+    def sck(self) -> float:
+        return self._sck
+    @sck.setter
+    def sck(self, sck: str):
+        factor = 1e0
+        if sck.lower().endswith('m'):
+            sck = sck[:-1]
+            factor = 1e6
+        try:
+            self._sck = float(sck) * factor
+        except ValueError:
+            raise error.Fatal("Kryoflux: Bad sck value: '%s'\n" % sck)
+
+
 class KryoFlux(Image):
 
     def __init__(self, name: str, _fmt) -> None:
@@ -44,6 +69,7 @@ class KryoFlux(Image):
         assert m is not None # mypy
         self.basename = name[:m.start()]
         self.filename = name
+        self.opts = KFOpts()
 
 
     @classmethod
@@ -67,7 +93,7 @@ class KryoFlux(Image):
 
         # Parse the index-pulse stream positions and KFInfo blocks.
         index, idx = [], 0
-        sck, ick = def_sck, def_sck/8
+        sck, ick = self.opts.sck, self.opts.sck/8
         while idx < len(dat):
             op = dat[idx]
             if op == Op.OOB:
@@ -198,7 +224,7 @@ class KryoFlux(Image):
             check_index(f)
 
         flux = track.flux()
-        sck = def_sck
+        sck = self.opts.sck
 
         # HxC crashes or fails to load non-index-cued stream files.
         # So let's give it what it wants.
