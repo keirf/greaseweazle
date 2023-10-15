@@ -3,6 +3,13 @@
 ** Keir Fraser <keir.xen@gmail.com>
 ************************************
 
+** v1.16 - 15 October 2023
+ - New formats: pc98.n88basic.hd, zx.quorum.800
+ - HFEv3: Fix import of some images
+ - CAPS: Support CT Raw files
+ - D88: Support multiple disk images in one file
+ - Kryoflux: Allow sample clock to be specified
+
 ** v1.15.1 - 31 July 2023
  - Fix import of Kryoflux raw files (broken in v1.14)
 
