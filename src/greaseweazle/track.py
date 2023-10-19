@@ -274,8 +274,9 @@ class MasterTrack:
 
         # Package up Flux.
         index_list = [ticks_to_index]
-        if not splice_at_index:
+        if not splice_at_index or True:
             # Emit two revolutions if track data crosses the index.
+            # UPDATE: Always emit two revolutions, for consistency.
             flux_list = flux_list + [flux_ticks+flux_list[0]] + flux_list[1:]
             index_list *= 2
         flux = Flux(index_list, flux_list,
