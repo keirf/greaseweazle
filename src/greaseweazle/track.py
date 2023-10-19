@@ -146,8 +146,8 @@ class MasterTrack:
         s += ')'
         return s
 
-    def flux(self) -> Flux:
-        flux = self._flux(for_writeout=False, cue_at_index=True)
+    def flux(self, revs: Optional[int] = None) -> Flux:
+        flux = self._flux(for_writeout=False, cue_at_index=True, revs=revs)
         assert isinstance(flux, Flux)
         return flux
 
@@ -156,7 +156,11 @@ class MasterTrack:
         assert isinstance(wflux, WriteoutFlux)
         return wflux
 
-    def _flux(self, for_writeout, cue_at_index) -> Union[Flux, WriteoutFlux]:
+    def _flux(self,
+              for_writeout: bool,
+              cue_at_index: bool,
+              revs: Optional[int] = None
+        ) -> Union[Flux, WriteoutFlux]:
 
         # We're going to mess with the track data, so take a copy.
         bits = self.bits.copy()
@@ -274,11 +278,15 @@ class MasterTrack:
 
         # Package up Flux.
         index_list = [ticks_to_index]
-        if not splice_at_index or True:
+        if revs is None:
             # Emit two revolutions if track data crosses the index.
-            # UPDATE: Always emit two revolutions, for consistency.
-            flux_list = flux_list + [flux_ticks+flux_list[0]] + flux_list[1:]
-            index_list *= 2
+            revs = 1 if splice_at_index else 2
+        assert revs is not None and revs > 0
+        if revs > 1:
+            l = flux_list
+            for i in range(revs-1):
+                flux_list = l + [flux_ticks+flux_list[0]] + flux_list[1:]
+            index_list *= revs
         flux = Flux(index_list, flux_list,
                     sample_freq = ticks_to_index / self.time_per_rev,
                     index_cued = True)

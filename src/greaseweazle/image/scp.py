@@ -12,8 +12,10 @@ from enum import IntFlag
 
 from greaseweazle import __version__
 from greaseweazle import error
-from greaseweazle.flux import Flux
+from greaseweazle.codec import codec
+from greaseweazle.flux import Flux, HasFlux
 from greaseweazle.tools import util
+from greaseweazle.track import MasterTrack
 from .image import Image, ImageOpts
 
 #  SCP image specification can be found at Jim Drew's site:
@@ -281,12 +283,20 @@ class SCP(Image):
         return flux
 
 
-    def emit_track(self, cyl: int, side: int, track) -> None:
+    def emit_track(self, cyl: int, side: int, track: HasFlux) -> None:
         """Converts @track into a Supercard Pro Track and appends it to
         the current image-in-progress.
         """
 
-        flux = track.flux()
+        if isinstance(track, codec.Codec):
+            track = track.master_track()
+        if isinstance(track, MasterTrack):
+            # Get a consistent number of revolutions, allowing for data
+            # across the index mark (which ideally warrants two revolutions).
+            mt_revs = 2 if self.opts.revs is None else self.opts.revs
+            flux = track.flux(revs = mt_revs)
+        else:
+            flux = track.flux()
 
         # External tools and emulators generally seem to work best (or only)
         # with index-cued SCP image files. So let's make sure we give them
