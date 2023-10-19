@@ -62,7 +62,7 @@ def process_input_track(
     else:
         dat = args.fmt_cls.decode_flux(cyl, head, track)
         if dat is None:
-            print("T%u.%u: WARNING: out of range for format '%s': Track "
+            print("T%u.%u: WARNING: Out of range for format '%s': Track "
                   "skipped" % (cyl, head, args.format))
             return None
         assert isinstance(dat, codec.Codec)

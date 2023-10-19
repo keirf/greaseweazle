@@ -56,7 +56,7 @@ def write_from_image(usb: USB.Unit, args, image: image.Image) -> None:
         if not isinstance(track, codec.Codec) and args.fmt_cls is not None:
             track = args.fmt_cls.decode_flux(cyl, head, track)
             if track is None:
-                print("T%u.%u: WARNING: out of range for format '%s': Track "
+                print("T%u.%u: WARNING: Out of range for format '%s': Track "
                       "skipped" % (cyl, head, args.format))
                 continue
             assert isinstance(track, codec.Codec)
