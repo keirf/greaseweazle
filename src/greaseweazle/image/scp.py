@@ -71,13 +71,15 @@ class SCPHeaderFlags(IntFlag):
 class SCPOpts(ImageOpts):
     """legacy_ss: Set to True to generate (incorrect) legacy single-sided
     SCP image.
+    revs: Number of revolutions to output per track.
     """
 
-    w_settings = [ 'disktype', 'legacy_ss' ]
+    w_settings = [ 'disktype', 'legacy_ss', 'revs' ]
 
     def __init__(self) -> None:
         self.legacy_ss = False
         self._disktype = 0x80 # Other
+        self._revs: Optional[int] = None
 
     @property
     def disktype(self) -> int:
@@ -94,6 +96,18 @@ class SCPOpts(ImageOpts):
                 l.sort()
                 raise error.Fatal("Bad SCP disktype: '%s'\n" % disktype
                                   + 'Valid types:\n' + util.columnify(l))
+
+    @property
+    def revs(self) -> Optional[int]:
+        return self._revs
+    @revs.setter
+    def revs(self, revs: str) -> None:
+        try:
+            self._revs = int(revs)
+            if self._revs < 1:
+                raise ValueError
+        except ValueError:
+            raise error.Fatal("Kryoflux: Invalid revs: '%s'" % revs)
 
 
 class SCPTrack:
@@ -278,6 +292,9 @@ class SCP(Image):
         # with index-cued SCP image files. So let's make sure we give them
         # what they want.
         flux.cue_at_index()
+
+        if self.opts.revs is not None:
+            flux.set_nr_revs(self.opts.revs)
 
         if not flux.index_cued:
             self.index_cued = False

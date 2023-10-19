@@ -5,6 +5,8 @@
 # This is free and unencumbered software released into the public domain.
 # See the file COPYING for more details, or visit <http://unlicense.org>.
 
+from typing import Optional
+
 import struct, re, math, os, datetime
 import itertools as it
 
@@ -34,12 +36,14 @@ class OOB:
 class KFOpts(ImageOpts):
     """sck: Sample clock to use for flux timings.
     Suffix 'm' for MHz. For example: sck=72m
+    revs: Number of revolutions to output per track.
     """
 
-    w_settings = [ 'sck' ]
+    w_settings = [ 'sck', 'revs' ]
 
     def __init__(self) -> None:
         self._sck: float = def_sck
+        self._revs: Optional[int] = None
 
     @property
     def sck(self) -> float:
@@ -54,6 +58,18 @@ class KFOpts(ImageOpts):
             self._sck = float(sck) * factor
         except ValueError:
             raise error.Fatal("Kryoflux: Bad sck value: '%s'\n" % sck)
+
+    @property
+    def revs(self) -> Optional[int]:
+        return self._revs
+    @revs.setter
+    def revs(self, revs: str) -> None:
+        try:
+            self._revs = int(revs)
+            if self._revs < 1:
+                raise ValueError
+        except ValueError:
+            raise error.Fatal("Kryoflux: Invalid revs: '%s'" % revs)
 
 
 class KryoFlux(Image):
@@ -229,6 +245,9 @@ class KryoFlux(Image):
         # HxC crashes or fails to load non-index-cued stream files.
         # So let's give it what it wants.
         flux.cue_at_index()
+
+        if self.opts.revs is not None:
+            flux.set_nr_revs(self.opts.revs)
 
         factor = sck / flux.sample_freq
         dat = bytearray()

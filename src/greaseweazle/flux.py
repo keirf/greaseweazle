@@ -85,6 +85,36 @@ class Flux:
         self.index_cued = True
 
 
+    def set_nr_revs(self, revs:int) -> None:
+
+        self.cue_at_index()
+        error.check(self.index_list,
+                    'Need at least one revolution to adjust # revolutions')
+
+        if len(self.index_list) > revs:
+            self.index_list = self.index_list[:revs]
+            to_index = sum(self.index_list)
+            for i in range(len(self.list)):
+                to_index -= self.list[i]
+                if to_index < 0:
+                    self.list = self.list[:i]
+                    break
+
+        while len(self.index_list) < revs:
+            nr = min(revs - len(self.index_list), len(self.index_list))
+            to_index = sum(self.index_list[:nr])
+            l = self.list
+            for i in range(len(l)):
+                to_index -= l[i]
+                if to_index < 0:
+                    to_index += l[i]
+                    l = l[:i]
+                    break
+            if self.list:
+                self.list = l + [to_index + self.list[0]] + self.list[1:]
+            self.index_list = self.index_list[:nr] + self.index_list
+
+
     def flux_for_writeout(self, cue_at_index) -> WriteoutFlux:
 
         # Splice at index unless we know better.
