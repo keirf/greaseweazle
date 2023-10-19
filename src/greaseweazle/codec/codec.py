@@ -1,4 +1,4 @@
-# greaseweazle/codec/formats.py
+# greaseweazle/codec/codec.py
 #
 # Written & released by Keir Fraser <keir.xen@gmail.com>
 #
