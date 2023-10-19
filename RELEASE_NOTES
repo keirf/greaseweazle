@@ -5,7 +5,7 @@
 
 ** v1.16.1 - 19 October 2023
  - Revert to emitting two revolutions of flux from codecs (fixes SCP output)
- - SCP, KRyoflux: Allow #revs to be specified in output (eg. name.scp::revs=3)
+ - SCP, Kryoflux: Allow #revs to be specified in output (eg. name.scp::revs=3)
 
 ** v1.16 - 15 October 2023
  - New formats: pc98.n88basic.hd, zx.quorum.800
