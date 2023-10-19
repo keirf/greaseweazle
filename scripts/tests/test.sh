@@ -29,13 +29,13 @@ diff -u a.adf b.adf
 
 # C64
 dd if=/dev/urandom of=a.d64 bs=256 count=683
-$GW convert --tracks=c=0-34 a.d64 a.scp
+$GW convert --tracks=c=0-34 a.d64 a.scp::revs=1
 $GW convert a.scp b.d64
 diff -u a.d64 b.d64
 
 # Mac
 dd if=/dev/urandom of=a.img bs=1024 count=800
-$GW convert --format=mac.800 a.img a.scp
+$GW convert --format=mac.800 a.img a.scp::revs=1
 $GW convert --format=mac.800 a.scp b.img
 diff -u a.img b.img
 
