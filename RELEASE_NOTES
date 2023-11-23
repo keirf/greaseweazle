@@ -3,6 +3,10 @@
 ** Keir Fraser <keir.xen@gmail.com>
 ************************************
 
+** v1.16.2 - 23 November 2023
+ - DCP, DIM: Fix image import
+ - SCP: Fix image export by using a consistent number of revs of flux
+
 ** v1.16.1 - 19 October 2023
  - Revert to emitting two revolutions of flux from codecs (fixes SCP output)
  - SCP, Kryoflux: Allow #revs to be specified in output (eg. name.scp::revs=3)
