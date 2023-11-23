@@ -1,4 +1,4 @@
-# greaseweazle/image/dim.py
+# greaseweazle/image/dcp.py
 #
 # Written & released by Keir Fraser <keir.xen@gmail.com>
 #
@@ -8,24 +8,27 @@
 import struct
 
 from greaseweazle import error
-from greaseweazle.image.img import IMG
+from greaseweazle.image.img import IMG_AutoFormat
 from greaseweazle.codec import codec
 from .image import Image
 
-class DCP(IMG):
+class DCP(IMG_AutoFormat):
 
     read_only = True
+
+    @staticmethod
+    def format_from_file(name: str) -> codec.DiskDef:
+        fmt = codec.get_diskdef('pc98.2hd')
+        assert fmt is not None # mypy
+        return fmt
 
     def from_bytes(self, dat: bytes) -> None:
 
         header = dat[:162]
         pos = 162
-        format_str = 'pc98.2hd'
-        fmt = codec.get_diskdef(format_str)
-        assert fmt is not None # mypy
+        fmt = self.fmt
 
-        for t in self.track_list():
-            cyl, head = t.cyl, t.head
+        for cyl, head in self.track_list():
             if self.sides_swapped:
                 head ^= 1
             track = fmt.mk_track(cyl, head)
@@ -38,7 +41,6 @@ class DCP(IMG):
                 self.to_track[cyl,head] = track
             elif header[cyl * 2 + head] != 0:
                 raise error.Fatal("DCP: Corrupt header.")
-        self.format_str = format_str
 
 # Local variables:
 # python-indent: 4

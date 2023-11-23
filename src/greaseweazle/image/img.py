@@ -10,7 +10,7 @@ from typing import Dict, Tuple, Optional, Any
 from greaseweazle import error
 from greaseweazle.codec import codec
 from greaseweazle.flux import HasFlux
-from .image import Image
+from .image import Image, OptDict
 
 class IMG(Image):
 
@@ -90,6 +90,20 @@ Sector image requires a disk format to be specified""")
 
         return tdat
 
+
+class IMG_AutoFormat(IMG):
+
+    @staticmethod
+    def format_from_file(name: str) -> codec.DiskDef:
+        raise NotImplementedError
+
+    @classmethod
+    def from_file(cls, name: str, fmt: Optional[codec.DiskDef],
+                  opts: OptDict) -> Image:
+        error.check(fmt is None,
+                    f'{cls.__name__}: Format cannot be overridden')
+        fmt = cls.format_from_file(name)
+        return super().from_file(name, fmt, opts)
 
 # Local variables:
 # python-indent: 4

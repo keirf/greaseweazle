@@ -8,17 +8,20 @@
 import struct
 
 from greaseweazle import error
-from greaseweazle.image.img import IMG
+from greaseweazle.image.img import IMG_AutoFormat
 from greaseweazle.codec import codec
 from .image import Image
 
-class DIM(IMG):
-    default_format = None
+class DIM(IMG_AutoFormat):
+
     read_only = True
 
-    def from_bytes(self, dat: bytes) -> None:
+    @staticmethod
+    def format_from_file(name: str) -> codec.DiskDef:
 
-        header = dat[:256]
+        with open(name, "rb") as f:
+            header = f.read(256)
+
         error.check(header[0xAB:0xB8] == b"DIFC HEADER  ",
                     "DIM: Not a DIM file.")
         media_byte, = struct.unpack('B255x', header)
@@ -28,10 +31,16 @@ class DIM(IMG):
             format_str = 'pc98.2hs'
         else:
             raise error.Fatal("DIM: Unsupported format.")
+
         fmt = codec.get_diskdef(format_str)
         assert fmt is not None # mypy
+        return fmt
+
+    def from_bytes(self, dat: bytes) -> None:
 
         pos = 256
+        fmt = self.fmt
+
         for t in fmt.tracks:
             cyl, head = t.cyl, t.head
             if self.sides_swapped:
@@ -40,7 +49,6 @@ class DIM(IMG):
             if track is not None:
                 pos += track.set_img_track(dat[pos:])
                 self.to_track[cyl,head] = track
-        self.format_str = format_str
 
 # Local variables:
 # python-indent: 4
