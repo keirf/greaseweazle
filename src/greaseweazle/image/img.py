@@ -94,7 +94,7 @@ Sector image requires a disk format to be specified""")
 class IMG_AutoFormat(IMG):
 
     @staticmethod
-    def format_from_file(name: str) -> codec.DiskDef:
+    def format_from_file(name: str) -> str:
         raise NotImplementedError
 
     @classmethod
@@ -102,7 +102,9 @@ class IMG_AutoFormat(IMG):
                   opts: OptDict) -> Image:
         error.check(fmt is None,
                     f'{cls.__name__}: Format cannot be overridden')
-        fmt = cls.format_from_file(name)
+        format_str = cls.format_from_file(name)
+        fmt = codec.get_diskdef(format_str)
+        print(f'{cls.__name__}: Image format {format_str}')
         return super().from_file(name, fmt, opts)
 
 # Local variables:

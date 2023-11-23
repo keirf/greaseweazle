@@ -17,7 +17,7 @@ class DIM(IMG_AutoFormat):
     read_only = True
 
     @staticmethod
-    def format_from_file(name: str) -> codec.DiskDef:
+    def format_from_file(name: str) -> str:
 
         with open(name, "rb") as f:
             header = f.read(256)
@@ -32,9 +32,7 @@ class DIM(IMG_AutoFormat):
         else:
             raise error.Fatal("DIM: Unsupported format.")
 
-        fmt = codec.get_diskdef(format_str)
-        assert fmt is not None # mypy
-        return fmt
+        return format_str
 
     def from_bytes(self, dat: bytes) -> None:
 

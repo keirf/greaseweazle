@@ -17,10 +17,8 @@ class DCP(IMG_AutoFormat):
     read_only = True
 
     @staticmethod
-    def format_from_file(name: str) -> codec.DiskDef:
-        fmt = codec.get_diskdef('pc98.2hd')
-        assert fmt is not None # mypy
-        return fmt
+    def format_from_file(name: str) -> str:
+        return 'pc98.2hd'
 
     def from_bytes(self, dat: bytes) -> None:
 
