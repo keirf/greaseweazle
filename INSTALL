@@ -8,7 +8,7 @@ Installing into your existing Python 3 environment is as simple as
 DEPENDENCIES:
 *************
 You may need to install some dependencies before installing Greaseweazle.
- - Python 3.7 or later, including Pip (Python package manager)
+ - Python 3.8 or later, including Pip (Python package manager)
  - Your system's standard C compiler
 
 macOS:

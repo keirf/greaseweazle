@@ -25,7 +25,7 @@ For more info see the following links:
 of the host tools. You can now open a CMD window and run the `gw.exe` tool
 from inside the unzipped release folder.
 
-**macOS, Linux:** First you must install Python v3.7 or later. You can then
+**macOS, Linux:** First you must install Python v3.8 or later. You can then
 install the latest host tools release directly from GitHub using Python Pip:
 ```
 $ python3 -m pip install git+https://github.com/keirf/greaseweazle@latest
