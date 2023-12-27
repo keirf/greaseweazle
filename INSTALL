@@ -1,12 +1,22 @@
 
-INSTALLATION ONE-LINER:
-***********************
-Installing into your existing Python 3 environment is as simple as
+INSTALLING GREASEWEAZLE FROM SOURCE:
+************************************
+
+Installing into your existing Python 3 environment is as simple as the
+following, from inside a local download of this repository:
  $ python3 -m pip install .
+
+If you wish to download and install in a single step the latest released
+version:
+ $ python3 -m pip install git+https://github.com/keirf/greaseweazle@latest
+
+For more detailed instructions please see the wiki:
+https://github.com/keirf/greaseweazle/wiki/Software-Installation
 
 
 DEPENDENCIES:
 *************
+
 You may need to install some dependencies before installing Greaseweazle.
  - Python 3.8 or later, including Pip (Python package manager)
  - Your system's standard C compiler
