@@ -170,7 +170,9 @@ class CmdError(Exception):
     def errcode_str(self):
         if self.code == Ack.BadCylinder and self.cmd[0] == Cmd.Seek:
             s = Ack.str[Ack.BadCylinder]
-            return s + " %d" % struct.unpack('2Bb', self.cmd)[2]
+            cyl = struct.unpack('2Bb' if len(self.cmd) == 3 else '2Bh',
+                                self.cmd)[2]
+            return s + f' {cyl}'
         return Ack.str.get(self.code, "Unknown Error (%u)" % self.code)
 
     def __str__(self):
@@ -250,7 +252,13 @@ class Unit:
     ## seek:
     ## Seek the selected drive's heads to the specified track (cyl, head).
     def seek(self, cyl, head) -> None:
-        self._send_cmd(struct.pack("2Bb", Cmd.Seek, 3, cyl))
+        if -0x80 <= cyl <= 0x7f:
+            cmd = struct.pack("2Bb", Cmd.Seek, 3, cyl)
+        elif -0x8000 <= cyl <= 0x7fff:
+            cmd = struct.pack("2Bh", Cmd.Seek, 4, cyl)
+        else:
+            raise error.Fatal(f'Seek: Invalid cylinder {cyl}')
+        self._send_cmd(cmd)
         trk0 = not self.get_pin(26)
         if cyl == 0 and not trk0:
             # This can happen with Kryoflux flippy-modded Panasonic drives

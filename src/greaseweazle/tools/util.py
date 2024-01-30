@@ -184,9 +184,9 @@ class TrackSet:
                 continue
             k,v = x.split('=')
             if k == 'c':
-                cyls = [False]*100
+                cyls = set()
                 for crange in v.split(','):
-                    m = re.match('(\d\d?)(-(\d\d?)(/(\d))?)?$', crange)
+                    m = re.match('(\d+)(-(\d+)(/(\d))?)?$', crange)
                     if m is None: raise ValueError()
                     if m.group(3) is None:
                         s,e,step = int(m.group(1)), int(m.group(1)), 1
@@ -195,10 +195,8 @@ class TrackSet:
                         if m.group(5) is not None:
                             step = int(m.group(5))
                     for c in range(s, e+1, step):
-                        cyls[c] = True
-                self.cyls = []
-                for c in range(len(cyls)):
-                    if cyls[c]: self.cyls.append(c)
+                        cyls.add(c)
+                self.cyls = sorted(cyls)
             elif k == 'h':
                 heads = [False]*2
                 for hrange in v.split(','):

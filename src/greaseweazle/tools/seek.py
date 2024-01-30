@@ -40,10 +40,6 @@ def main(argv) -> None:
     parser.prog += ' ' + argv[1]
     args = parser.parse_args(argv[2:])
 
-    try:
-        struct.pack('b', args.cylinder)
-    except struct.error:
-        raise error.Fatal("Cylinder %d out of range" % args.cylinder)
     if not 0 <= args.cylinder <= 83 and not args.force:
         answer = input("Seek to extreme cylinder %d, Yes/No? " % args.cylinder)
         if answer != "Yes":
