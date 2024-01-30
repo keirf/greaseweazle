@@ -186,7 +186,7 @@ class TrackSet:
             if k == 'c':
                 cyls = set()
                 for crange in v.split(','):
-                    m = re.match('(\d+)(-(\d+)(/(\d))?)?$', crange)
+                    m = re.match('(\d+)(-(\d+)(/(\d+))?)?$', crange)
                     if m is None: raise ValueError()
                     if m.group(3) is None:
                         s,e,step = int(m.group(1)), int(m.group(1)), 1
@@ -213,11 +213,11 @@ class TrackSet:
                     if heads[h]: self.heads.append(h)
             elif re.match('h[01].off$', k):
                 h = int(re.match('h([01]).off$', k).group(1))
-                m = re.match('([+-][\d])$', v)
+                m = re.match('([+-]\d+)$', v)
                 if m is None: raise ValueError()
                 self.h_off[h] = int(m.group(1))
             elif k == 'step':
-                m = re.match('1/(\d)$', v)
+                m = re.match('1/(\d+)$', v)
                 self.step = -int(m.group(1)) if m is not None else int(v)
             else:
                 raise ValueError()
