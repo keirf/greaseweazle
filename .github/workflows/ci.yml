@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
 
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         fetch-depth: 0
 
@@ -32,7 +32,7 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
 
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         fetch-depth: 0
 
@@ -53,21 +53,21 @@ jobs:
       run: make dist
 
     - name: Upload artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
-        name: greaseweazle.ci.${{ steps.vars.outputs.ver }}
+        name: greaseweazle-ci-${{ steps.vars.outputs.ver }}-sdist
         path: greaseweazle-${{ steps.vars.outputs.ver }}.zip
 
   build-win32:
     runs-on: windows-2019
     steps:
 
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         fetch-depth: 0
 
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: 3.8
         architecture: x86
@@ -95,21 +95,21 @@ jobs:
         7z a $GW-win32.zip $GW
 
     - name: Upload artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
-        name: greaseweazle.ci.${{ steps.vars.outputs.ver }}
+        name: greaseweazle-ci-${{ steps.vars.outputs.ver }}-win32
         path: greaseweazle-${{ steps.vars.outputs.ver }}-win32.zip
 
   build-win64:
     runs-on: windows-2022
     steps:
 
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         fetch-depth: 0
 
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: 3.11
         architecture: x64
@@ -137,7 +137,7 @@ jobs:
         7z a $GW-win64.zip $GW
 
     - name: Upload artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
-        name: greaseweazle.ci.${{ steps.vars.outputs.ver }}
+        name: greaseweazle-ci-${{ steps.vars.outputs.ver }}-win64
         path: greaseweazle-${{ steps.vars.outputs.ver }}-win64.zip
