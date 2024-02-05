@@ -48,6 +48,9 @@ def write_from_image(usb: USB.Unit, args, image: image.Image) -> None:
 
         usb.seek(t.physical_cyl, t.physical_head)
 
+        if args.gen_tg43:
+            usb.set_pin(2, cyl < 43)
+
         if track is None:
             print("T%u.%u: Erasing Track" % (cyl, head))
             usb.erase_track(drive_ticks_per_rev * 1.1)
@@ -202,8 +205,11 @@ def main(argv) -> None:
                         help="number of retries on verify failure")
     parser.add_argument("--precomp", type=PrecompSpec,
                         help="write precompensation")
-    parser.add_argument("--dd", type=util.level,
+    densel_group = parser.add_mutually_exclusive_group(required=False)
+    densel_group.add_argument("--dd", type=util.level,
                         help="drive interface DD/HD select (H,L)")
+    densel_group.add_argument("--gen-tg43", action = "store_true",
+                        help="generate TG43 signal for use with 8 inch floppy drives (on pin DENSEL)")
     parser.add_argument("file", help="input filename")
     parser.description = description
     parser.prog += ' ' + argv[1]
@@ -238,13 +244,14 @@ Known formats:\n%s"""
         if args.format:
             print("Format " + args.format)
         try:
-            if args.dd is not None:
+            if args.dd is not None or args.gen_tg43:
                 prev_pin2 = usb.get_pin(2)
+            if args.dd is not None:
                 usb.set_pin(2, args.dd)
             util.with_drive_selected(
                 lambda: write_from_image(usb, args, image), usb, args.drive)
         finally:
-            if args.dd is not None:
+            if args.dd is not None or args.gen_tg43:
                 usb.set_pin(2, prev_pin2)
     except USB.CmdError as err:
         print("Command Failed: %s" % err)
