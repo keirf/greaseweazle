@@ -209,8 +209,8 @@ def main(argv) -> None:
                         help="do not overwrite an existing file")
     parser.add_argument("--pll", type=track.PLL, metavar="PLLSPEC",
                         help="manual PLL parameter override")
-    parser.add_argument("--dd", type=util.level,
-                        help="drive interface DD/HD select (H,L)")
+    parser.add_argument("--densel", "--dd", type=util.level, metavar="LEVEL",
+                        help="drive interface density select on pin 2 (H,L)")
     parser.add_argument("file", help="output filename")
     parser.description = description
     parser.prog += ' ' + argv[1]
@@ -248,14 +248,14 @@ Known formats:\n%s"""
         if args.format:
             print("Format " + args.format)
         try:
-            if args.dd is not None:
+            if args.densel is not None:
                 prev_pin2 = usb.get_pin(2)
-                usb.set_pin(2, args.dd)
+                usb.set_pin(2, args.densel)
             with open_image(args, image_class) as image:
                 util.with_drive_selected(
                     lambda: read_to_image(usb, args, image), usb, args.drive)
         finally:
-            if args.dd is not None:
+            if args.densel is not None:
                 usb.set_pin(2, prev_pin2)
     except USB.CmdError as err:
         print("Command Failed: %s" % err)

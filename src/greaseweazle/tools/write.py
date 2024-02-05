@@ -206,10 +206,12 @@ def main(argv) -> None:
     parser.add_argument("--precomp", type=PrecompSpec,
                         help="write precompensation")
     densel_group = parser.add_mutually_exclusive_group(required=False)
-    densel_group.add_argument("--dd", type=util.level,
-                        help="drive interface DD/HD select (H,L)")
-    densel_group.add_argument("--gen-tg43", action = "store_true",
-                        help="generate TG43 signal for use with 8 inch floppy drives (on pin DENSEL)")
+    densel_group.add_argument(
+        "--densel", "--dd", type=util.level, metavar="LEVEL",
+        help="drive interface density select on pin 2 (H,L)")
+    densel_group.add_argument(
+        "--gen-tg43", action = "store_true",
+        help="generate TG43 signal for 8-inch drive on pin 2")
     parser.add_argument("file", help="input filename")
     parser.description = description
     parser.prog += ' ' + argv[1]
@@ -244,14 +246,14 @@ Known formats:\n%s"""
         if args.format:
             print("Format " + args.format)
         try:
-            if args.dd is not None or args.gen_tg43:
+            if args.densel is not None or args.gen_tg43:
                 prev_pin2 = usb.get_pin(2)
-            if args.dd is not None:
-                usb.set_pin(2, args.dd)
+            if args.densel is not None:
+                usb.set_pin(2, args.densel)
             util.with_drive_selected(
                 lambda: write_from_image(usb, args, image), usb, args.drive)
         finally:
-            if args.dd is not None or args.gen_tg43:
+            if args.densel is not None or args.gen_tg43:
                 usb.set_pin(2, prev_pin2)
     except USB.CmdError as err:
         print("Command Failed: %s" % err)
