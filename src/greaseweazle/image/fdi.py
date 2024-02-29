@@ -17,18 +17,18 @@ class FDI(IMG):
 
     def from_bytes(self, dat: bytes) -> None:
 
-        (magic, fdd_type, headerSize, sectorSize, sectorsPerTrack,
+        (magic, fdd_type, header_size, sector_size, sectors_per_track,
          sides, tracks) = struct.unpack('<LLL4xLLLL', dat[:32])
-        error.check(magic == 0, "FDI: Not a FDI file.")
-        error.check(fdd_type == 0x90, "FDI: Unsupported format.")
-        error.check(sectorSize == 1024, "FDI: Unsupported sector size.")
-        error.check(sectorsPerTrack == 8, "FDI: Unsupported number of sectors per track.")
-        error.check(sides == 2, "FDI: Unsupported number of sides.")
-        error.check(tracks == 77, "FDI: Unsupported number of tracks.")
+        error.check(magic == 0, 'FDI: Not a FDI file.')
+        error.check(fdd_type == 0x90, 'FDI: Unsupported format.')
+        error.check(sector_size == 1024, 'FDI: Unsupported sector size.')
+        error.check(sectors_per_track == 8,
+                    'FDI: Unsupported number of sectors per track.')
+        error.check(sides == 2, 'FDI: Unsupported number of sides.')
+        error.check(tracks == 77, 'FDI: Unsupported number of tracks.')
 
-        pos = headerSize
-        for t in self.track_list():
-            cyl, head = t.cyl, t.head
+        pos = header_size
+        for cyl, head in self.track_list():
             if self.sides_swapped:
                 head ^= 1
             track = self.fmt.mk_track(cyl, head)
