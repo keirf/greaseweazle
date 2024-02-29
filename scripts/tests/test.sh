@@ -49,4 +49,16 @@ $GW convert --format=dec.rx02 rx02_a.scp rx02_a.img 2>&1 | tee rx02.log
 diff -u rx02.img rx02_a.img
 grep Unknown rx02.log && exit 1
 
+# FDI import
+echo -en "\x00\x00\x00\x00\x90\x00\x00\x00" >a.fdi
+echo -en "\x00\x10\x00\x00\x00\x40\x13\x00" >>a.fdi
+echo -en "\x00\x04\x00\x00\x08\x00\x00\x00" >>a.fdi
+echo -en "\x02\x00\x00\x00\x4d\x00\x00\x00" >>a.fdi
+dd if=/dev/zero of=a.fdi bs=16 seek=2 count=254
+dd if=/dev/urandom of=a.img bs=4096 count=308
+cat a.img >>a.fdi
+$GW convert a.fdi a.scp
+$GW convert --format=pc98.2hd a.scp b.img
+diff -u a.img b.img
+
 popd
