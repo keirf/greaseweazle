@@ -3,6 +3,11 @@
 ** Keir Fraser <keir.xen@gmail.com>
 ************************************
 
+** v1.16.3 - 1 March 2024
+ - FDI: Fix import of FDI image files
+ - gw read, write: --dd option renamed to --densel
+ - gw write: Option --gen-tg43 generates 8-inch /TG43 signal on pin 2
+
 ** v1.16.2 - 23 November 2023
  - DCP, DIM: Fix image import
  - Flux: Emit one revolution of flux where possible, rather than two
