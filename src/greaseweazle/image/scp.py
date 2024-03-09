@@ -36,7 +36,7 @@ DiskType = {
     'apple-400k':  0x24,
     'apple-800k':  0x25,
     'apple-1m44':  0x26,
-    'ibmpc-320k':  0x30,
+    'ibmpc-360k':  0x30,
     'ibmpc-720k':  0x31,
     'ibmpc-1m2':   0x32,
     'ibmpc-1m44':  0x33,
