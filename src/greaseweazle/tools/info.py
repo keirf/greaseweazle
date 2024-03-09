@@ -47,6 +47,8 @@ def print_info_line(name: str, value: str, tab=0) -> None:
 def latest_firmware() -> Tuple[int,int]:
     rsp = requests.get('https://api.github.com/repos/keirf/'
                        'greaseweazle-firmware/releases/latest', timeout=5)
+    if int(rsp.headers.get('X-RateLimit-Remaining', 1)) == 0:
+        raise requests.RequestException('GitHub API Rate limit exceeded')
     tag = rsp.json()['tag_name']
     r = re.match(r'v(\d+)\.(\d+)', tag)
     assert r is not None
@@ -127,7 +129,11 @@ def main(argv) -> None:
         usb = util.usb_reopen(usb, not args.bootloader)
 
     if not usb_update_mode:
-        latest_version = latest_firmware()
+        try:
+            latest_version = latest_firmware()
+        except requests.RequestException as e:
+            print('\n*** Unable to check for new firmware version *** ', e)
+            return
         if latest_version > usb_version:
             print('\n*** New firmware version %d.%d is available'
                   % latest_version)
