@@ -366,7 +366,12 @@ class PLLTrack:
             flux_iter = iter(flux.list)
             while (x := next(flux_iter, None)) is not None:
                 if x/freq <= thresh:
-                    flux_list[-1] += x + next(flux_iter, 0.0)
+                    y = next(flux_iter, 0.0)
+                    # Merge a group-of-three centred on shortest of {x, y}.
+                    if y <= x:
+                        flux_list.append(x + y + next(flux_iter, 0.0))
+                    else:
+                        flux_list[-1] += x + y
                 else:
                     flux_list.append(x)
         else:
