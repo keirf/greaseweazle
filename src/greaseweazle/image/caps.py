@@ -228,10 +228,14 @@ class CTRaw(CAPS):
         except CAPSTrackInfo.NoTrack:
             return None
 
+        # CTRaw dumps get bogus speed info from the CAPS library.
+        # Assume they are uniform density.
+        bit_ticks = None # ti.ticks
+
         return MasterTrack(
             bits = ti.bits,
             time_per_rev = 60/ti.rpm,
-            bit_ticks = ti.ticks)
+            bit_ticks = bit_ticks)
 
 
 class IPFTrack(MasterTrack):
