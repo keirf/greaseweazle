@@ -619,7 +619,7 @@ class IBMTrack(codec.Codec):
             list: List[Any]
             if isinstance(a, IAM):
                 list = self.iams
-            elif isinstance(a, Sector):
+            elif isinstance(a, Sector) or isinstance(a, IDAM):
                 list = self.sectors
             else:
                 continue
