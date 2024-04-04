@@ -329,8 +329,7 @@ class IPF(CAPS):
                                        cyl, head, 1, i)
             error.check(res == 0, "Couldn't get sector info")
             # Adjust the range start to be splice- rather than index-relative
-            data.append(((si.datastart - ti.overlap) % ti.tracklen,
-                         si.datasize))
+            data.append((si.datastart % ti.tracklen, si.datasize))
 
         weak = []
         for i in range(ti.weakcnt):
@@ -339,13 +338,57 @@ class IPF(CAPS):
                                        cyl, head, 2, i)
             error.check(res == 0, "Couldn't get weak data info")
             # Adjust the range start to be splice- rather than index-relative
-            weak.append(((wi.start - ti.overlap) % ti.tracklen, wi.size))
+            weak.append((wi.start % ti.tracklen, wi.size))
 
-        # Rotate the track to start at the splice rather than the index.
+        if ti.overlap < 0 and weak:
+            # Splice halfway through the longest weak area.
+            longest_weak = 0
+            for i,(s,n) in enumerate(weak):
+                if n > weak[longest_weak][1]:
+                    longest_weak = i
+            s,n = weak[longest_weak]
+            if n > 200:
+                ti.overlap = (s + n//2) % ti.tracklen
+
+        if ti.overlap < 0 and data:
+            # Splice halfway through the longest gap area.
+            data.sort()
+            gap = []
+            for i,(s,n) in enumerate(data):
+                gap.append((data[(i+1)%len(data)][0] - s - n) % ti.tracklen)
+            i = gap.index(max(gap))
+            s,n = data[i]
+            ti.overlap = (s + n + gap[i] // 2) % ti.tracklen
+
+        if ti.overlap < 0:
+                # No sector or weak information. Splice at the index.
+                ti.overlap = 0
+
         if ti.overlap:
+
+            # Adjust range starts to be splice- rather than index-relative
+            f = lambda x: ((x[0] - ti.overlap) % ti.tracklen, x[1])
+            data = list(map(f, data))
+            weak = list(map(f, weak))
+
+            # Rotate the track to start at the splice rather than the index.
             ti.bits = ti.bits[ti.overlap:] + ti.bits[:ti.overlap]
             if ti.ticks:
                 ti.ticks = ti.ticks[ti.overlap:] + ti.ticks[:ti.overlap]
+
+        # Sort ranges by start, and clip at splice point.
+        def clip_and_sort_ranges(r):
+            res = []
+            for i,(s,n) in enumerate(r):
+                if s + n > ti.tracklen:
+                    res.append((s,ti.tracklen-s))
+                    res.append((0, s+n-ti.tracklen))
+                else:
+                    res.append((s,n))
+            res.sort()
+            return res
+        data = clip_and_sort_ranges(data)
+        weak = clip_and_sort_ranges(weak)
 
         track = IPFTrack(
             bits = ti.bits,
