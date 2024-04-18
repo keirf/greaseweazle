@@ -39,8 +39,11 @@ class IMD(Image):
                 break
         error.check(x == 0x1a, 'IMD: No comment terminator found')
 
+        # We will adjust this as we go
+        rpm = 300
+
         i += 1
-        while i < len(dat):
+        while i < len(dat)-5:
             mode, cyl, head, nsec, sec_n = struct.unpack('5B', dat[i:i+5])
             i += 5
             error.check(0 <= sec_n <= 6, 'IMD: Bad sector size %x' % sec_n)
@@ -53,19 +56,21 @@ class IMD(Image):
 
             if mode == IMDMode.FM_250kbps or mode == IMDMode.FM_300kbps:
                 fmt = ibm.IBMTrack_FixedDef('ibm.fm')
-                fmt.rpm, fmt.rate = 300, 125
+                fmt.rate = 125
             elif mode == IMDMode.FM_500kbps:
                 fmt = ibm.IBMTrack_FixedDef('ibm.fm')
-                fmt.rpm, fmt.rate = 300, 250
+                if nsec == 26: rpm = 360 # 8-inch disk
+                fmt.rate = 250
             elif mode == IMDMode.MFM_250kbps or mode == IMDMode.MFM_300kbps:
                 fmt = ibm.IBMTrack_FixedDef('ibm.mfm')
-                fmt.rpm, fmt.rate = 300, 250
+                fmt.rate = 250
             elif mode == IMDMode.MFM_500kbps:
                 fmt = ibm.IBMTrack_FixedDef('ibm.mfm')
-                fmt.rpm, fmt.rate = 300, 500
+                fmt.rate = 500
             else:
                 raise error.Fatal('IMD: Unrecognised track mode %x' % mode)
 
+            fmt.rpm = rpm
             fmt.secs, fmt.sz = nsec, [sec_n]
             fmt.finalise()
             t = fmt.mk_track(cyl, head)
