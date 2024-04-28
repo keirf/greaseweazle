@@ -140,16 +140,12 @@ class IMD(Image):
             if t.mode is ibm.Mode.FM:
                 if t.clock < 3.0e-6:
                     mode = IMDMode.FM_500kbps # High Rate
-                elif t.time_per_rev < 0.185:
-                    mode = IMDMode.FM_300kbps # 360 RPM
                 else:
                     mode = IMDMode.FM_250kbps # 300 RPM
             else:
                 assert t.mode is ibm.Mode.MFM
                 if t.clock < 1.5e-6:
                     mode = IMDMode.MFM_500kbps # High Rate
-                elif t.time_per_rev < 0.185:
-                    mode = IMDMode.MFM_300kbps # 360 RPM
                 else:
                     mode = IMDMode.MFM_250kbps # 300 RPM
             cyl, head, nsec, sec_n = c, h, 0, None
