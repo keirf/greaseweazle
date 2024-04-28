@@ -66,6 +66,7 @@ class IMD(Image):
                 fmt.rate = 250
             elif mode == IMDMode.MFM_500kbps:
                 fmt = ibm.IBMTrack_FixedDef('ibm.mfm')
+                if nsec == 26: rpm = 360 # 8-inch disk
                 fmt.rate = 500
             else:
                 raise error.Fatal('IMD: Unrecognised track mode %x' % mode)
