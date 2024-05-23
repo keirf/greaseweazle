@@ -153,6 +153,7 @@ from greaseweazle.codec.ibm import ibm
 from greaseweazle.codec.amiga import amigados
 from greaseweazle.codec.macintosh import mac_gcr
 from greaseweazle.codec.commodore import c64_gcr
+from greaseweazle.codec.apple2 import apple2_gcr
 
 def mk_trackdef(format_name: str) -> TrackDef:
     if format_name in ['amiga.amigados']:
@@ -165,6 +166,8 @@ def mk_trackdef(format_name: str) -> TrackDef:
         return mac_gcr.MacGCRDef(format_name)
     if format_name in ['c64.gcr']:
         return c64_gcr.C64GCRDef(format_name)
+    if format_name in ['apple2.gcr']:
+        return apple2_gcr.Apple2GCRDef(format_name)
     if format_name in ['bitcell']:
         return bitcell.BitcellTrackDef(format_name)
     raise error.Fatal('unrecognised format name: %s' % format_name)

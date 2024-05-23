@@ -15,6 +15,7 @@ from greaseweazle import error
 from greaseweazle.tools import util
 from greaseweazle.codec import codec
 from greaseweazle.codec.ibm import ibm
+from greaseweazle.codec.apple2 import apple2_gcr
 from greaseweazle.track import MasterTrack, PLLTrack
 from bitarray import bitarray
 from .image import Image, ImageOpts
@@ -212,15 +213,17 @@ class HFE(Image):
 
 
     def emit_track(self, cyl: int, side: int, track) -> None:
-        # HFE convention is that FM is recorded at double density
-        is_fm = isinstance(track, ibm.IBMTrack) and track.mode is ibm.Mode.FM
+        # HFE convention is that FM and GCR are recorded at double rate
+        double_rate = (
+            (isinstance(track, ibm.IBMTrack) and track.mode is ibm.Mode.FM)
+            or isinstance(track, apple2_gcr.Apple2GCR))
         t = track.master_track() if isinstance(track, codec.Codec) else track
         if self.opts.bitrate is None:
             error.check(hasattr(t, 'bitrate'),
                         'HFE: Requires bitrate to be specified'
                         ' (eg. filename.hfe::bitrate=500)')
             self.opts.bitrate = round(t.bitrate / 2e3)
-            if is_fm:
+            if double_rate:
                 self.opts.bitrate *= 2
             print('HFE: Data bitrate detected: %d kbit/s' % self.opts.bitrate)
         if isinstance(t, MasterTrack):
@@ -241,7 +244,7 @@ class HFE(Image):
                         weak.append((s % len(t.bits), n))
                 else:
                     weak.append((s, n))
-            if is_fm: # FM data is recorded to HFE at double rate
+            if double_rate:
                 double_bytes = ibm.doubler(bits.tobytes())
                 double_bits = bitarray(endian='big')
                 double_bits.frombytes(double_bytes)

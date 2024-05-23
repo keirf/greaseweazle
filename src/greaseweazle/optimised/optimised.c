@@ -5,6 +5,7 @@
 #include <stdint.h>
 #include "mac.h"
 #include "c64.h"
+#include "apple2.h"
 
 #define FLUXOP_INDEX   1
 #define FLUXOP_SPACE   2
@@ -396,6 +397,57 @@ fail:
     return out;
 }
 
+static PyObject *
+py_decode_apple2_sector(PyObject *self, PyObject *args)
+{
+    Py_buffer in;
+    PyObject *out;
+    int status;
+    PyObject *res = NULL;
+
+    if (!PyArg_ParseTuple(args, "y*", &in))
+        return NULL;
+    if (in.len < APPLE2_ENCODED_SECTOR_LENGTH+2)
+        goto fail;
+
+    out = PyBytes_FromStringAndSize(NULL, APPLE2_SECTOR_LENGTH);
+    if (out == NULL)
+        goto fail;
+
+    status = decode_apple2_sector((const uint8_t *)in.buf,
+                                (uint8_t *)PyBytes_AsString(out));
+
+    res = Py_BuildValue("Oi", out, status);
+
+    Py_DECREF(out);
+fail:
+    PyBuffer_Release(&in);
+    return res;
+}
+
+static PyObject *
+py_encode_apple2_sector(PyObject *self, PyObject *args)
+{
+    Py_buffer in;
+    PyObject *out = NULL;
+
+    if (!PyArg_ParseTuple(args, "y*", &in))
+        return NULL;
+    if (in.len < APPLE2_SECTOR_LENGTH)
+        goto fail;
+
+    out = PyBytes_FromStringAndSize(NULL, APPLE2_ENCODED_SECTOR_LENGTH+1);
+    if (out == NULL)
+        goto fail;
+
+    encode_apple2_sector((const uint8_t *)in.buf,
+                         (uint8_t *)PyBytes_AsString(out));
+
+fail:
+    PyBuffer_Release(&in);
+    return out;
+}
+
 uint8_t *td0_unpack(uint8_t *packeddata, unsigned int size,
                     unsigned int *unpacked_size);
 
@@ -431,6 +483,8 @@ static PyMethodDef modulefuncs[] = {
     { "encode_mac_sector", py_encode_mac_sector, METH_VARARGS, NULL },
     { "decode_c64_gcr", py_decode_c64_gcr, METH_VARARGS, NULL },
     { "encode_c64_gcr", py_encode_c64_gcr, METH_VARARGS, NULL },
+    { "decode_apple2_sector", py_decode_apple2_sector, METH_VARARGS, NULL },
+    { "encode_apple2_sector", py_encode_apple2_sector, METH_VARARGS, NULL },
     { "td0_unpack", py_td0_unpack, METH_VARARGS, NULL },
     { NULL }
 };
