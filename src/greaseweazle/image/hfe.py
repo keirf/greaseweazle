@@ -70,13 +70,15 @@ class HFEOpts(ImageOpts):
     """bitrate: Bitrate of new HFE image file.
     """
 
-    w_settings = [ 'bitrate', 'version', 'interface', 'encoding' ]
+    w_settings = [ 'bitrate', 'version', 'interface', 'encoding',
+                   'double_step' ]
     
     def __init__(self) -> None:
         self._bitrate: Optional[int] = None
         self._version = 1
         self._interface = 0xff
         self._encoding = 0xff
+        self.double_step = False
 
     @property
     def bitrate(self) -> Optional[int]:
@@ -303,7 +305,7 @@ class HFE(Image):
                         tdat += slice + bytes([0x88] * (256 - len(slice)))
 
         # Construct the image header.
-        header = struct.pack("<8s4B2H2BH",
+        header = struct.pack("<8s4B2H2BH2B",
                              b"HXCPICFE",
                              0,
                              n_cyl,
@@ -313,7 +315,9 @@ class HFE(Image):
                              0,    # rpm (unused)
                              self.opts.interface,
                              1,    # rsvd
-                             1)    # track list offset
+                             1,    # track list offset
+                             0xff, # write_allowed
+                             0xff if not self.opts.double_step else 0)
 
         # Pad the header and TLUT to 512-byte blocks.
         header += bytes([0xff] * (0x200 - len(header)))
@@ -653,7 +657,7 @@ def hfev3_get_image(hfe: HFE) -> bytes:
                 tdat += t[b*256:(b+1)*256]
 
     # Construct the image header.
-    header = struct.pack("<8s4B2H2BH",
+    header = struct.pack("<8s4B2H2BH2B",
                          b"HXCHFEV3",
                          0,
                          n_cyl,
@@ -663,7 +667,9 @@ def hfev3_get_image(hfe: HFE) -> bytes:
                          0,    # rpm (unused)
                          hfe.opts.interface,
                          1,    # rsvd
-                         1)    # track list offset
+                         1,    # track list offset
+                         0xff, # write_allowed
+                         0xff if not hfe.opts.double_step else 0)
 
     # Pad the header and TLUT to 512-byte blocks.
     header += bytes([0xff] * (0x200 - len(header)))
