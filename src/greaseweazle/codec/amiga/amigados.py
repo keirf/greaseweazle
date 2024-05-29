@@ -142,7 +142,7 @@ class AmigaDOS(codec.Codec):
 
         track = MasterTrack(
             bits = ibm.mfm_encode(t),
-            time_per_rev = 0.2)
+            time_per_rev = self.time_per_rev)
         track.verify = self
         return track
 

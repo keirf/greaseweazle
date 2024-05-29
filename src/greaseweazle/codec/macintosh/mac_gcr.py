@@ -178,7 +178,7 @@ class MacGCR(codec.Codec):
         tlen = int((self.time_per_rev / self.clock)) & ~31
         t += bytes([0x96] * (tlen//8-len(t)))
 
-        track = MasterTrack(bits = t, time_per_rev = 0.2)
+        track = MasterTrack(bits = t, time_per_rev = self.time_per_rev)
         track.verify = self
         return track
 

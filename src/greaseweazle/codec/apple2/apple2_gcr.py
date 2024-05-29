@@ -171,7 +171,7 @@ class Apple2GCR(codec.Codec):
         tlen = int((self.time_per_rev / self.clock))
         t += gap4 * (tlen-len(t))
 
-        track = MasterTrack(bits = t, time_per_rev = 0.2)
+        track = MasterTrack(bits = t, time_per_rev = self.time_per_rev)
         track.verify = self
         return track
 
