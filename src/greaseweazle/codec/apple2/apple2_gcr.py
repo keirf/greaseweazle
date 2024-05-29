@@ -150,10 +150,6 @@ class Apple2GCR(codec.Codec):
 
     def master_track(self) -> MasterTrack:
 
-        def gcr44(x):
-            x = x | x << 7 | 0xaaaa
-            return bytes([x>>8, x&255])
-
         vol_id = self.vol_id if self.vol_id is not None else 254
         trk_id = self.tracknr()
 
@@ -164,10 +160,9 @@ class Apple2GCR(codec.Codec):
             sector = self.sector[sec_id]
             data = bad_sector if sector is None else sector
             t += ff40*18 + ff32 + addr_sync
-            t.frombytes(gcr44(vol_id))
-            t.frombytes(gcr44(trk_id))
-            t.frombytes(gcr44(sec_id))
-            t.frombytes(gcr44(vol_id ^ trk_id ^ sec_id))
+            t.frombytes(b''.join(map(
+                lambda x: bytes([x>>1 | 0xaa, x | 0xaa]),
+                [vol_id, trk_id, sec_id, vol_id ^ trk_id ^ sec_id])))
             t += trailer + ff40*6 + data_sync
             t.frombytes(optimised.encode_apple2_sector(data))
             t += trailer
