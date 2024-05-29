@@ -18,16 +18,18 @@ from greaseweazle.flux import Flux, HasFlux
 
 default_revs = 1.1
 
-ff40_presync_bytes = b'\xff\x3f\xcf\xf3\xfc\xff\x3f\xcf\xf3\xfc'
-trailer_bytes = b'\xde\xaa\xeb'
-sector_sync_bytes = b'\xd5\xaa\x96'
-data_sync_bytes = b'\xd5\xaa\xad'
+gap4 = bitarray([1], endian='big')
+ff40 = bitarray([1]*8 + [0]*2, endian='big')
+ff32 = ff40[:8]
 
-sector_sync = bitarray(endian='big')
-sector_sync.frombytes(sector_sync_bytes)
+addr_sync = bitarray(endian='big')
+addr_sync.frombytes(b'\xd5\xaa\x96')
 
 data_sync = bitarray(endian='big')
-data_sync.frombytes(data_sync_bytes)
+data_sync.frombytes(b'\xd5\xaa\xad')
+
+trailer = bitarray(endian='big')
+trailer.frombytes(b'\xde\xaa\xeb')
 
 bad_sector = b'-=[BAD SECTOR]=-' * 16
 
@@ -96,7 +98,7 @@ class Apple2GCR(codec.Codec):
                        lowpass_thresh = 2.5e-6)
         bits, _ = raw.get_all_data()
 
-        for offs in bits.itersearch(sector_sync):
+        for offs in bits.itersearch(addr_sync):
 
             if self.nr_missing() == 0:
                 break
@@ -156,25 +158,23 @@ class Apple2GCR(codec.Codec):
         trk_id = self.tracknr()
 
         # Post-index track gap.
-        t = ff40_presync_bytes * 3
+        t = gap4 * 300
 
         for sec_id in range(self.nsec):
             sector = self.sector[sec_id]
             data = bad_sector if sector is None else sector
-            # Header
-            t += ff40_presync_bytes*2 + b'\xff' + sector_sync_bytes
-            t += gcr44(vol_id)
-            t += gcr44(trk_id)
-            t += gcr44(sec_id)
-            t += gcr44(vol_id ^ trk_id ^ sec_id)
-            t += trailer_bytes
-            t += ff40_presync_bytes + data_sync_bytes
-            t += optimised.encode_apple2_sector(data)
-            t += trailer_bytes
+            t += ff40*18 + ff32 + addr_sync
+            t.frombytes(gcr44(vol_id))
+            t.frombytes(gcr44(trk_id))
+            t.frombytes(gcr44(sec_id))
+            t.frombytes(gcr44(vol_id ^ trk_id ^ sec_id))
+            t += trailer + ff40*6 + data_sync
+            t.frombytes(optimised.encode_apple2_sector(data))
+            t += trailer
 
         # Add the pre-index gap.
-        tlen = int((self.time_per_rev / self.clock)) & ~31
-        t += bytes([0x55] * (tlen//8-len(t)))
+        tlen = int((self.time_per_rev / self.clock))
+        t += gap4 * (tlen-len(t))
 
         track = MasterTrack(bits = t, time_per_rev = 0.2)
         track.verify = self
