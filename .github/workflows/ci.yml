@@ -74,7 +74,7 @@ jobs:
 
     - name: Dependency packages (pip)
       run: |
-        python -m pip install --upgrade pip setuptools==60.1.0 wheel
+        python -m pip install --upgrade pip setuptools wheel
         python -m pip install --user cx_Freeze setuptools_scm
 
     - name: Set environment variables
@@ -116,7 +116,7 @@ jobs:
 
     - name: Dependency packages (pip)
       run: |
-        python -m pip install --upgrade pip setuptools==60.1.0 wheel
+        python -m pip install --upgrade pip setuptools wheel
         python -m pip install --user cx_Freeze setuptools_scm
 
     - name: Set environment variables
