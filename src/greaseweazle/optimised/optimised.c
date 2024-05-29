@@ -6,6 +6,7 @@
 #include "mac.h"
 #include "c64.h"
 #include "apple2.h"
+#include "apple_gcr_6a2.h"
 
 #define FLUXOP_INDEX   1
 #define FLUXOP_SPACE   2
@@ -261,9 +262,9 @@ py_decode_mac_gcr(PyObject *self, PyObject *args)
     if (out == NULL)
         goto fail;
 
-    gcr_decode_bytes((const uint8_t *)in.buf,
-                     (uint8_t *)PyBytes_AsString(out),
-                     in.len);
+    apple_gcr_6a2_decode_bytes((const uint8_t *)in.buf,
+                               (uint8_t *)PyBytes_AsString(out),
+                               in.len);
 
 fail:
     PyBuffer_Release(&in);
@@ -283,9 +284,9 @@ py_encode_mac_gcr(PyObject *self, PyObject *args)
     if (out == NULL)
         goto fail;
 
-    gcr_encode_bytes((const uint8_t *)in.buf,
-                     (uint8_t *)PyBytes_AsString(out),
-                     in.len);
+    apple_gcr_6a2_encode_bytes((const uint8_t *)in.buf,
+                               (uint8_t *)PyBytes_AsString(out),
+                               in.len);
 
 fail:
     PyBuffer_Release(&in);

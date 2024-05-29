@@ -13,39 +13,6 @@
 
 #define LOOKUP_LEN (MAC_SECTOR_LENGTH / 3)
 
-static int gcr_decode_byte(uint8_t gcr)
-{
-    switch (gcr)
-    {
-#define GCR_ENTRY(gcr, data) case gcr: return data;
-#include "mac_gcr.h"
-#undef GCR_ENTRY
-    }
-    return -1;
-}
-
-void gcr_decode_bytes(const uint8_t *input, uint8_t *output, int len)
-{
-    while (--len >= 0)
-        *output++ = (uint8_t)gcr_decode_byte(*input++);
-}
-
-static int gcr_encode_byte(uint8_t x)
-{
-    switch (x) {
-#define GCR_ENTRY(gcr, data) case data: return gcr;
-#include "mac_gcr.h"
-#undef GCR_ENTRY
-    }
-    return -1;
-}
-
-void gcr_encode_bytes(const uint8_t *input, uint8_t *output, int len)
-{
-    while (--len >= 0)
-        *output++ = (uint8_t)gcr_encode_byte(*input++);
-}
-
 int decode_mac_sector(const uint8_t *input, uint8_t *output)
 {
     const uint8_t *in = input;

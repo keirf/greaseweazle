@@ -6,7 +6,7 @@ static int decode_data_gcr(uint8_t x)
     switch (x)
     {
 #define GCR_ENTRY(gcr, data) case gcr: return data;
-#include "c64_gcr.h"
+#include "c64_gcr_code.h"
 #undef GCR_ENTRY
     }
     return -1;
@@ -16,7 +16,7 @@ static int encode_data_gcr(uint8_t x)
 {
     switch (x) {
 #define GCR_ENTRY(gcr, data) case data: return gcr;
-#include "c64_gcr.h"
+#include "c64_gcr_code.h"
 #undef GCR_ENTRY
     }
     return -1;

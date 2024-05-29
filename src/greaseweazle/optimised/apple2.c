@@ -6,28 +6,8 @@
  * https://github.com/mamedev/mame/blob/7914a6083a3b3a8c243ae6c3b8cb50b023f21e0e/src/lib/formats/ap2_dsk.cpp
  */
 
+#include "apple_gcr_6a2.h"
 #include "apple2.h"
-
-static int decode_data_gcr(uint8_t x)
-{
-    switch (x)
-    {
-#define GCR_ENTRY(gcr, data) case gcr: return data;
-#include "apple2_gcr.h"
-#undef GCR_ENTRY
-    }
-    return -1;
-}
-
-static int encode_data_gcr(uint8_t x)
-{
-    switch (x) {
-#define GCR_ENTRY(gcr, data) case data: return gcr;
-#include "apple2_gcr.h"
-#undef GCR_ENTRY
-    }
-    return -1;
-}
 
 int decode_apple2_sector(const uint8_t *input, uint8_t *output)
 {
@@ -35,7 +15,7 @@ int decode_apple2_sector(const uint8_t *input, uint8_t *output)
     uint8_t checksum = 0;
 
     for (i = 0; i < APPLE2_ENCODED_SECTOR_LENGTH; i++) {
-        checksum ^= decode_data_gcr(*input++);
+        checksum ^= apple_gcr_6a2_decode_byte(*input++);
 
         if (i >= 86) {
             /* 6 bit */
@@ -52,7 +32,7 @@ int decode_apple2_sector(const uint8_t *input, uint8_t *output)
     }
 
     checksum &= 0x3f;
-    return (checksum != decode_data_gcr(*input));
+    return (checksum != apple_gcr_6a2_decode_byte(*input));
 }
 
 void encode_apple2_sector(const uint8_t *input, uint8_t *output)
@@ -77,10 +57,10 @@ void encode_apple2_sector(const uint8_t *input, uint8_t *output)
             }
         }
         checksum ^= value;
-        *output++ = encode_data_gcr(checksum);
+        *output++ = apple_gcr_6a2_encode_byte(checksum);
         checksum = value;
     }
-    *output++ = encode_data_gcr(checksum);
+    *output++ = apple_gcr_6a2_encode_byte(checksum);
 #undef TWOBIT_COUNT
 }
 
