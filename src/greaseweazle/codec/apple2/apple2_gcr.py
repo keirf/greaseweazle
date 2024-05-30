@@ -137,11 +137,8 @@ class Apple2GCR(codec.Codec):
             offs += dat_offs[0]
 
             # Decode data
-            offs += 3*8
-            sec = bits[offs:offs+344*8].tobytes()
-            if len(sec) != 344:
-                continue
-            sec, csum = optimised.decode_apple2_sector(sec)
+            sec, csum = optimised.decode_apple2_sector(
+                bits[offs+3*8:offs+400*8].tobytes())
             if csum != 0:
                 continue
 

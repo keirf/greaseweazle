@@ -311,7 +311,7 @@ py_decode_mac_sector(PyObject *self, PyObject *args)
         goto fail;
 
     status = decode_mac_sector((const uint8_t *)in.buf,
-                                (uint8_t *)PyBytes_AsString(out));
+                               (uint8_t *)PyBytes_AsString(out));
 
     res = Py_BuildValue("Oi", out, status);
 
@@ -363,8 +363,8 @@ py_decode_c64_gcr(PyObject *self, PyObject *args)
         goto fail;
 
     decode_c64_gcr((const uint8_t *)in.buf,
-                     (uint8_t *)PyBytes_AsString(out),
-                     out_len);
+                   (uint8_t *)PyBytes_AsString(out),
+                   out_len);
 
 fail:
     PyBuffer_Release(&in);
@@ -390,8 +390,8 @@ py_encode_c64_gcr(PyObject *self, PyObject *args)
         goto fail;
 
     encode_c64_gcr((const uint8_t *)in.buf,
-                     (uint8_t *)PyBytes_AsString(out),
-                     in.len);
+                   (uint8_t *)PyBytes_AsString(out),
+                   in.len);
 
 fail:
     PyBuffer_Release(&in);
@@ -408,15 +408,13 @@ py_decode_apple2_sector(PyObject *self, PyObject *args)
 
     if (!PyArg_ParseTuple(args, "y*", &in))
         return NULL;
-    if (in.len < APPLE2_ENCODED_SECTOR_LENGTH+2)
-        goto fail;
 
     out = PyBytes_FromStringAndSize(NULL, APPLE2_SECTOR_LENGTH);
     if (out == NULL)
         goto fail;
 
-    status = decode_apple2_sector((const uint8_t *)in.buf,
-                                (uint8_t *)PyBytes_AsString(out));
+    status = decode_apple2_sector((const uint8_t *)in.buf, in.len,
+                                  (uint8_t *)PyBytes_AsString(out));
 
     res = Py_BuildValue("Oi", out, status);
 
