@@ -3,6 +3,14 @@
 ** Keir Fraser <keir.xen@gmail.com>
 ************************************
 
+** v1.17 - 31 May 2024
+ - Apple II: Supported via new apple2.gcr track format
+   - Support PO/DO image conversion
+   - New diskdef formats: apple2.appledos.140, apple2.prodos.140
+ - IMD: Fix import of 360-rpm disks with single-density track 0
+ - Linux: Update udev rules to use the systemd tag "uaccess"
+ - CTRaw: Ignore speed info on import as it's often bogus
+
 ** v1.16.3 - 1 March 2024
  - FDI: Fix import of FDI image files
  - gw read, write: --dd option renamed to --densel
