@@ -83,7 +83,6 @@ class DiskDef:
     def __init__(self) -> None:
         self.cyls: Optional[int] = None
         self.heads: Optional[int] = None
-        self.step = 1
         self.track_map: Dict[Tuple[int,int],TrackDef] = dict()
 
     def add_param(self, key: str, val: str) -> None:
@@ -95,10 +94,6 @@ class DiskDef:
             n = int(val)
             error.check(1 <= n <= 2, '%s out of range' % key)
             self.heads = n
-        elif key == 'step':
-            n = int(val)
-            error.check(1 <= n <= 4, '%s out of range' % key)
-            self.step = n
         else:
             raise error.Fatal('unrecognised disk option: %s' % key)
 
@@ -114,8 +109,6 @@ class DiskDef:
         s += ':h=0'
         if self.heads > 1:
             s += '-' + str(self.heads-1)
-        if self.step > 1:
-            s += ':step=' + str(self.step)
         return s
 
     def mk_track(self, cyl: int, head: int) -> Optional[codec.Codec]:
