@@ -153,7 +153,7 @@ class SCP(Image):
         if sum(dat[16:]) & 0xffffffff != checksum:
             print('SCP: WARNING: Bad image checksum')
 
-        index_cued = flags & 1 or nr_revs == 1
+        index_cued = (flags & 1) == 1 or nr_revs == 1
 
         # Some tools generate a short TLUT. We handle this by truncating the
         # TLUT at the first Track Data Header.

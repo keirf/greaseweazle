@@ -69,7 +69,7 @@ class TD0(Image):
                         'TD0: bad track header crc')
             off += 4
 
-            track_is_fm = (head & 128) or global_is_fm
+            track_is_fm = (head & 128) == 128 or global_is_fm
             head &= 127
 
             fmt = ibm.IBMTrack_FixedDef(['ibm.mfm','ibm.fm'][track_is_fm])
