@@ -3,6 +3,11 @@
 ** Keir Fraser <keir.xen@gmail.com>
 ************************************
 
+** v1.17.1 - 17 June 2024
+ - TD0: Fix import of mixed FM/MFM disks
+ - diskdef: Remove "step=" option
+ - diskdef: Update BBC and MM/1 formats
+
 ** v1.17 - 31 May 2024
  - Apple II: Supported via new apple2.gcr track format
    - Support PO/DO image conversion
