@@ -12,9 +12,13 @@ from typing import Callable
 
 import argparse, os, sys, serial, struct, time, re, platform
 import importlib
-import serial.tools.list_ports
 from collections import OrderedDict
 import itertools as it
+
+if os.name == 'nt':
+    from .list_ports_windows import comports # type: ignore
+else:
+    from serial.tools.list_ports import comports
 
 from greaseweazle import error
 from greaseweazle import usb as USB
@@ -364,7 +368,7 @@ def score_port(x, old_port=None):
 
 def find_port(old_port=None):
     best_score, best_port = 0, None
-    for x in serial.tools.list_ports.comports():
+    for x in comports():
         score = score_port(x, old_port)
         if score > best_score:
             best_score, best_port = score, x
@@ -373,7 +377,7 @@ def find_port(old_port=None):
     raise serial.SerialException('Cannot find the Greaseweazle device')
 
 def port_info(devname):
-    for x in serial.tools.list_ports.comports():
+    for x in comports():
         if x.device == devname:
             return x
     return None
