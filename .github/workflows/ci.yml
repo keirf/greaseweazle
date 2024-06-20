@@ -92,13 +92,12 @@ jobs:
         7z x -oipf ipf.zip
         cp -a ipf/capsimg_binary/CAPSImg.dll $GW/
         rm -rf ipf ipf.zip
-        7z a $GW-win32.zip $GW
 
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
       with:
         name: greaseweazle-ci-${{ steps.vars.outputs.ver }}-win32
-        path: greaseweazle-${{ steps.vars.outputs.ver }}-win32.zip
+        path: greaseweazle-${{ steps.vars.outputs.ver }}
 
   build-win64:
     runs-on: windows-2022
@@ -134,10 +133,9 @@ jobs:
         7z x -oipf ipf.zip
         cp -a ipf/capsimg_binary/x64/CAPSImg.dll $GW/
         rm -rf ipf ipf.zip
-        7z a $GW-win64.zip $GW
 
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
       with:
         name: greaseweazle-ci-${{ steps.vars.outputs.ver }}-win64
-        path: greaseweazle-${{ steps.vars.outputs.ver }}-win64.zip
+        path: greaseweazle-${{ steps.vars.outputs.ver }}
