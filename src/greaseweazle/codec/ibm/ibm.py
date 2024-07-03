@@ -97,6 +97,19 @@ def decode(dat):
 
 crc16 = crcmod.predefined.Crc('crc-ccitt-false')
 
+# Create logical sector map in rotational order
+def sec_map(nsec: int, interleave: int, cskew: int, hskew: int,
+            cyl: int, head: int) -> List[int]:
+    sec_map, pos = [-1] * nsec, 0
+    if nsec != 0:
+        pos = (cyl*cskew + head*hskew) % nsec
+    for i in range(nsec):
+        while sec_map[pos] != -1:
+            pos = (pos + 1) % nsec
+        sec_map[pos] = i
+        pos = (pos + interleave) % nsec
+    return sec_map
+
 def sec_sz(n):
     return 128 << n if n <= 7 else 128 << 8
 
@@ -762,16 +775,6 @@ class IBMTrack_Fixed(IBMTrack):
         t.time_per_rev = 60 / rpm
         t.clock = t.time_per_rev / tracklen_bc
 
-        # Create logical sector map in rotational order
-        sec_map, pos = [-1] * nsec, 0
-        if nsec != 0:
-            pos = (cyl*config.cskew + head*config.hskew) % nsec
-        for i in range(nsec):
-            while sec_map[pos] != -1:
-                pos = (pos + 1) % nsec
-            sec_map[pos] = i
-            pos = (pos + config.interleave) % nsec
-
         pos = gap4a
         if gap1 is not None:
             pos += t.gap_presync
@@ -780,11 +783,11 @@ class IBMTrack_Fixed(IBMTrack):
 
         id0 = config.id
         h = head if config.h is None else config.h
-        for i in range(nsec):
-            sec = sec_map[i]
+        for sec in sec_map(nsec, config.interleave,
+                           config.cskew, config.hskew, cyl, head):
             pos += t.gap_presync
             idam = IDAM(pos*16, (pos+synclen+4+2)*16, 0xffff,
-                        c = cyl, h = h, r= id0+sec, n = sec_n(sec))
+                        c = cyl, h = h, r = id0+sec, n = sec_n(sec))
             pos += synclen + 4 + 2 + gap2 + t.gap_presync
             size = 128 << idam.n
             datsz = size*2 if mark_dam == Mark.DAM_DEC_MMFM else size
