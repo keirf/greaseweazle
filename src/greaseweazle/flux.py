@@ -108,6 +108,11 @@ class Flux:
         if self.index_cued:
             return
 
+        error.check(len(self.index_list) >= 2,
+                    '''\
+                    Not enough revolutions of flux data to cue at index.
+                    Try dumping more revolutions (larger --revs value).''')
+
         # Clip the initial partial revolution.
         to_index = self.index_list[0]
         for i in range(len(self.list)):
