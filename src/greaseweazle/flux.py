@@ -28,6 +28,7 @@ class Flux:
                  sample_freq: float,
                  index_cued = True) -> None:
         self.index_list = index_list
+        self.sector_list: Optional[List[List[float]]] = None
         self.list = flux_list
         self.sample_freq = sample_freq
         self.splice: Optional[float] = None
@@ -38,16 +39,50 @@ class Flux:
         s = "\nFlux: %.2f MHz" % (self.sample_freq*1e-6)
         s += ("\n Total: %u samples, %.2fms\n"
               % (len(self.list), sum(self.list)*1000/self.sample_freq))
-        rev = 0
-        for t in self.index_list:
+        for rev, t in enumerate(self.index_list):
             s += " Revolution %u: %.2fms\n" % (rev, t*1000/self.sample_freq)
-            rev += 1
+            if self.sector_list:
+                for sec, t in enumerate(self.sector_list[rev]):
+                    s += ("    Sector %u: %.2fms\n"
+                          % (sec, t*1000/self.sample_freq))
         return s[:-1]
 
 
     def summary_string(self) -> str:
         return ("Raw Flux (%u flux in %.2fms)"
                 % (len(self.list), sum(self.list)*1000/self.sample_freq))
+
+
+    def identify_hard_sectors(self) -> None:
+        assert not self.sector_list
+        error.check(len(self.index_list) > 3,
+                    "Not enough index marks for a hard-sectored track")
+        self.cue_at_index()
+        x = [self.index_list[0], self.index_list[2]]
+        x.sort()
+        thresh = x[1] * 3 / 4
+        ticks_to_index: float = 0
+        short_ticks: float = 0
+        sectors: List[float] = []
+        index_list = self.index_list
+        self.index_list = []
+        self.sector_list = []
+        for t in index_list:
+            if t < thresh:
+                short_ticks += t
+            else:
+                if short_ticks != 0:
+                    sectors.append(short_ticks)
+                    ticks_to_index += short_ticks
+                    self.index_list.append(ticks_to_index)
+                    self.sector_list.append(sectors)
+                    sectors = []
+                    short_ticks = ticks_to_index = 0
+                ticks_to_index += t
+                sectors.append(t)
+        self.index_cued = (
+            (len(self.index_list) >= 2) and
+            (len(self.sector_list[0]) == len(self.sector_list[1])))
 
 
     def append(self, flux: Flux) -> None:
@@ -64,6 +99,8 @@ class Flux:
         rev0 = i_list[0] + sum(self.list) - sum(self.index_list)
         self.index_list += [rev0] + i_list[1:]
         self.list += f_list
+        # TODO: Work with hard-sectored disks
+        self.sector_list = None
 
 
     def cue_at_index(self) -> None:
@@ -83,6 +120,8 @@ class Flux:
             self.list = []
         self.index_list = self.index_list[1:]
         self.index_cued = True
+        if self.sector_list:
+            self.sector_list = self.sector_list[1:]
 
 
     def set_nr_revs(self, revs:int) -> None:
@@ -93,6 +132,8 @@ class Flux:
 
         if len(self.index_list) > revs:
             self.index_list = self.index_list[:revs]
+            if self.sector_list:
+                self.sector_list = self.sector_list[:revs]
             to_index = sum(self.index_list)
             for i in range(len(self.list)):
                 to_index -= self.list[i]
@@ -113,7 +154,8 @@ class Flux:
             if self.list:
                 self.list = l + [to_index + self.list[0]] + self.list[1:]
             self.index_list = self.index_list[:nr] + self.index_list
-
+            if self.sector_list:
+                self.sector_list = self.sector_list[:nr] + self.sector_list
 
     def flux_for_writeout(self, cue_at_index) -> WriteoutFlux:
 

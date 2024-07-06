@@ -491,7 +491,7 @@ class IBMTrack(codec.Codec):
 
         # Convert to offsets within track
         areas.sort(key=lambda x:x.start)
-        index = iter(raw.revolutions)
+        index = iter([x.nr_bits for x in raw.revolutions])
         p, n = 0, next(index)
         for a in areas:
             if a.start >= n:
@@ -593,7 +593,7 @@ class IBMTrack(codec.Codec):
 
         # Convert to offsets within track
         areas.sort(key=lambda x:x.start)
-        index = iter(raw.revolutions)
+        index = iter([x.nr_bits for x in raw.revolutions])
         p, n = 0, next(index)
         for a in areas:
             if a.start >= n:

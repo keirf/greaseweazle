@@ -49,6 +49,13 @@ def process_input_track(
     if track is None:
         return None
 
+    if args.hard_sectors:
+        track = track.flux()
+        track.identify_hard_sectors()
+        assert track.sector_list is not None # mypy
+        print('T%u.%u: Converted to %u hard sectors'
+              % (cyl, head, len(track.sector_list[-1])))
+
     if args.adjust_speed is not None:
         if isinstance(track, codec.Codec):
             track = track.master_track()
@@ -123,6 +130,8 @@ def main(argv) -> None:
                         help="do not overwrite an existing file")
     parser.add_argument("--pll", type=track.PLL, metavar="PLLSPEC",
                         help="manual PLL parameter override")
+    parser.add_argument("--hard-sectors", action="store_true",
+                        help="convert index positions to hard sectors")
     parser.add_argument("in_file", help="input filename")
     parser.add_argument("out_file", help="output filename")
     parser.description = description

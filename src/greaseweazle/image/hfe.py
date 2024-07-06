@@ -71,14 +71,15 @@ class HFEOpts(ImageOpts):
     """
 
     w_settings = [ 'bitrate', 'version', 'interface', 'encoding',
-                   'double_step' ]
-    
+                   'double_step', 'uniform' ]
+
     def __init__(self) -> None:
         self._bitrate: Optional[int] = None
         self._version = 1
         self._interface = 0xff
         self._encoding = 0xff
         self.double_step = False
+        self.uniform = False
 
     @property
     def bitrate(self) -> Optional[int]:
@@ -262,9 +263,12 @@ class HFE(Image):
             flux.cue_at_index()
             raw = PLLTrack(clock = 5e-4 / self.opts.bitrate, data = flux)
             bits, bit_ticks = raw.get_revolution(0)
+            if self.opts.uniform:
+                bit_ticks = None
             mt = MasterTrack(
                 bits = bits, time_per_rev = flux.time_per_rev,
-                bit_ticks = bit_ticks)
+                bit_ticks = bit_ticks,
+                hardsector_bits = raw.revolutions[0].hardsector_bits)
         self.to_track[cyl,side] = HFETrack(mt)
 
 
@@ -417,6 +421,8 @@ def hfev3_mk_track(cyl: int, head: int, track_v1: HFETrack) -> HFETrack:
             bits.frombytes(bytes(1))
             ticks += [rate]*8
         else:
+            error.check((x & 0xf0) != 0xf0,
+                        f'T{cyl}.{head}: HFEv3: unrecognised opcode {x:02x}')
             bits.frombytes(bytes([x]))
             ticks += [rate]*8
 
@@ -443,10 +449,12 @@ def hfev3_mk_track(cyl: int, head: int, track_v1: HFETrack) -> HFETrack:
 # HFEv3_Chunk: Represents a consecutive range of input bitcells with identical
 # bitcell timings and weakness property.
 class HFEv3_Chunk:
-    def __init__(self, nbits: int, time_per_bit: float, is_random: bool):
+    def __init__(self, nbits: int, time_per_bit: float, is_random: bool,
+                 emit_index: bool):
         self.nbits = nbits
         self.time_per_bit = time_per_bit
         self.is_random = is_random
+        self.emit_index = emit_index
     def __str__(self) -> str:
         s = "%d bits, %.4fus per bit" % (self.nbits, self.time_per_bit*1e6)
         if self.is_random:
@@ -461,7 +469,16 @@ class HFEv3_Generator:
             self.ticks_per_rev = sum(track.bit_ticks)
         else:
             self.ticks_per_rev = len(track.bits)
-        self.time_per_tick = self.track.time_per_rev / self.ticks_per_rev
+        self.time_per_tick = track.time_per_rev / self.ticks_per_rev
+        # index_positions: Bit positions at which to insert index pulses
+        index_positions = track.hardsector_bits
+        if not index_positions:
+            index_positions = [ 0 ]
+        else:
+            index_positions[-1] //= 2
+            index_positions = list(it.accumulate([ 0 ] + index_positions))
+        index_positions.append(len(track.bits))
+        self.index_positions = index_positions
         # tick_iter: An iterator over ranges of consecutive bitcells with
         # identical ticks per bitcell.
         self.ticks: List[Tuple[int,int,float]]
@@ -483,7 +500,7 @@ class HFEv3_Generator:
                              it.chain(track.weak, [(len(track.bits),0)]))
         self.weak_cur = next(self.weak_iter)
         # out: The raw HFEv3 output bytestream that we are generating.
-        self.out = bytearray([HFEv3_Op.Index])
+        self.out = bytearray()
         # time: Input track current time, in seconds.
         # hfe_time: HFE track output current time, in seconds.
         self.time = self.hfe_time = 0.0
@@ -492,6 +509,8 @@ class HFEv3_Generator:
         # rate: Current HFE output rate, as set by HFEv3_Op.Bitrate.
         # rate_change_pos: Byte position we last updated rate in HFE output.
         self.rate, self.rate_change_pos = -1, 0
+        # sec: Which sector are we emitting
+        self.sec = 0
         # chunk: Chunk of input bitcells currently being processed.
         self.chunk = self.next_chunk()
 
@@ -499,11 +518,17 @@ class HFEv3_Generator:
         # All done? Then return nothing.
         if self.pos >= len(self.track.bits):
             return None
+        # Position to next sector pulse
+        emit_index = False
+        while (n := self.index_positions[self.sec] - self.pos) <= 0:
+            assert n == 0 and not emit_index
+            self.sec += 1
+            emit_index = True
         # Position among bitcells with identical timing.
         while self.pos >= self.tick_cur.e:
             self.tick_cur = next(self.tick_iter)
         assert self.pos >= self.tick_cur.s
-        n = self.tick_cur.e - self.pos
+        n = min(n, self.tick_cur.e - self.pos)
         # Position relative to weak ranges.
         while self.pos >= self.weak_cur.e:
             self.weak_cur = next(self.weak_iter)
@@ -514,7 +539,7 @@ class HFEv3_Generator:
             n = min(n, self.weak_cur.e - self.pos)
             is_random = True
         return HFEv3_Chunk(n, self.time_per_tick * self.tick_cur.val,
-                           is_random)
+                           is_random, emit_index)
 
     def increment_position(self, n: int) -> None:
         c = self.chunk
@@ -601,6 +626,11 @@ def hfev3_get_image(hfe: HFE) -> bytes:
             rate_distance = 64 # byte-cells
             tpb = c.time_per_bit + (x.time - x.hfe_time) / (rate_distance*8)
 
+            if c.emit_index:
+                c.emit_index = False
+                x.out.append(HFEv3_Op.Index)
+                diff -= 8
+
             # Do a rate change if the rate has significantly changed or,
             # for a change of +/-1, if we haven't changed rate in a while.
             rate = round(tpb * 36e6)
@@ -625,7 +655,16 @@ def hfev3_get_image(hfe: HFE) -> bytes:
             if c.is_random:
                 x.out.append(HFEv3_Op.Rand)
             else:
-                x.out.append(x.track.bits[x.pos:x.pos+n].tobytes()[0]>>(8-n))
+                # Extract next bitcells into a stream-ready byte.
+                b = x.track.bits[x.pos:x.pos+n].tobytes()[0] >> (8-n)
+                # If the byte looks like an opcode, skip a bit.
+                if (b & 0xf0) == 0xf0:
+                    n = 7
+                    b >>= 1
+                    x.out.append(HFEv3_Op.SkipBits)
+                    x.out.append(8 - n)
+                # Emit the fixed-up byte.
+                x.out.append(b)
 
             # Update tallies.
             x.increment_position(n)
@@ -645,7 +684,9 @@ def hfev3_get_image(hfe: HFE) -> bytes:
             '''\
             HFEv3: Track too long to fit in image!
             Are you trying to convert raw flux (SCP, KF, etc)?
-            If so: You can't (yet). If not: Report a bug.''')
+            If so: Try specifying 'uniform': eg. name.hfe::version=3:uniform
+                   (will break variable-rate copy protections such as Copylock)
+            If not: Report a bug.''')
 
         nr_blocks = (nr_bytes + 0xff) // 0x100
         for x in s:

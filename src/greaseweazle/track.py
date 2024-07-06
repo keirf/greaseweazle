@@ -100,13 +100,15 @@ class MasterTrack:
     # bit_ticks: Per-bitcell time values, in unitless 'ticks'
     # splice: Location of the track splice, in bitcells, after the index
     # weak: List of (start, length) weak ranges
+    # hardsector_bits: Optional list of hard-sector lengths, in bitcells
     def __init__(
             self,
             bits: Union[bitarray, bytes],
             time_per_rev: float,
             bit_ticks: Optional[List[float]] = None,
             splice: int = 0,
-            weak: List[Tuple[int,int]] = []
+            weak: List[Tuple[int,int]] = [],
+            hardsector_bits: Optional[List[int]] = None
     ) -> None:
         self.bits: bitarray
         if isinstance(bits, bytes):
@@ -120,6 +122,7 @@ class MasterTrack:
         self.weak = weak
         self.precomp: Optional[Precomp] = None
         self.force_random_weak = True
+        self.hardsector_bits = hardsector_bits
 
     def __str__(self) -> str:
         s = "\nMaster Track: splice @ %d\n" % self.splice
@@ -293,6 +296,11 @@ class MasterTrack:
         flux.splice = sum(bit_ticks[:self.splice])
         return flux
 
+class PLLRevolution:
+    def __init__(self, nr_bits: int,
+                 hardsector_bits: Optional[List[int]] = None) -> None:
+        self.nr_bits = nr_bits
+        self.hardsector_bits = hardsector_bits
 
 # Track data generated from flux.
 class PLLTrack:
@@ -313,7 +321,7 @@ class PLLTrack:
                                else pll.lowpass_thresh)
         self.bitarray = bitarray(endian='big')
         self.timearray: List[float] = []
-        self.revolutions: List[int] = []
+        self.revolutions: List[PLLRevolution] = []
         self.import_flux_data(data)
 
 
@@ -323,15 +331,15 @@ class PLLTrack:
             b, _ = self.get_revolution(rev)
             s += "Revolution %u (%u bits): " % (rev, len(b))
             s += str(binascii.hexlify(b.tobytes())) + "\n"
-        b = self.bitarray[sum(self.revolutions):]
+        b = self.bitarray[sum([x.nr_bits for x in self.revolutions]):]
         s += "Tail (%u bits): " % (len(b))
         s += str(binascii.hexlify(b.tobytes())) + "\n"
         return s[:-1]
 
 
     def get_revolution(self, nr) -> Tuple[bitarray, List[float]]:
-        start = sum(self.revolutions[:nr])
-        end = start + self.revolutions[nr]
+        start = sum([x.nr_bits for x in self.revolutions[:nr]])
+        end = start + self.revolutions[nr].nr_bits
         return self.bitarray[start:end], self.timearray[start:end]
 
 
@@ -382,18 +390,37 @@ class PLLTrack:
         tail = max(0, sum(flux.index_list) - sum(flux_list) + clock*freq*2)
         flux_iter = it.chain(flux_list, [tail])
 
+        revolutions: List[int] = []
         try:
             optimised.flux_to_bitcells(
-                self.bitarray, self.timearray, self.revolutions,
+                self.bitarray, self.timearray, revolutions,
                 index_iter, flux_iter,
                 freq, clock, clock_min, clock_max,
                 self.pll_period_adj, self.pll_phase_adj)
         except AttributeError:
             flux_to_bitcells(
-                self.bitarray, self.timearray, self.revolutions,
+                self.bitarray, self.timearray, revolutions,
                 index_iter, flux_iter,
                 freq, clock, clock_min, clock_max,
                 self.pll_period_adj, self.pll_phase_adj)
+
+        hardsector_bits = None
+        for i, nr_bits in enumerate(revolutions):
+            if flux.sector_list is not None:
+                start = sum(revolutions[:i])
+                cell_sum = it.accumulate(self.timearray[start:start+nr_bits])
+                hardsector_bits = []
+                for sector_end in it.accumulate(map(lambda x: x/freq,
+                                                    flux.sector_list[i])):
+                    nbits = 0
+                    try:
+                        while next(cell_sum) < sector_end:
+                            nbits += 1
+                        nbits += 1
+                    except StopIteration:
+                        pass
+                    hardsector_bits.append(nbits)
+            self.revolutions.append(PLLRevolution(nr_bits, hardsector_bits))
 
 
 def flux_to_bitcells(bit_array, time_array, revolutions,
