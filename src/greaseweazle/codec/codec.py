@@ -163,8 +163,8 @@ def mk_trackdef(format_name: str) -> TrackDef:
         return c64_gcr.C64GCRDef(format_name)
     if format_name in ['hp.mmfm']:
         return hp_mmfm.HPMMFMDef(format_name)
-    if format_name in ['northstar.mfm']:
-        return northstar.NorthStarMFMDef(format_name)
+    if format_name in ['northstar']:
+        return northstar.NorthStarDef(format_name)
     if format_name in ['apple2.gcr']:
         return apple2_gcr.Apple2GCRDef(format_name)
     if format_name in ['bitcell']:

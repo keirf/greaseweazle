@@ -10,10 +10,11 @@ import struct
 from bitarray import bitarray
 import crcmod.predefined
 import itertools as it
+from enum import Enum
 
 from greaseweazle import error
 from greaseweazle.codec import codec
-from greaseweazle.codec.ibm.ibm import decode, encode, mfm_encode
+from greaseweazle.codec.ibm.ibm import decode, encode, fm_encode, mfm_encode
 from greaseweazle.track import MasterTrack, PLL, PLLTrack
 from greaseweazle.flux import HasFlux
 
@@ -24,6 +25,9 @@ bad_sector = b'-=[BAD SECTOR]=-'
 mfm_sync = bitarray(endian='big')
 mfm_sync.frombytes(mfm_encode(encode(b'\x00\xfb')))
 
+fm_sync = bitarray(endian='big')
+fm_sync.frombytes(fm_encode(encode(b'\x00\xfb')))
+
 def csum(dat):
     y = 0
     for x in dat:
@@ -31,15 +35,31 @@ def csum(dat):
         y = ((y << 1) | (y >> 7)) & 255
     return y
 
-class NorthStarMFM(codec.Codec):
+class Mode(Enum):
+    FM, MFM = range(2)
+    def __str__(self):
+        NAMES = [ 'North Star FM', 'North Star MFM' ]
+        return f'{NAMES[self.value]}'
+
+class NorthStar(codec.Codec):
 
     time_per_rev = 0.2
-    clock = 2e-6
-    bps = 512
 
     verify_revs: float = default_revs
 
     def __init__(self, cyl: int, head: int, config):
+        if config.mode is Mode.FM:
+            self.clock = 4e-6
+            self.bps = 256
+            self.sync = fm_sync
+            self.presync_bytes = 17
+            self.sync_bytes = 1
+        else:
+            self.clock = 2e-6
+            self.bps = 512
+            self.sync = mfm_sync
+            self.presync_bytes = 34
+            self.sync_bytes = 2
         self.cyl, self.head = cyl, head
         self.config = config
         self.sector: List[Optional[bytes]]
@@ -51,7 +71,7 @@ class NorthStarMFM(codec.Codec):
 
     def summary_string(self) -> str:
         nsec, nbad = self.nsec, self.nr_missing()
-        s = "North Star MFM (%d/%d sectors)" % (nsec - nbad, nsec)
+        s = "%s (%d/%d sectors)" % (self.config.mode, nsec - nbad, nsec)
         return s
 
     # private
@@ -111,13 +131,13 @@ class NorthStarMFM(codec.Codec):
                     continue
 
                 s, e = hardsector_bits[sec_id], hardsector_bits[sec_id+1]
-                offs = bits[s:e].search(mfm_sync)
+                offs = bits[s:e].search(self.sync)
                 if len(offs) == 0:
                     continue
-                off = offs[0]
-                data = decode(bits[s+off:s+off+(3+self.bps+1)*16].tobytes())
-                if csum(data[3:-1]) == data[-1]:
-                    self.add(sec_id, data[3:-1])
+                off = offs[0] + (1 + self.sync_bytes) * 16
+                data = decode(bits[s+off:s+off+(self.bps+1)*16].tobytes())
+                if csum(data[:-1]) == data[-1]:
+                    self.add(sec_id, data[:-1])
 
 
     def master_track(self) -> MasterTrack:
@@ -126,15 +146,15 @@ class NorthStarMFM(codec.Codec):
         slen = int((self.time_per_rev / self.clock / self.nsec / 16))
 
         for sec_id in range(self.nsec):
-            s  = encode(bytes(34))
-            s += encode(b'\xfb\xfb')
+            s  = encode(bytes(self.presync_bytes))
+            s += encode(b'\xfb' * self.sync_bytes)
             sector = self.sector[sec_id]
             data = bad_sector*(self.bps//16) if sector is None else sector
             s += encode(data + bytes([csum(data)]))
             s += encode(bytes(slen - len(s)//2))
             t += s
 
-        t = mfm_encode(t)
+        t = mfm_encode(t) if self.config.mode is Mode.MFM else fm_encode(t)
 
         hardsector_bits = [slen*16*i for i in range(self.nsec)]
 
@@ -150,11 +170,12 @@ class NorthStarMFM(codec.Codec):
                 and self.sector == readback_track.sector)
 
 
-class NorthStarMFMDef(codec.TrackDef):
+class NorthStarDef(codec.TrackDef):
 
     default_revs = default_revs
 
     def __init__(self, format_name: str):
+        self.mode: Optional[Mode] = None
         self.secs: Optional[int] = None
         self.finalised = False
 
@@ -162,6 +183,13 @@ class NorthStarMFMDef(codec.TrackDef):
         if key == 'secs':
             val = int(val)
             self.secs = val
+        elif key == 'mode':
+            if val == 'fm':
+                self.mode = Mode.FM
+            elif val == 'mfm':
+                self.mode = Mode.MFM
+            else:
+                raise error.Fatal('unrecognised mode %s' % val)
         else:
             raise error.Fatal('unrecognised track option %s' % key)
 
@@ -170,10 +198,12 @@ class NorthStarMFMDef(codec.TrackDef):
             return
         error.check(self.secs is not None,
                     'number of sectors not specified')
+        error.check(self.mode is not None,
+                    'mode not specified')
         self.finalised = True
 
-    def mk_track(self, cyl: int, head: int) -> NorthStarMFM:
-        return NorthStarMFM(cyl, head, self)
+    def mk_track(self, cyl: int, head: int) -> NorthStar:
+        return NorthStar(cyl, head, self)
 
 
 # Local variables:
