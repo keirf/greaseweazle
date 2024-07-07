@@ -9,10 +9,25 @@
 # This is free and unencumbered software released into the public domain.
 # See the file COPYING for more details, or visit <http://unlicense.org>.
 
-from greaseweazle.image.img import IMG
+import os
 
-class NSI(IMG):
-    default_format = 'northstar.mfm.ds'
+from greaseweazle import error
+from greaseweazle.image.img import IMG_AutoFormat
+
+class NSI(IMG_AutoFormat):
+
+    @staticmethod
+    def format_from_file(name: str) -> str:
+        size = os.path.getsize(name)
+        if size == 1*35*10*256:
+            return 'northstar.fm.ss'
+        if size == 2*35*10*256:
+            return 'northstar.fm.ds'
+        if size == 1*35*10*512:
+            return 'northstar.mfm.ss'
+        if size == 2*35*10*512:
+            return 'northstar.mfm.ds'
+        raise error.Fatal(f'NSI: {name}: unrecognised file size')
 
     def track_list(self):
         t, l = self.fmt.tracks, []
