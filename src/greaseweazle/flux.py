@@ -54,7 +54,8 @@ class Flux:
 
 
     def identify_hard_sectors(self) -> None:
-        assert not self.sector_list
+        if self.sector_list is not None:
+            return
         error.check(len(self.index_list) > 3,
                     "Not enough index marks for a hard-sectored track")
         self.cue_at_index()
