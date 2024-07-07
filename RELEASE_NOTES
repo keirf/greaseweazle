@@ -3,6 +3,13 @@
 ** Keir Fraser <keir.xen@gmail.com>
 ************************************
 
+** v1.18 - 7 July 2024
+ - Windows: Improved device detection, using USB-reported device strings
+ - gw convert: --hard-sectors converts input index marks into hard sectors
+ - hfev3: correctly export hard sectors as index marks
+ - hp.mmfm: Codec for MMFM format used by HP 9885/9895/7902 drives
+ - northstar: Codec for North Star hard-sectored FM and MFM disks
+
 ** v1.17.1 - 17 June 2024
  - TD0: Fix import of mixed FM/MFM disks
  - diskdef: Remove "step=" option
