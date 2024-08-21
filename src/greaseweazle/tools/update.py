@@ -84,6 +84,11 @@ def extract_update(usb, dat, args):
 
     return (major, minor), dat
 
+def gh_request_get(url, timeout):
+    rsp = requests.get(url, timeout=timeout)
+    if int(rsp.headers.get('X-RateLimit-Remaining', 1)) == 0:
+        raise requests.RequestException('GitHub API Rate Limit exceeded')
+    return rsp
 
 def download(json):
     # Look for a matching asset (greaseweazle-firmware-<ver>.zip)
@@ -96,15 +101,15 @@ def download(json):
     # Download and unzip the asset
     name = basename+'.upd'
     print('Downloading latest firmware: '+name)
-    rsp = requests.get(url, timeout=10)
+    rsp = gh_request_get(url, timeout=10)
     z = zipfile.ZipFile(io.BytesIO(rsp._content))
     return name, z.read(basename+'/'+name)
 
 
 def download_by_tag(tag_name):
     '''Download the latest Update File from GitHub.'''
-    rsp = requests.get('https://api.github.com/repos/keirf/'
-                       'greaseweazle-firmware/releases', timeout=5)
+    rsp = gh_request_get('https://api.github.com/repos/keirf/'
+                         'greaseweazle-firmware/releases', timeout=5)
     for release in rsp.json():
         if release['tag_name'] == tag_name:
             return download(release)
@@ -113,8 +118,8 @@ def download_by_tag(tag_name):
 
 def download_latest():
     '''Download the latest Update File from GitHub.'''
-    rsp = requests.get('https://api.github.com/repos/keirf/'
-                       'greaseweazle-firmware/releases/latest', timeout=5)
+    rsp = gh_request_get('https://api.github.com/repos/keirf/'
+                         'greaseweazle-firmware/releases/latest', timeout=5)
     return download(rsp.json())
 
 

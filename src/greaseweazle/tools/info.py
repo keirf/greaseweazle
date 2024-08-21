@@ -47,6 +47,8 @@ def print_info_line(name: str, value: str, tab=0) -> None:
 def latest_firmware() -> Tuple[int,int]:
     rsp = requests.get('https://api.github.com/repos/keirf/'
                        'greaseweazle-firmware/releases/latest', timeout=5)
+    if int(rsp.headers.get('X-RateLimit-Remaining', 1)) == 0:
+        raise requests.RequestException('GitHub API Rate Limit exceeded')
     tag = rsp.json()['tag_name']
     r = re.match(r'v(\d+)\.(\d+)', tag)
     assert r is not None
