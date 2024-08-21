@@ -149,6 +149,17 @@ class MasterTrack:
         s += ')'
         return s
 
+    def reverse(self) -> None:
+        bitlen = len(self.bits)
+        if bitlen == 0: return
+        self.bits.reverse()
+        if self.bit_ticks is not None:
+            self.bit_ticks.reverse()
+        self.splice = -self.splice % bitlen
+        self.weak = list(map(lambda x: (-x[0] % bitlen, x[1]), self.weak))
+        if self.hardsector_bits is not None:
+            self.hardsector_bits.reverse()
+
     def flux(self, revs: Optional[int] = None) -> Flux:
         flux = self._flux(for_writeout=False, cue_at_index=True, revs=revs)
         assert isinstance(flux, Flux)

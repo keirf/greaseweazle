@@ -43,6 +43,8 @@ def read_and_normalise(usb: USB.Unit, args, revs: int, ticks=0) -> Flux:
     else:
         flux = usb.read_track(revs=revs, ticks=ticks)
     flux._ticks_per_rev = args.drive_ticks_per_rev
+    if args.reverse:
+        flux.reverse()
     if args.adjust_speed is not None:
         flux.scale(args.adjust_speed / flux.time_per_rev)
     return flux
@@ -211,6 +213,8 @@ def main(argv) -> None:
                         help="manual PLL parameter override")
     parser.add_argument("--densel", "--dd", type=util.level, metavar="LEVEL",
                         help="drive interface density select on pin 2 (H,L)")
+    parser.add_argument("--reverse", action="store_true",
+                        help="reverse track data (flippy disk)")
     parser.add_argument("file", help="output filename")
     parser.description = description
     parser.prog += ' ' + argv[1]

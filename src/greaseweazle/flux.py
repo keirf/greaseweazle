@@ -130,6 +130,31 @@ class Flux:
             self.sector_list = self.sector_list[1:]
 
 
+    def reverse(self) -> None:
+
+        assert self.sector_list is None
+
+        was_index_cued = self.index_cued
+        flux_sum = sum(self.list)
+
+        self.index_cued = False
+        self.list.reverse()
+        self.index_list.reverse()
+
+        to_index = flux_sum - sum(self.index_list)
+        if to_index <= 0:
+            if to_index < 0:
+                self.list.insert(0, -to_index)
+                flux_sum += -to_index
+            self.index_list = self.index_list[1:]
+            self.index_cued = True
+        else:
+            self.index_list = [to_index] + self.index_list[:-1]
+
+        if was_index_cued:
+            self.index_list.append(flux_sum - sum(self.index_list))
+
+
     def set_nr_revs(self, revs:int) -> None:
 
         self.cue_at_index()

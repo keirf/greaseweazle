@@ -69,8 +69,14 @@ def write_from_image(usb: USB.Unit, args, image: image.Image) -> None:
         if isinstance(track, codec.Codec):
             track = track.master_track()
 
-        if args.precomp is not None and isinstance(track, MasterTrack):
-            track.precomp = args.precomp.track_precomp(cyl)
+        if isinstance(track, MasterTrack):
+            if args.reverse:
+                track.reverse()
+            if args.precomp is not None:
+                track.precomp = args.precomp.track_precomp(cyl)
+        elif args.reverse:
+            track = track.flux()
+            track.reverse()
         wflux = track.flux_for_writeout(cue_at_index = not no_index)
 
         # @factor adjusts flux times for speed variations between the
@@ -127,6 +133,8 @@ def write_from_image(usb: USB.Unit, args, image: image.Image) -> None:
             else:
                 v_flux = usb.read_track(revs = v_revs, ticks = v_ticks)
             v_flux._ticks_per_rev = drive_ticks_per_rev
+            if args.reverse:
+                v_flux.reverse()
             verified = verify.verify_track(v_flux)
             if verified:
                 verified_count += 1
@@ -205,6 +213,8 @@ def main(argv) -> None:
                         help="number of retries on verify failure")
     parser.add_argument("--precomp", type=PrecompSpec,
                         help="write precompensation")
+    parser.add_argument("--reverse", action="store_true",
+                        help="reverse track data (flippy disk)")
     densel_group = parser.add_mutually_exclusive_group(required=False)
     densel_group.add_argument(
         "--densel", "--dd", type=util.level, metavar="LEVEL",

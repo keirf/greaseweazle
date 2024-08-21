@@ -49,6 +49,10 @@ def process_input_track(
     if track is None:
         return None
 
+    if args.reverse:
+        track = track.flux()
+        track.reverse()
+
     if args.hard_sectors:
         track = track.flux()
         track.identify_hard_sectors()
@@ -132,6 +136,8 @@ def main(argv) -> None:
                         help="manual PLL parameter override")
     parser.add_argument("--hard-sectors", action="store_true",
                         help="convert index positions to hard sectors")
+    parser.add_argument("--reverse", action="store_true",
+                        help="reverse track data (flippy disk)")
     parser.add_argument("in_file", help="input filename")
     parser.add_argument("out_file", help="output filename")
     parser.description = description
