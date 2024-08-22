@@ -45,6 +45,10 @@ def process_input_track(
     cyl, head = t.cyl, t.head
     dat: Optional[HasFlux]
 
+    tspec = f'T{cyl}.{head}'
+    if t.physical_cyl != cyl or t.physical_head != head:
+        tspec += f' <- Image {t.physical_cyl}.{t.physical_head}'
+
     track = in_image.get_track(t.physical_cyl, t.physical_head)
     if track is None:
         return None
@@ -57,8 +61,8 @@ def process_input_track(
         track = track.flux()
         track.identify_hard_sectors()
         assert track.sector_list is not None # mypy
-        print('T%u.%u: Converted to %u hard sectors'
-              % (cyl, head, len(track.sector_list[-1])))
+        print('%s: Converted to %u hard sectors'
+              % (tspec, len(track.sector_list[-1])))
 
     if args.adjust_speed is not None:
         if isinstance(track, codec.Codec):
@@ -69,20 +73,20 @@ def process_input_track(
 
     if args.fmt_cls is None or isinstance(track, codec.Codec):
         dat = track
-        print("T%u.%u: %s" % (cyl, head, track.summary_string()))
+        print("%s: %s" % (tspec, track.summary_string()))
     else:
         dat = args.fmt_cls.decode_flux(cyl, head, track)
         if dat is None:
-            print("T%u.%u: WARNING: Out of range for format '%s': Track "
-                  "skipped" % (cyl, head, args.format))
+            print("%s: WARNING: Out of range for format '%s': Track "
+                  "skipped" % (tspec, args.format))
             return None
         assert isinstance(dat, codec.Codec)
         for pll in plls[1:]:
             if dat.nr_missing() == 0:
                 break
             dat.decode_flux(track, pll)
-        print("T%u.%u: %s from %s" % (cyl, head, dat.summary_string(),
-                                      track.summary_string()))
+        print("%s: %s from %s" % (tspec, dat.summary_string(),
+                                  track.summary_string()))
 
     return dat
 

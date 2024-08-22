@@ -46,26 +46,30 @@ def write_from_image(usb: USB.Unit, args, image: image.Image) -> None:
         if track is None and not args.erase_empty:
             continue
 
+        tspec = f'T{cyl}.{head}'
+        if t.physical_cyl != cyl or t.physical_head != head:
+            tspec += f' -> Drive {t.physical_cyl}.{t.physical_head}'
+
         usb.seek(t.physical_cyl, t.physical_head)
 
         if args.gen_tg43:
             usb.set_pin(2, cyl < 43)
 
         if track is None:
-            print("T%u.%u: Erasing Track" % (cyl, head))
+            print(f'{tspec}: Erasing Track')
             usb.erase_track(drive_ticks_per_rev * 1.1)
             continue
 
         if not isinstance(track, codec.Codec) and args.fmt_cls is not None:
             track = args.fmt_cls.decode_flux(cyl, head, track)
             if track is None:
-                print("T%u.%u: WARNING: Out of range for format '%s': Track "
-                      "skipped" % (cyl, head, args.format))
+                print("%s: WARNING: Out of range for format '%s': Track "
+                      "skipped" % (tspec, args.format))
                 continue
             assert isinstance(track, codec.Codec)
             error.check(track.nr_missing() == 0,
-                        'T%u.%u: %u missing sectors in input image'
-                        % (cyl, head, track.nr_missing()))
+                        '%s: %u missing sectors in input image'
+                        % (tspec, track.nr_missing()))
         if isinstance(track, codec.Codec):
             track = track.master_track()
 
@@ -96,9 +100,9 @@ def write_from_image(usb: USB.Unit, args, image: image.Image) -> None:
         verified = False
         for retry in range(args.retries+1):
             if args.pre_erase:
-                print("T%u.%u: Erasing Track" % (cyl, head))
+                print(f'{tspec}: Erasing Track')
                 usb.erase_track(drive_ticks_per_rev * 1.1)
-            s = "T%u.%u: Writing Track" % (cyl, head)
+            s = f'{tspec}: Writing Track'
             if retry != 0:
                 s += " (Verify Failure: Retry #%u)" % retry
             else:

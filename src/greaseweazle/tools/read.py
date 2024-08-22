@@ -54,17 +54,21 @@ def read_with_retry(usb: USB.Unit, args, t) -> Tuple[Flux, Optional[HasFlux]]:
 
     cyl, head = t.cyl, t.head
 
+    tspec = f'T{cyl}.{head}'
+    if t.physical_cyl != cyl or t.physical_head != head:
+        tspec += f' <- Drive {t.physical_cyl}.{t.physical_head}'
+
     usb.seek(t.physical_cyl, t.physical_head)
 
     flux = read_and_normalise(usb, args, args.revs, args.ticks)
     if args.fmt_cls is None:
-        print("T%u.%u: %s" % (cyl, head, flux.summary_string()))
+        print(f'{tspec}: {flux.summary_string()}')
         return flux, flux
 
     dat = args.fmt_cls.decode_flux(cyl, head, flux)
     if dat is None:
-        print("T%u.%u: WARNING: Out of range for format '%s': No format "
-              "conversion applied" % (cyl, head, args.format))
+        print("%s: WARNING: Out of range for format '%s': No format "
+              "conversion applied" % (tspec, args.format))
         return flux, None
     for pll in plls[1:]:
         if dat.nr_missing() == 0:
@@ -73,7 +77,7 @@ def read_with_retry(usb: USB.Unit, args, t) -> Tuple[Flux, Optional[HasFlux]]:
 
     seek_retry, retry = 0, 0
     while True:
-        s = "T%u.%u: %s from %s" % (cyl, head, dat.summary_string(),
+        s = "%s: %s from %s" % (tspec, dat.summary_string(),
                                     flux.summary_string())
         if retry != 0:
             s += " (Retry #%u.%u)" % (seek_retry, retry)
@@ -82,8 +86,8 @@ def read_with_retry(usb: USB.Unit, args, t) -> Tuple[Flux, Optional[HasFlux]]:
             break
         if args.retries == 0 or (retry % args.retries) == 0:
             if args.retries == 0 or seek_retry > args.seek_retries:
-                print("T%u.%u: Giving up: %d sectors missing"
-                      % (cyl, head, dat.nr_missing()))
+                print("%s: Giving up: %d sectors missing"
+                      % (tspec, dat.nr_missing()))
                 break
             if retry != 0:
                 usb.seek(0, 0)
