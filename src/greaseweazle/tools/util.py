@@ -290,6 +290,7 @@ image_types = OrderedDict(
       '.ipf': ('IPF','caps'),
       '.mgt': 'MGT',
       '.msa': 'MSA',
+      '.nfd': 'NFD',
       '.nsi': 'NSI',
       '.po' : ('PO','apple2'),
       '.raw': 'KryoFlux',
