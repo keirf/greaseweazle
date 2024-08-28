@@ -16,9 +16,16 @@ from bitarray import bitarray
 
 from greaseweazle import __version__
 from greaseweazle import error
+from greaseweazle.flux import Flux
 from greaseweazle.codec.ibm import ibm
 from greaseweazle.track import MasterTrack, PLLTrack
 from .image import Image
+
+class EDSKRate:
+    Unknown          = 0
+    DoubleDensity    = 1
+    HighDensity      = 2
+    ExtendedDensity  = 3
 
 class SR1:
     SUCCESS                   = 0x00
@@ -88,14 +95,21 @@ class EDSKTrack:
     gapbyte = 0x4e
     
     verify_len: int
-    verify_revs = 1
+    verify_revs: float = 1
 
-    def __init__(self):
+    def __init__(self, rate = 0) -> None:
         self.time_per_rev = 0.2
-        self.clock = 2e-6
-        self.bits, self.weak, self.bytes = [], [], bytearray()
+        if rate == EDSKRate.HighDensity:
+            self.clock = 1e-6
+        elif rate == EDSKRate.ExtendedDensity:
+            self.clock = 5e-7
+        else: # Double Density, or unknown
+            self.clock = 2e-6
+        self.bits = bitarray(endian='big')
+        self.weak: List[Tuple[int,int]] = []
+        self.bytes = bytearray()
 
-    def master_track(self):
+    def master_track(self) -> MasterTrack:
         track = MasterTrack(
             bits = self.bits,
             time_per_rev = self.time_per_rev,
@@ -103,13 +117,13 @@ class EDSKTrack:
         track.verify = self
         return track
 
-    def _find_sync(self, bits, sync, start):
+    def _find_sync(self, bits, sync, start) -> Optional[int]:
         for offs in bits.itersearch(sync):
             if offs >= start:
                 return offs
         return None
     
-    def verify_track(self, flux):
+    def verify_track(self, flux: Flux) -> bool:
         flux.cue_at_index()
         raw = PLLTrack(time_per_rev = self.time_per_rev,
                        clock = self.time_per_rev / len(self.bits),
@@ -121,6 +135,7 @@ class EDSKTrack:
         # Start checking from the IAM sync
         dump_start = self._find_sync(bits, ibm.mfm_iam_sync, 0)
         self_start = self._find_sync(self.bits, ibm.mfm_iam_sync, 0)
+        assert self_start is not None
 
         # Include the IAM pre-sync header
         if dump_start is None:
@@ -140,6 +155,7 @@ class EDSKTrack:
             # If there is a weak area preceding us, move the start point to
             # immediately follow the weak area.
             if s is not None:
+                assert n is not None # mypy
                 delta = self_start - (s + n + 16)
                 self_start -= delta
                 dump_start -= delta
@@ -308,15 +324,15 @@ class EDSK(Image):
         for track_size in track_sizes:
             if track_size == 0:
                 continue
-            sig, cyl, head, sec_sz, nsecs, gap_3, filler = struct.unpack(
-                '<12s4x2B2x4B', dat[o:o+24])
+            x = struct.unpack('<12s4x8B', dat[o:o+24])
+            sig, cyl, head, rate, mode, sec_sz, nsecs, gap_3, filler = x
             error.check(sig == b'Track-Info\r\n',
                         'EDSK: Missing track header')
             error.check((cyl, head) not in self.to_track,
                         'EDSK: Track specified twice')
             bad_crc_clip_data = False
             while True:
-                track = EDSKTrack()
+                track = EDSKTrack(rate)
                 t = track.bytes
                 # Post-index gap
                 t += ibm.encode(bytes([track.gapbyte] * track.gap_4a))
@@ -521,8 +537,16 @@ class EDSK(Image):
                 assert isinstance(t, ibm.IBMTrack)
                 error.check(t.mode is ibm.Mode.MFM,
                             'EDSK: Cannot handle %s track format' % t.mode)
-                error.check(1.9e-6 < t.clock < 2.1e-6,
+                error.check(0.4e-6 < t.clock < 2.1e-6,
                             'EDSK: Cannot handle %.2fus clock' % (t.clock*1e6))
+
+                if t.clock < 0.75e-6:
+                    rate = EDSKRate.ExtendedDensity
+                elif t.clock < 1.5e-6:
+                    rate = EDSKRate.HighDensity
+                else:
+                    # Double Density, but we'll just mark it as default (0)
+                    rate = 0
 
                 # Estimate sec_sz from size of first sector only.
                 # Estimate gap3 from gap between first two sectors.
@@ -533,8 +557,8 @@ class EDSK(Image):
                 if n_sec > 1:
                     gap3 = t.sectors[1].start - t.sectors[0].end
                     gap3 = max(0, round(gap3 / 16) - t.gap_presync)
-                tdat = struct.pack('<12s4x2B2x4B',
-                                   b'Track-Info\r\n', c, h,
+                tdat = struct.pack('<12s4x8B',
+                                   b'Track-Info\r\n', c, h, rate, 0,
                                    sec_sz, n_sec, gap3, 0xe5)
 
                 # Track Information Block
