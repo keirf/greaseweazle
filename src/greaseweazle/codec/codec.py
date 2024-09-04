@@ -5,6 +5,7 @@
 # This is free and unencumbered software released into the public domain.
 # See the file COPYING for more details, or visit <http://unlicense.org>.
 
+from __future__ import annotations
 from typing import Dict, List, Tuple, Optional
 
 import os.path, re
@@ -128,16 +129,24 @@ class DiskDef:
         return max([x.default_revs for x in self.track_map.values()])
 
 
-
-def read_diskdef_file_lines(filename: Optional[str]) -> Tuple[List[str], str]:
-    if filename is None:
-        filename = 'diskdefs.cfg'
-        with importlib.resources.open_text('greaseweazle.data', filename) as f:
-            lines = f.readlines()
-    else:
-        with open(os.path.expanduser(filename), 'r') as f:
-            lines = f.readlines()
-    return (lines, filename)
+class DiskDef_File:
+    def __init__(self, name: Optional[str],
+                 parent: Optional[DiskDef_File] = None) -> None:
+        self.path: Optional[str] = None
+        self.name: str = 'diskdefs.cfg' if name is None else name
+        if name is None or (parent and not parent.path):
+            with importlib.resources.open_text('greaseweazle.data',
+                                               self.name) as f:
+                self.lines = f.readlines()
+        else:
+            if parent:
+                assert parent.path # mypy
+                self.path = os.path.join(os.path.dirname(parent.path),
+                                         self.name)
+            else:
+                self.path = os.path.expanduser(self.name)
+            with open(self.path, 'r') as f:
+                self.lines = f.readlines()
 
 
 # Import the TrackDef subclasses
@@ -177,18 +186,18 @@ class ParseMode:
     Disk  = 1
     Track = 2
 
-def get_diskdef(
+def _get_diskdef(
         format_name: str,
-        diskdef_filename: Optional[str] = None
+        prefix: str,
+        diskdef_file: DiskDef_File
 ) -> Optional[DiskDef]:
 
     parse_mode = ParseMode.Outer
     active = False
     disk: Optional[DiskDef] = None
     track: Optional[TrackDef] = None
-    lines, diskdef_filename = read_diskdef_file_lines(diskdef_filename)
 
-    for linenr, l in enumerate(lines, start=1):
+    for linenr, l in enumerate(diskdef_file.lines, start=1):
         try:
             # Strip comments and whitespace.
             match = re.match(r'\s*([^#]*)', l)
@@ -201,17 +210,32 @@ def get_diskdef(
 
             if parse_mode == ParseMode.Outer:
                 disk_match = re.match(r'disk\s+([\w,.-]+)', t)
-                error.check(disk_match is not None, 'syntax error')
-                assert disk_match is not None # mypy
-                parse_mode = ParseMode.Disk
-                active = disk_match.group(1) == format_name
-                if active:
-                    disk = DiskDef()
+                if disk_match:
+                    parse_mode = ParseMode.Disk
+                    active = ((prefix + disk_match.group(1).casefold())
+                              == format_name)
+                    if active:
+                        disk = DiskDef()
+                else:
+                    import_match = re.match(r'import\s+([\w,.-]*)\s*"([^"]+)"',
+                                            t)
+                    error.check(import_match is not None, 'syntax error')
+                    assert import_match is not None # mypy
+                    sub_prefix = prefix + import_match.group(1).casefold()
+                    if format_name.startswith(sub_prefix):
+                        disk = _get_diskdef(format_name, sub_prefix,
+                                            DiskDef_File(
+                                                name = import_match.group(2),
+                                                parent = diskdef_file))
+                        if disk:
+                            break
 
             elif parse_mode == ParseMode.Disk:
                 if t == 'end':
                     parse_mode = ParseMode.Outer
                     active = False
+                    if disk:
+                        break
                     continue
                 tracks_match = re.match(r'tracks\s+([0-9,.*-]+)'
                                         r'\s+([\w,.-]+)', t)
@@ -287,24 +311,42 @@ def get_diskdef(
                                 keyval_match.group(2))
 
         except Exception as err:
-            ctxt = "%s, line %d: " % (diskdef_filename, linenr)
-            err.args = (ctxt + err.args[0],) + err.args[1:]
+            if err.args and isinstance(x := err.args[0], str):
+                ctxt = f'At {diskdef_file.name}, line {linenr}:'
+                ctxt += '\n' if x.startswith('At') else ' '
+                err.args = (ctxt + x,) + err.args[1:]
             raise
-
-    if disk is None:
-        return None
-    disk.finalise()
 
     return disk
 
+def get_diskdef(
+        format_name: str,
+        diskdef_filename: Optional[str] = None
+) -> Optional[DiskDef]:
+    diskdef_file = DiskDef_File(name = diskdef_filename)
+    disk = _get_diskdef(format_name.casefold(), '', diskdef_file)
+    if disk is None:
+        return None
+    disk.finalise()
+    return disk
 
-def print_formats(diskdef_filename: Optional[str] = None) -> str:
-    columns, sep, formats = 80, 2, []
-    lines, _ = read_diskdef_file_lines(diskdef_filename)
-    for l in lines:
+def get_all_formats(prefix: str, diskdef_file: DiskDef_File) -> List[str]:
+    formats = []
+    for l in diskdef_file.lines:
         disk_match = re.match(r'\s*disk\s+([\w,.-]+)', l)
         if disk_match:
-            formats.append(disk_match.group(1))
+            formats.append(prefix + disk_match.group(1))
+        import_match = re.match(r'\s*import\s+([\w,.-]*)\s*"([^"]+)"', l)
+        if import_match:
+            formats += get_all_formats(
+                prefix + import_match.group(1),
+                DiskDef_File(
+                    name = import_match.group(2),
+                    parent = diskdef_file))
+    return formats
+
+def print_formats(diskdef_filename: Optional[str] = None) -> str:
+    formats = get_all_formats('', DiskDef_File(name = diskdef_filename))
     formats.sort()
     return util.columnify(formats)
 
