@@ -214,7 +214,7 @@ def get_diskdef(
                     active = False
                     continue
                 tracks_match = re.match(r'tracks\s+([0-9,.*-]+)'
-                                        '\s+([\w,.-]+)', t)
+                                        r'\s+([\w,.-]+)', t)
                 if tracks_match:
                     parse_mode = ParseMode.Track
                     if not active:
@@ -233,7 +233,7 @@ def get_diskdef(
                                         disk.track_map[c,hd] = track
                         else:
                             t_match = re.match(r'(\d+)(?:-(\d+))?'
-                                               '(?:\.([01]))?', x)
+                                               r'(?:\.([01]))?', x)
                             error.check(t_match is not None,
                                         'bad track specifier')
                             assert t_match is not None # mypy
@@ -261,7 +261,7 @@ def get_diskdef(
                 assert disk is not None # mypy
 
                 keyval_match = re.match(r'([a-zA-Z0-9:,._-]+)\s*='
-                                        '\s*([a-zA-Z0-9:,._-]+)', t)
+                                        r'\s*([a-zA-Z0-9:,._-]+)', t)
                 error.check(keyval_match is not None, 'syntax error')
                 assert keyval_match is not None # mypy
                 disk.add_param(keyval_match.group(1),
@@ -280,7 +280,7 @@ def get_diskdef(
                 assert track is not None # mypy
 
                 keyval_match = re.match(r'([a-zA-Z0-9:,._-]+)\s*='
-                                        '\s*([a-zA-Z0-9:,._*-]+)', t)
+                                        r'\s*([a-zA-Z0-9:,._*-]+)', t)
                 error.check(keyval_match is not None, 'syntax error')
                 assert keyval_match is not None # mypy
                 track.add_param(keyval_match.group(1),
