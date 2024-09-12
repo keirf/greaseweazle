@@ -28,15 +28,15 @@ else:
     download = False
     url = sys.argv[1]
 
-url = re.sub('github.com', 'nightly.link', url)
-url = re.sub('suites/\d+', 'actions', url)
+url = re.sub(r'github.com', 'nightly.link', url)
+url = re.sub(r'suites/\d+', 'actions', url)
 url += '.zip'
 print(url)
 
 if download:
     res = requests.get(url)
     content_disposition = res.headers['Content-Disposition']
-    zipname = re.search('filename=([^ ]+.zip);', content_disposition).group(1)
+    zipname = re.search(r'filename=([^ ]+.zip);', content_disposition).group(1)
     print('Downloading to: ' + zipname)
     with open(zipname, 'wb') as f:
         f.write(res.content)

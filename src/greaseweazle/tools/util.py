@@ -100,19 +100,19 @@ PLLSPEC: Colon-separated list of:
 # Returns time period in seconds (float)
 # Accepts rpm, ms, us, ns, scp. Naked value is assumed rpm.
 def period(arg):
-    m = re.match('(\d*\.\d+|\d+)rpm', arg)
+    m = re.match(r'(\d*\.\d+|\d+)rpm', arg)
     if m is not None:
         return 60 / float(m.group(1))
-    m = re.match('(\d*\.\d+|\d+)ms', arg)
+    m = re.match(r'(\d*\.\d+|\d+)ms', arg)
     if m is not None:
         return float(m.group(1)) / 1e3
-    m = re.match('(\d*\.\d+|\d+)us', arg)
+    m = re.match(r'(\d*\.\d+|\d+)us', arg)
     if m is not None:
         return float(m.group(1)) / 1e6
-    m = re.match('(\d*\.\d+|\d+)ns', arg)
+    m = re.match(r'(\d*\.\d+|\d+)ns', arg)
     if m is not None:
         return float(m.group(1)) / 1e9
-    m = re.match('(\d*\.\d+|\d+)scp', arg)
+    m = re.match(r'(\d*\.\d+|\d+)scp', arg)
     if m is not None:
         return float(m.group(1)) / 40e6 # SCP @ 40MHz
     return 60 / float(arg)
@@ -190,7 +190,7 @@ class TrackSet:
             if k == 'c':
                 cyls = set()
                 for crange in v.split(','):
-                    m = re.match('(\d+)(-(\d+)(/(\d+))?)?$', crange)
+                    m = re.match(r'(\d+)(-(\d+)(/(\d+))?)?$', crange)
                     if m is None: raise ValueError()
                     if m.group(3) is None:
                         s,e,step = int(m.group(1)), int(m.group(1)), 1
@@ -204,7 +204,7 @@ class TrackSet:
             elif k == 'h':
                 heads = [False]*2
                 for hrange in v.split(','):
-                    m = re.match('([01])(-([01]))?$', hrange)
+                    m = re.match(r'([01])(-([01]))?$', hrange)
                     if m is None: raise ValueError()
                     if m.group(3) is None:
                         s,e = int(m.group(1)), int(m.group(1))
@@ -215,13 +215,13 @@ class TrackSet:
                 self.heads = []
                 for h in range(len(heads)):
                     if heads[h]: self.heads.append(h)
-            elif re.match('h[01].off$', k):
-                h = int(re.match('h([01]).off$', k).group(1))
-                m = re.match('([+-]\d+)$', v)
+            elif re.match(r'h[01].off$', k):
+                h = int(re.match(r'h([01]).off$', k).group(1))
+                m = re.match(r'([+-]\d+)$', v)
                 if m is None: raise ValueError()
                 self.h_off[h] = int(m.group(1))
             elif k == 'step':
-                m = re.match('1/(\d+)$', v)
+                m = re.match(r'1/(\d+)$', v)
                 self.step = -int(m.group(1)) if m is not None else int(v)
             else:
                 raise ValueError()
