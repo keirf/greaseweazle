@@ -214,11 +214,6 @@ class Unit:
         self.update_needed = (self.version < EARLIEST_SUPPORTED_FIRMWARE)
         if self.update_needed:
             return
-        # Initialise the delay properties with current firmware values.
-        self._send_cmd(struct.pack("4B", Cmd.GetParams, 4, Params.Delays, 10))
-        (self._select_delay, self._step_delay,
-         self._seek_settle_delay, self._motor_delay,
-         self._watchdog_delay) = struct.unpack("<5H", self.ser.read(10))
 
 
     ## reset:
@@ -247,6 +242,16 @@ class Unit:
     def get_current_drive_info(self) -> DriveInfo:
         self._send_cmd(struct.pack("3B", Cmd.GetInfo, 3, GetInfo.CurrentDrive))
         return DriveInfo(self.ser.read(32))
+
+
+    def get_params(self, idx: int, nr: int) -> bytes:
+        self._send_cmd(struct.pack("4B", Cmd.GetParams, 4, idx, nr))
+        return self.ser.read(nr)
+
+
+    def set_params(self, idx: int, dat: bytes) -> None:
+        self._send_cmd(struct.pack(f'<3B{len(dat)}s', Cmd.SetParams,
+                                   3+len(dat), idx, dat))
 
 
     ## seek:
@@ -546,63 +551,6 @@ class Unit:
         max_bw = (8 * max_bytes) / max_usecs
         return min_bw, max_bw
 
-    
-    ##
-    ## Delay-property public getters and setters:
-    ##  select_delay:      Delay (usec) after asserting drive select
-    ##  step_delay:        Delay (usec) after issuing a head-step command
-    ##  seek_settle_delay: Delay (msec) after completing a head-seek operation
-    ##  motor_delay:       Delay (msec) after turning on drive spindle motor
-    ##  watchdog_delay:    Timeout (msec) since last command upon which all
-    ##                     drives are deselected and spindle motors turned off
-    ##
-
-    def _set_delays(self):
-        self._send_cmd(struct.pack("<3B5H", Cmd.SetParams,
-                                   3+5*2, Params.Delays,
-                                   self._select_delay, self._step_delay,
-                                   self._seek_settle_delay,
-                                   self._motor_delay, self._watchdog_delay))
-
-    @property
-    def select_delay(self):
-        return self._select_delay
-    @select_delay.setter
-    def select_delay(self, select_delay):
-        self._select_delay = select_delay
-        self._set_delays()
-
-    @property
-    def step_delay(self):
-        return self._step_delay
-    @step_delay.setter
-    def step_delay(self, step_delay):
-        self._step_delay = step_delay
-        self._set_delays()
-
-    @property
-    def seek_settle_delay(self):
-        return self._seek_settle_delay
-    @seek_settle_delay.setter
-    def seek_settle_delay(self, seek_settle_delay):
-        self._seek_settle_delay = seek_settle_delay
-        self._set_delays()
-
-    @property
-    def motor_delay(self):
-        return self._motor_delay
-    @motor_delay.setter
-    def motor_delay(self, motor_delay):
-        self._motor_delay = motor_delay
-        self._set_delays()
-
-    @property
-    def watchdog_delay(self):
-        return self._watchdog_delay
-    @watchdog_delay.setter
-    def watchdog_delay(self, watchdog_delay):
-        self._watchdog_delay = watchdog_delay
-        self._set_delays()
 
 # Local variables:
 # python-indent: 4
