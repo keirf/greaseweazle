@@ -898,7 +898,7 @@ class IBMTrack_Empty(IBMTrack):
         return "IBM Empty"
 
     def set_img_track(self, tdat: bytes) -> int:
-        raise error.Fatal('ibm.generic: Cannot handle IMG input data')
+        raise error.Fatal('ibm.scan: Cannot handle IMG input data')
 
 
 class IBMTrack_Scan(codec.Codec):
