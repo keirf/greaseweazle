@@ -100,7 +100,10 @@ def read_with_retry(usb: USB.Unit, args, t) -> Tuple[Flux, Optional[HasFlux]]:
             if dat.nr_missing() == 0:
                 break
             dat.decode_flux(_flux, pll)
-        flux.append(_flux)
+        if args.raw:
+            flux.append(_flux)
+        else:
+            flux = _flux
 
     return flux, dat
 
