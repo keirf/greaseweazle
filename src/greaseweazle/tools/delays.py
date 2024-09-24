@@ -17,39 +17,55 @@ from greaseweazle import error
 
 
 class Delays:
+
     def __init__(self, usb: USB.Unit) -> None:
         self.usb = usb
-        try:
-            self.size = 14
-            dat = usb.get_params(USB.Params.Delays, 14)
-        except USB.CmdError as err:
-            if err.code != USB.Ack.BadCommand:
-                raise err
-            self.size = 10
-            dat = usb.get_params(USB.Params.Delays, 10) + bytes(4)
-
+        self.size = 16
+        while True:
+            try:
+                dat = usb.get_params(USB.Params.Delays, self.size)
+                break
+            except USB.CmdError as err:
+                if err.code != USB.Ack.BadCommand or self.size == 10:
+                    raise err
+                self.size -= 2
+        dat += bytes(16 - self.size)
         (self.select, self.step, self.seek_settle, self.motor, self.watchdog,
-         self.pre_write, self.post_write) = struct.unpack('<7H', dat)
+         self.pre_write, self.post_write, self.index_mask
+         ) = struct.unpack('<8H', dat)
+        if self.size < 12: self.pre_write = None
+        if self.size < 14: self.post_write = None
+        if self.size < 16: self.index_mask = None
+
     def update(self) -> None:
-        dat = struct.pack('<7H', self.select, self.step, self.seek_settle,
-                          self.motor, self.watchdog,
-                          self.pre_write, self.post_write)
-        self.usb.set_params(USB.Params.Delays, dat[:self.size])
+        dat = struct.pack('<5H', self.select, self.step, self.seek_settle,
+                          self.motor, self.watchdog)
+        if self.pre_write is not None:
+            dat += struct.pack('<H', self.pre_write)
+        if self.post_write is not None:
+            dat += struct.pack('<H', self.post_write)
+        if self.index_mask is not None:
+            dat += struct.pack('<H', self.index_mask)
+        assert len(dat) == self.size
+        self.usb.set_params(USB.Params.Delays, dat)
+
 
 def print_info_line(name: str, value: str, tab=0) -> None:
     print(''.ljust(tab) + (name + ':').ljust(14-tab) + value)
 
+
 def main(argv) -> None:
 
     epilog = '''
-Select Delay:      Delay (usec) after asserting drive select
-Step Delay:        Delay (usec) after issuing a head-step command
-Settle Time:       Delay (msec) after completing a head-seek operation
-Motor Delay:       Delay (msec) after turning on drive spindle motor
-Watchdog:          Timeout (msec) since last command upon which all
-                   drives are deselected and spindle motors turned off
-Pre-Write:         Min. usec from track change to write start
-Post-Write:        Min. usec from write end to track change'''
+Select Delay: (usec) Delay after asserting drive select
+Step Delay:   (usec) Delay after issuing a head-step command
+Settle Time:  (msec) Delay after completing a head-seek operation
+Motor Delay:  (msec) Delay after turning on drive spindle motor
+Watchdog:     (msec) Timeout since last command upon which all drives
+                     are deselected and spindle motors turned off
+Pre-Write:    (usec) Min. time from track change to write start
+Post-Write:   (usec) Min. time from write end to track change
+Index Mask:   (usec) Index post-trigger mask time'''
     
     parser = util.ArgumentParser(usage='%(prog)s [options]',
                                  epilog=epilog)
@@ -68,6 +84,8 @@ Post-Write:        Min. usec from write end to track change'''
                         help="Pre-Write (usecs)")
     parser.add_argument("--post-write", type=util.uint, metavar="N",
                         help="Post-Write (usecs)")
+    parser.add_argument("--index-mask", type=util.uint, metavar="N",
+                        help="Index Mask (usecs)")
     parser.description = description
     parser.prog += ' ' + argv[1]
     args = parser.parse_args(argv[2:])
@@ -80,30 +98,35 @@ Post-Write:        Min. usec from write end to track change'''
 
         update = False
         
-        if args.select:
+        if args.select is not None:
             delays.select = args.select
             update = True
-        if args.step:
+        if args.step is not None:
             delays.step = args.step
             update = True
-        if args.settle:
+        if args.settle is not None:
             delays.seek_settle = args.settle
             update = True
-        if args.motor:
+        if args.motor is not None:
             delays.motor = args.motor
             update = True
-        if args.watchdog:
+        if args.watchdog is not None:
             delays.watchdog = args.watchdog
             update = True
-        if args.pre_write:
-            error.check(delays.size >= 14,
+        if args.pre_write is not None:
+            error.check(delays.pre_write is not None,
                         'Option --pre-write requires updated firmware')
             delays.pre_write = args.pre_write
             update = True
-        if args.post_write:
-            error.check(delays.size >= 14,
+        if args.post_write is not None:
+            error.check(delays.post_write is not None,
                         'Option --post-write requires updated firmware')
             delays.post_write = args.post_write
+            update = True
+        if args.index_mask is not None:
+            error.check(delays.index_mask is not None,
+                        'Option --index-mask requires updated firmware')
+            delays.index_mask = args.index_mask
             update = True
 
         if update:
@@ -114,9 +137,12 @@ Post-Write:        Min. usec from write end to track change'''
         print_info_line('Settle Time', f'{delays.seek_settle}ms')
         print_info_line('Motor Delay', f'{delays.motor}ms')
         print_info_line('Watchdog', f'{delays.watchdog}ms')
-        if delays.size >= 14:
+        if delays.pre_write is not None:
             print_info_line('Pre-Write', f'{delays.pre_write}us')
+        if delays.post_write is not None:
             print_info_line('Post-Write', f'{delays.post_write}us')
+        if delays.index_mask is not None:
+            print_info_line('Index Mask', f'{delays.index_mask}us')
 
     except USB.CmdError as err:
         print("Command Failed: %s" % err)
