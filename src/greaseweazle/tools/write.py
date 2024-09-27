@@ -28,11 +28,22 @@ def open_image(args, image_class: Type[image.Image]) -> image.Image:
 # Writes the specified image file to floppy disk.
 def write_from_image(usb: USB.Unit, args, image: image.Image) -> None:
 
+    hard_sector_ticks = 0
+
     # Measure drive RPM.
     # We will adjust the flux intervals per track to allow for this.
     no_index = args.fake_index is not None
     if no_index:
         drive_ticks_per_rev = args.fake_index * usb.sample_freq
+    elif args.hard_sectors:
+        flux = usb.read_track(revs = 0, ticks = int(usb.sample_freq / 2))
+        flux.identify_hard_sectors()
+        assert flux.sector_list is not None # mypy
+        drive_ticks_per_rev = flux.ticks_per_rev
+        args.hard_sectors = len(flux.sector_list[-1])
+        hard_sector_ticks = int(drive_ticks_per_rev / args.hard_sectors)
+        print(f'Drive reports {args.hard_sectors} hard sectors')
+        del flux
     else:
         drive_ticks_per_rev = usb.read_track(2).ticks_per_rev
 
@@ -110,7 +121,8 @@ def write_from_image(usb: USB.Unit, args, image: image.Image) -> None:
             print(s)
             usb.write_track(flux_list = wflux_list,
                             cue_at_index = wflux.index_cued,
-                            terminate_at_index = wflux.terminate_at_index)
+                            terminate_at_index = wflux.terminate_at_index,
+                            hard_sector_ticks = hard_sector_ticks)
             verify: Optional[HasVerify] = None
             no_verify = (args.no_verify
                          or not isinstance(track, MasterTrack)
@@ -124,6 +136,9 @@ def write_from_image(usb: USB.Unit, args, image: image.Image) -> None:
             if isinstance(v_revs, float):
                 v_ticks = int(drive_ticks_per_rev * v_revs)
                 v_revs = 2
+            if args.hard_sectors:
+                v_ticks = 0
+                v_revs = cast(int, (args.hard_sectors + 1) * 2)
             if no_index:
                 drive_tpr = int(drive_ticks_per_rev)
                 pre_index = int(usb.sample_freq * 0.5e-3)
@@ -139,6 +154,8 @@ def write_from_image(usb: USB.Unit, args, image: image.Image) -> None:
             v_flux._ticks_per_rev = drive_ticks_per_rev
             if args.reverse:
                 v_flux.reverse()
+            if args.hard_sectors:
+                v_flux.identify_hard_sectors()
             verified = verify.verify_track(v_flux)
             if verified:
                 verified_count += 1
@@ -209,8 +226,11 @@ def main(argv) -> None:
                         help="erase tracks before writing (default: no)")
     parser.add_argument("--erase-empty", action="store_true",
                         help="erase empty tracks (default: skip)")
-    parser.add_argument("--fake-index", type=util.period, metavar="SPEED",
-                        help="fake index pulses at SPEED")
+    index_group = parser.add_mutually_exclusive_group(required=False)
+    index_group.add_argument("--fake-index", type=util.period, metavar="SPEED",
+                             help="fake index pulses at SPEED")
+    index_group.add_argument("--hard-sectors", action="store_true",
+                             help="write to a hard-sectored disk")
     parser.add_argument("--no-verify", action="store_true",
                         help="disable verify")
     parser.add_argument("--retries", type=util.uint, default=3, metavar="N",

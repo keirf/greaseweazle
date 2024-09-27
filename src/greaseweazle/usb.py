@@ -491,7 +491,8 @@ class Unit:
     ## write_track:
     ## Write the given flux stream to the current track via Greaseweazle.
     def write_track(self, flux_list, terminate_at_index,
-                    cue_at_index=True, nr_retries=5) -> None:
+                    cue_at_index=True, nr_retries=5,
+                    hard_sector_ticks=0) -> None:
 
         # Create encoded data stream.
         dat = self._encode_flux(flux_list)
@@ -500,9 +501,15 @@ class Unit:
         while True:
             try:
                 # Write the flux stream to the track via Greaseweazle.
-                self._send_cmd(struct.pack("4B", Cmd.WriteFlux, 4,
-                                           int(cue_at_index),
-                                           int(terminate_at_index)))
+                if hard_sector_ticks != 0:
+                    self._send_cmd(struct.pack("4BI", Cmd.WriteFlux, 8,
+                                               int(cue_at_index),
+                                               int(terminate_at_index),
+                                               hard_sector_ticks))
+                else:
+                    self._send_cmd(struct.pack("4B", Cmd.WriteFlux, 4,
+                                               int(cue_at_index),
+                                               int(terminate_at_index)))
                 self.ser.write(dat)
                 self.ser.read(1) # Sync with Greaseweazle
                 self._send_cmd(struct.pack("2B", Cmd.GetFluxStatus, 2))
