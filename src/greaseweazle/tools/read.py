@@ -45,6 +45,8 @@ def read_and_normalise(usb: USB.Unit, args, revs: int, ticks=0) -> Flux:
     flux._ticks_per_rev = args.drive_ticks_per_rev
     if args.reverse:
         flux.reverse()
+    if args.hard_sectors and not args.raw:
+        flux.identify_hard_sectors()
     if args.adjust_speed is not None:
         flux.scale(args.adjust_speed / flux.time_per_rev)
     return flux
@@ -154,6 +156,14 @@ def read_to_image(usb: USB.Unit, args, image: image.Image) -> None:
 
     if args.fake_index is not None:
         args.drive_ticks_per_rev = args.fake_index * usb.sample_freq
+    elif args.hard_sectors:
+        flux = usb.read_track(revs = 0, ticks = int(usb.sample_freq / 2))
+        flux.identify_hard_sectors()
+        assert flux.sector_list is not None # mypy
+        args.drive_ticks_per_rev = flux.ticks_per_rev
+        args.hard_sectors = len(flux.sector_list[-1])
+        print(f'Drive reports {args.hard_sectors} hard sectors')
+        del flux
 
     if isinstance(args.revs, float):
         if args.raw:
@@ -166,6 +176,13 @@ def read_to_image(usb: USB.Unit, args, image: image.Image) -> None:
                 args.drive_ticks_per_rev = usb.read_track(2).ticks_per_rev
             args.ticks = int(args.drive_ticks_per_rev * args.revs)
             args.revs = 2
+
+    if args.hard_sectors:
+        # Hard-sectored disks have "hard_sectors + 1" holes.
+        # We read an extra revolution's worth to be sure we get the requested
+        # number of full index-to-index revolutions.
+        args.revs = (args.hard_sectors + 1) * (args.revs + 1)
+        args.ticks = 0
 
     summary: Dict[Tuple[int,int],codec.Codec] = dict()
 
@@ -205,8 +222,11 @@ def main(argv) -> None:
                         help="which tracks to read")
     parser.add_argument("--raw", action="store_true",
                         help="output raw stream (--format verifies only)")
-    parser.add_argument("--fake-index", type=util.period, metavar="SPEED",
-                        help="fake index pulses at SPEED")
+    index_group = parser.add_mutually_exclusive_group(required=False)
+    index_group.add_argument("--fake-index", type=util.period, metavar="SPEED",
+                             help="fake index pulses at SPEED")
+    index_group.add_argument("--hard-sectors", action="store_true",
+                             help="read from a hard-sectored disk")
     parser.add_argument("--adjust-speed", type=util.period, metavar="SPEED",
                         help="scale track data to effective drive SPEED")
     parser.add_argument("--retries", type=util.uint, default=3, metavar="N",
