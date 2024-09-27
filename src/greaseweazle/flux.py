@@ -37,6 +37,7 @@ class Flux:
 
     def __str__(self) -> str:
         s = "\nFlux: %.2f MHz" % (self.sample_freq*1e-6)
+        if self.index_cued: s += ", Index-Cued"
         s += ("\n Total: %u samples, %.2fms\n"
               % (len(self.list), sum(self.list)*1000/self.sample_freq))
         for rev, t in enumerate(self.index_list):
@@ -68,19 +69,26 @@ class Flux:
         index_list = self.index_list
         self.index_list = []
         self.sector_list = []
+        short_count = 0
         for t in index_list:
-            if t < thresh:
+            is_short = (t < thresh)
+            if is_short:
                 short_ticks += t
-            else:
-                if short_ticks != 0:
-                    sectors.append(short_ticks)
-                    ticks_to_index += short_ticks
-                    self.index_list.append(ticks_to_index)
-                    self.sector_list.append(sectors)
-                    sectors = []
-                    short_ticks = ticks_to_index = 0
+                short_count += 1
+            # Latch an index when we see two short pulses, or a long pulse
+            # following at least one short pulse.
+            if short_count != 0 and (short_count > 1 or not is_short):
+                ticks_to_index += short_ticks
+                sectors.append(short_ticks)
+                self.index_list.append(ticks_to_index)
+                self.sector_list.append(sectors)
+                sectors = []
+                short_ticks = ticks_to_index = short_count = 0
+            if not is_short:
                 ticks_to_index += t
                 sectors.append(t)
+        error.check(len(self.index_list) > 0,
+                    "No hard-sector index mark found")
         self.index_cued = (
             (len(self.index_list) >= 2) and
             (len(self.sector_list[0]) == len(self.sector_list[1])))
