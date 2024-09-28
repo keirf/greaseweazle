@@ -18,6 +18,7 @@ from greaseweazle import error, track
 from greaseweazle import usb as USB
 from greaseweazle.codec import codec
 from greaseweazle.image import image
+from greaseweazle.image.img import IMG
 from greaseweazle.track import HasVerify, MasterTrack
 
 # Read and parse the image file.
@@ -266,6 +267,10 @@ Unknown format '%s'
 Known formats:\n%s"""
                                   % (args.format, codec.print_formats(
                                       args.diskdefs)))
+        image = open_image(args, image_class)
+        if args.fmt_cls is None and isinstance(image, IMG):
+            args.fmt_cls = image.fmt
+        if args.fmt_cls is not None:
             def_tracks = copy.copy(args.fmt_cls.tracks)
         if def_tracks is None:
             def_tracks = util.TrackSet('c=0-81:h=0-1')
@@ -273,12 +278,11 @@ Known formats:\n%s"""
             def_tracks.update_from_trackspec(args.tracks.trackspec)
         args.tracks = def_tracks
         usb = util.usb_open(args.device)
-        image = open_image(args, image_class)
+        if args.format:
+            print("Format " + args.format)
         print("Writing " + str(args.tracks))
         if args.precomp is not None:
             print(args.precomp)
-        if args.format:
-            print("Format " + args.format)
         try:
             if args.densel is not None or args.gen_tg43:
                 prev_pin2 = usb.get_pin(2)

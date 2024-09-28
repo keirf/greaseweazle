@@ -18,6 +18,7 @@ from greaseweazle.flux import Flux, HasFlux
 from greaseweazle.codec import codec
 from greaseweazle.track import MasterTrack
 from greaseweazle.image.image import Image
+from greaseweazle.image.img import IMG
 
 from greaseweazle import track
 plls = track.plls
@@ -171,6 +172,10 @@ Unknown format '%s'
 Known formats:\n%s"""
                               % (args.format, codec.print_formats(
                                   args.diskdefs)))
+    in_image = open_input_image(args, in_image_class)
+    if args.fmt_cls is None and isinstance(in_image, IMG):
+        args.fmt_cls = in_image.fmt
+    if args.fmt_cls is not None:
         def_tracks = copy.copy(args.fmt_cls.tracks)
     if def_tracks is None:
         def_tracks = util.TrackSet('c=0-81:h=0-1')
@@ -184,11 +189,10 @@ Known formats:\n%s"""
         out_def_tracks.update_from_trackspec(args.out_tracks.trackspec)
     args.out_tracks = out_def_tracks
 
-    print("Converting %s -> %s" % (args.tracks, args.out_tracks))
     if args.format:
         print("Format " + args.format)
+    print("Converting %s -> %s" % (args.tracks, args.out_tracks))
 
-    in_image = open_input_image(args, in_image_class)
     with open_output_image(args, out_image_class) as out_image:
         convert(args, in_image, out_image)
 
