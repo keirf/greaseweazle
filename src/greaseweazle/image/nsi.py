@@ -21,8 +21,8 @@ class NSI(IMG_AutoFormat):
         size = os.path.getsize(name)
         if size == 1*35*10*256:
             return 'northstar.fm.ss'
-        if size == 2*35*10*256:
-            return 'northstar.fm.ds'
+#        if size == 2*35*10*256:
+#            return 'northstar.fm.ds'
         if size == 1*35*10*512:
             return 'northstar.mfm.ss'
         if size == 2*35*10*512:
