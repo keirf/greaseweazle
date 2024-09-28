@@ -100,11 +100,10 @@ class IMG_AutoFormat(IMG):
     @classmethod
     def from_file(cls, name: str, fmt: Optional[codec.DiskDef],
                   opts: OptDict) -> Image:
-        error.check(fmt is None,
-                    f'{cls.__name__}: Format cannot be overridden')
-        format_str = cls.format_from_file(name)
-        fmt = codec.get_diskdef(format_str)
-        print(f'{cls.__name__}: Image format {format_str}')
+        if fmt is None:
+            format_str = cls.format_from_file(name)
+            fmt = codec.get_diskdef(format_str)
+            print(f'{cls.__name__}: Image format {format_str}')
         return super().from_file(name, fmt, opts)
 
 # Local variables:
