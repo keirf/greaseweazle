@@ -3,6 +3,12 @@
 ** Keir Fraser <keir.xen@gmail.com>
 ************************************
 
+** v1.20 - 28 September 2024
+ - Thomson MO/TO: thomson.* formats and *.fd images
+ - EDSK: HD and ED recording rates
+ - gw delays: Pre- and post-write; Index mask
+ - gw read, write: New option --hard-sectors
+
 ** v1.19 - 22 August 2024
  - gw read/write/convert: New option --reverse
    - Reverses track data (eg side B of a flippy disk)
