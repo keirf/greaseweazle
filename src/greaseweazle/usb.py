@@ -281,7 +281,11 @@ class Unit:
                 pass
             trk0 = not self.get_pin(26) # now re-sample /TRK0
         error.check(cyl < 0 or (cyl == 0) == trk0,
-                    "Track0 signal %s after seek to cylinder %d"
+                    '''\
+Track0 signal %s after seek to cylinder %d
+ 1. Try "gw reset" to re-calibrate the drive-head position
+ 2. If the error persists try slowing down seek operations
+     eg. "gw delays --step 20000" for 20ms per step'''
                     % (('absent', 'asserted')[trk0], cyl))
         self._send_cmd(struct.pack("3B", Cmd.Head, 3, head))
 
