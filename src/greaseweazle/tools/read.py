@@ -70,7 +70,8 @@ def read_with_retry(usb: USB.Unit, args, t) -> Tuple[Flux, Optional[HasFlux]]:
     dat = args.fmt_cls.decode_flux(cyl, head, flux)
     if dat is None:
         print("%s: WARNING: Out of range for format '%s': No format "
-              "conversion applied" % (tspec, args.format))
+              "conversion applied: %s" % (tspec, args.format,
+                flux.summary_string()))
         return flux, None
     for pll in plls[1:]:
         if dat.nr_missing() == 0:
