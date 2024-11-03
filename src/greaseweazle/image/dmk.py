@@ -24,9 +24,9 @@ class DMKTrack:
 
     def __init__(self, data):
         time_per_rev = 0.2
-        dlen = len(data)
-        if dlen < 8000: dlen *= 2
-        if dlen < 11000: time_per_rev *= 5/6
+        dlen = (len(data) * 8) // 1000
+        if (80 <= dlen <= 85) or (160 <= dlen <= 170):
+            time_per_rev *= 5/6
         self.track = MasterTrack(
             bits = bytes(data),
             time_per_rev = time_per_rev)
@@ -57,6 +57,16 @@ class DMK(Image):
                                            (x & 0x3fff) - 128),
                                 filter(lambda x: x != 0,
                                        struct.unpack("<64H", dat[o:o+128]))))
+                # DMK Spec: "The IDAM offsets MUST be in ascending order with
+                # no unused or bad pointers." We clip at the first
+                # non-ascending offset, fixing some buggy DMK image imports
+                # (for example, which have 0x80 added to empty offset entries).
+                prev = -1
+                for i, (_, off) in enumerate(offs):
+                    if off <= prev:
+                        offs = offs[:i]
+                        break
+                    prev = off
                 data = dat[o+128:o+tlen]
                 o += tlen
                 if not offs:
