@@ -402,6 +402,13 @@ def usb_reopen(usb, is_update):
         # Win10 pyserial returns a short read which fails struct.unpack
         pass
     usb.ser.close()
+    s = '''\
+Could not find the Greaseweazle device after switching firmware mode.
+1. If you are connected via a USB hub, instead try connecting directly.
+2. Firmware 1.7 and later fix an issue with some USB hubs.
+   a. Please try "gw update --bootloader" and "gw update"; and
+   b. Report the issue if it persists.'''
+    raise serial.SerialException(s)
     for i in range(10):
         time.sleep(0.5)
         try:
