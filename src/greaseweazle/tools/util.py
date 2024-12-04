@@ -416,7 +416,9 @@ def usb_reopen(usb, is_update):
             new_usb.jumperless_update = usb.jumperless_update
             new_usb.can_mode_switch = usb.can_mode_switch
             return new_usb
-    raise serial.SerialException('Could not reopen port after mode switch')
+    raise serial.SerialException('''\
+Could not find the Greaseweazle device after switching firmware mode.
+If you are connected via a USB hub, instead try connecting directly.''')
 
 
 def print_update_instructions(usb):
