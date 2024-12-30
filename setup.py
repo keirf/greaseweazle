@@ -18,7 +18,7 @@ setup(name = 'greaseweazle',
       version = version(),
       install_requires = [
           'crcmod',
-          'bitarray<3',
+          'bitarray>=3',
           'pyserial',
           'requests'
       ],

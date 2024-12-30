@@ -241,11 +241,11 @@ class DEC_MMFM:
         pre_bits.frombytes(pre)
         post_bits = bitarray(endian='big')
         post_bits.frombytes(mfm_encode(encode(pre)))
-        for x in pre_bits.itersearch(self.encode_search):
+        for x in pre_bits.search(self.encode_search):
             post_bits[x*2+1:x*2+12] = self.encode_replace
         return post_bits.tobytes()
     def decode(self, bits: bitarray) -> bytes:
-        for x in bits.itersearch(self.decode_search):
+        for x in bits.search(self.decode_search):
             if x&1 != 0: # Only matches starting on a data bit
                 bits[x:x+3] = self.decode_replace
         return decode(bits.tobytes())
@@ -448,14 +448,14 @@ class IBMTrack(codec.Codec):
 
         ## 1. Calculate offsets within dump
         
-        for offs in bits.itersearch(mfm_iam_sync):
+        for offs in bits.search(mfm_iam_sync):
             if len(bits) < offs+4*16:
                 continue
             mark = decode(bits[offs+3*16:offs+4*16].tobytes())[0]
             if mark == Mark.IAM:
                 areas.append(IAM(offs, offs+4*16))
 
-        for offs in bits.itersearch(mfm_sync):
+        for offs in bits.search(mfm_sync):
 
             if len(bits) < offs+4*16:
                 continue
@@ -515,18 +515,18 @@ class IBMTrack(codec.Codec):
 
         if mmfm_raw is not None:
             mmfm_bits, mmfm_times = mmfm_raw.get_all_data()
-            mmfm_iter = mmfm_bits.itersearch(dec_mmfm.sync_prefix)
+            mmfm_iter = mmfm_bits.search(dec_mmfm.sync_prefix)
             mmfm_offs = next(mmfm_iter, None)
             fm_time, prev_fm_offs = 0.0, 0
             mmfm_time, prev_mmfm_offs = 0.0, 0
 
         ## 1. Calculate offsets within dump
         
-        for offs in bits.itersearch(fm_iam_sync):
+        for offs in bits.search(fm_iam_sync):
             offs += 16
             areas.append(IAM(offs, offs+1*16))
 
-        for offs in bits.itersearch(fm_sync_prefix):
+        for offs in bits.search(fm_sync_prefix):
 
             # DEC MMFM track: Ensure this looks like an FM mark even at
             # double rate. This also finds the equivalent point in the

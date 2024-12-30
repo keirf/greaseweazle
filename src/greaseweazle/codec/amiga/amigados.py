@@ -84,7 +84,7 @@ class AmigaDOS(codec.Codec):
                        clock = self.clock, data = track, pll = pll)
         bits, _ = raw.get_all_data()
 
-        for offs in bits.itersearch(sync):
+        for offs in bits.search(sync):
 
             if self.nr_missing() == 0:
                 break

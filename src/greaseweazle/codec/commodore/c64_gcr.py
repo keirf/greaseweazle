@@ -94,7 +94,7 @@ class C64GCR(codec.Codec):
                        lowpass_thresh = 2.5e-6)
         bits, _ = raw.get_all_data()
 
-        for offs in bits.itersearch(sector_sync):
+        for offs in bits.search(sector_sync):
 
             if self.nr_missing() == 0:
                 break
@@ -128,7 +128,7 @@ class C64GCR(codec.Codec):
 
             # Find data
             offs += 8*8
-            dat_offs = bits[offs:offs+100*8].search(data_sync)
+            dat_offs = list(bits[offs:offs+100*8].search(data_sync))
             if len(dat_offs) != 1:
                 continue
             offs += dat_offs[0]

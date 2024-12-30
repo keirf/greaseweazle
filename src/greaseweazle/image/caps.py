@@ -283,7 +283,7 @@ class IPFTrack(MasterTrack):
             raw_area = raw_bits[max(self.splice + s - self.tolerance, 0)
                                 : self.splice + s + l + self.tolerance]
             # All we care about is at least one match (this is a bit fuzzy)
-            if next(raw_area.itersearch(sector), None) is None:
+            if next(raw_area.search(sector), None) is None:
                 return False
         return True
 

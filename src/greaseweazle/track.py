@@ -59,20 +59,20 @@ class Precomp:
               scale: float) -> None:
         t = self.ns * scale
         if self.type == Precomp.MFM:
-            for i in bits.itersearch(bitarray('10100', endian='big')):
+            for i in bits.search(bitarray('10100', endian='big')):
                 bit_ticks[i+2] -= t
                 bit_ticks[i+3] += t
-            for i in bits.itersearch(bitarray('00101', endian='big')):
+            for i in bits.search(bitarray('00101', endian='big')):
                 bit_ticks[i+2] += t
                 bit_ticks[i+3] -= t
         # This is primarily for GCR and FM which permit adjacent 1s (and
         # have correspondingly slower bit times). However it may be useful
         # for illegal MFM sequences too, especially on Amiga (custom syncwords,
         # 4us-bitcell tracks). Normal MFM should not trigger these patterns.
-        for i in bits.itersearch(bitarray('110', endian='big')):
+        for i in bits.search(bitarray('110', endian='big')):
             bit_ticks[i+1] -= t
             bit_ticks[i+2] += t
-        for i in bits.itersearch(bitarray('011', endian='big')):
+        for i in bits.search(bitarray('011', endian='big')):
             bit_ticks[i+1] += t
             bit_ticks[i+2] -= t
 

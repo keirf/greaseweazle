@@ -117,8 +117,8 @@ class EDSKTrack:
         track.verify = self
         return track
 
-    def _find_sync(self, bits, sync, start) -> Optional[int]:
-        for offs in bits.itersearch(sync):
+    def _find_sync(self, bits: bitarray, sync, start) -> Optional[int]:
+        for offs in bits.search(sync):
             if offs >= start:
                 return offs
         return None

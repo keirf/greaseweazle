@@ -132,9 +132,9 @@ class NorthStar(codec.Codec):
 
                 s, e = hardsector_bits[sec_id], hardsector_bits[sec_id+1]
                 offs = bits[s:e].search(self.sync)
-                if len(offs) == 0:
+                if (off := next(offs, None)) is None:
                     continue
-                off = offs[0] + (1 + self.sync_bytes) * 16
+                off += (1 + self.sync_bytes) * 16
                 data = decode(bits[s+off:s+off+(self.bps+1)*16].tobytes())
                 if csum(data[:-1]) == data[-1]:
                     self.add(sec_id, data[:-1])
