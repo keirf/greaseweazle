@@ -22,8 +22,8 @@ from .image import Image
 
 class Encoding:
 
-    def __init__(self, len: int, mfm: bool) -> None:
-        self.fm_step = 2
+    def __init__(self, len: int, mfm: bool, fm_step: int) -> None:
+        self.fm_step = fm_step
         self.mfm = [False] * len
         self.clock = bytearray(len)
         self.cursor = 0
@@ -88,9 +88,10 @@ class DMK(Image):
     def from_bytes(self, dat: bytes) -> None:
 
         ro, ncyl, tlen, flags = struct.unpack('<2BHB', dat[:5])
-        error.check(flags & 0xef == 0,
+        error.check(flags & 0x2f == 0,
                     'DMK: Unrecognised flags value 0x%02x' % flags)
         nside = 1 if flags & 0x10 else 2
+        fm_step = 1 if flags & 0xc0 else 2
 
         o = 16 # skip disk header
         for cyl in range(ncyl):
@@ -113,7 +114,7 @@ class DMK(Image):
                 o += tlen
                 if not offs:
                     continue
-                encoding = Encoding(len(data), offs[0][0])
+                encoding = Encoding(len(data), offs[0][0], fm_step)
                 for mfm, off in offs:
                     if mfm:
                         encoding.mfm_off(data, off)
