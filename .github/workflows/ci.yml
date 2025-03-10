@@ -21,7 +21,9 @@ jobs:
         sudo apt -y install python3-pip
 
     - name: Dependency packages (pip)
-      run: python3 -m pip install --user setuptools_scm mypy types-requests .
+      run: |
+        python3 -m pip install -U pip setuptools setuptools[core] wheel
+        python3 -m pip install setuptools_scm mypy types-requests .
 
     - name: Tests
       run: |
@@ -42,7 +44,9 @@ jobs:
         sudo apt -y install python3-pip
 
     - name: Dependency packages (pip)
-      run: python3 -m pip install --user setuptools_scm
+      run: |
+        python3 -m pip install -U pip setuptools setuptools[core] wheel
+        python3 -m pip install setuptools_scm
 
     - name: Set environment variables
       id: vars
@@ -74,8 +78,8 @@ jobs:
 
     - name: Dependency packages (pip)
       run: |
-        python -m pip install --upgrade pip setuptools wheel
-        python -m pip install --user cx_Freeze setuptools_scm
+        python -m pip install -U pip setuptools wheel
+        python -m pip install cx_Freeze setuptools_scm
 
     - name: Set environment variables
       id: vars
@@ -115,8 +119,8 @@ jobs:
 
     - name: Dependency packages (pip)
       run: |
-        python -m pip install --upgrade pip setuptools wheel
-        python -m pip install --user cx_Freeze setuptools_scm
+        python -m pip install -U pip setuptools wheel
+        python -m pip install cx_Freeze setuptools_scm
 
     - name: Set environment variables
       id: vars
