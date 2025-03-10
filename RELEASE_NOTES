@@ -3,6 +3,9 @@
 ** Keir Fraser <keir.xen@gmail.com>
 ************************************
 
+** v1.22 - 10 March 2025
+ - DMK: Many fixes for import of TRS-80 DMK image files
+
 ** v1.21 - 23 October 2024
  - micropolis: Codec for Micropolis hard-sectored MFM disks
  - gw reset: By default do not reset configured "gw delays"
