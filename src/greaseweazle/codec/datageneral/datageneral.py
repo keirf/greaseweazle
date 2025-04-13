@@ -14,7 +14,7 @@ from enum import Enum
 
 from greaseweazle import error
 from greaseweazle.codec import codec
-from greaseweazle.codec.ibm.ibm import decode, encode, fm_encode, mfm_encode
+from greaseweazle.codec.ibm.ibm import decode, encode, fm_encode
 from greaseweazle.track import MasterTrack, PLL, PLLTrack
 from greaseweazle.flux import HasFlux
 
@@ -22,21 +22,14 @@ default_revs = 1
 
 bad_sector = b'-=[BAD SECTOR]=-'
 
-mfm_sync = bitarray(endian='big')
-mfm_sync.frombytes(mfm_encode(encode(b'\x00\xfb')))
+min_sync = 1000
+max_sync = 0
+min_sync_zero = 1000
+max_sync_zero = 0
+min_datasync = 1000
+max_datasync = 0
 
-fm_sync = bitarray(endian='big')
-fm_sync.frombytes(fm_encode(encode(b'\x00\x00\x00\x00\x00\x01')))
 
-
-#Sector starts with 23 * 16 zero bits, then a 0001 sync word followed by the adress field
-#There is an 18us "splice" between the address field and the following data field sync 
-#The documentation is not very clear on the exact number of bits in the data sync field
-#The splice plus the data sync add up to a non-integer number of bits, so we 
-#need to search for the data sync pattern to locate the data
-
-#"Manual" FM encoding....
-fm_datasync = bitarray("101010101010101010101010101010101010101010101010101010101011")
 
 
 def csum(dat):
@@ -49,31 +42,65 @@ def csum(dat):
     return y
 
 class Mode(Enum):
-    FM, MFM = range(2)
+    FM = 0
     def __str__(self):
-        NAMES = [ 'Data General FM', 'Data General MFM' ]
+        NAMES = [ 'Data General FM']
         return f'{NAMES[self.value]}'
 
 class DataGeneral(codec.Codec):
+    '''
+            Data General 8" floppy disk format, from DG document 015-000088-00, flowchart page G-4
+            
+            Sector read:
+            <sector index pulse> <704uS delay> <sector address sync bit> <16 bits sector address (preamble) <20 uS delay> <64 uS delay> <data sync bit> <data 512 bits><crc 16 bits>
 
+            Sector write:
+            <sector index pulse> <704uS delay> <sector address sync bit> <16 bits sector address (preamble) <20 uS delay> <write zeros for 160 uS -> 40 zero bits> <data sync bit> <data 512 bits><crc 16 bits>
+
+            Formatting operation:
+            <sector index pulse> <160 uS delay> <352 bits '0'> <0000000000000001> <16 bits sector address> <352 bits '0'> <3520 bits 'dont care'>
+
+            The actual number of zero bits before the sector address sync bit observed in disk images varies between 572 and 740
+            
+    '''        
+    
     time_per_rev = 0.166
 
     verify_revs: float = default_revs
 
     def __init__(self, cyl: int, head: int, config):
-        if config.mode is Mode.FM:
-            self.clock = 2e-6
-            self.bps = 512
-            self.sync = fm_sync
-            self.datasync = fm_datasync
-            self.presync_bytes = 21
-            self.sync_bytes = 6
-        else:
-            self.clock = 2e-6
-            self.bps = 512
-            self.sync = mfm_sync
-            self.presync_bytes = 34
-            self.sync_bytes = 2
+        
+        self.clock = 2e-6
+        self.bps = 512
+
+        self.address_sync = b'\x00\x01'
+        self.data_sync = b'\x00\x01'
+
+        self.address_sync_fmbits = bitarray(endian='big')
+        self.address_sync_fmbits.frombytes(fm_encode(encode(self.address_sync)))
+
+        self.data_sync_fmbits = bitarray(endian='big')
+        self.data_sync_fmbits.frombytes(fm_encode(encode(self.data_sync)))
+        
+        #According to the documentation, there is a 704uS delay before the drive reads the sync word for the sector address (preamble)
+        #This is equivalent to 704 presync FM bits followed by 0x0001 (32 FM bits) sync word
+        #The actual number of FM bits before the sector address sync word observed in disk images varies between 572 and 740
+        self.pre_addresssync_read_fm_bits = 560
+        #self.pre_addresssync_read_fm_bits = 100
+        
+        #self.pre_addresssync_write_fm_bits = 704
+        self.pre_addresssync_write_fm_bytes = 44
+
+        #there is a 20us + 64us delay before the data sync bit is read corresponding to a total of 84 FM bits + 2 fm sync bits
+        #When writing, there is a 20uS delay, then 40 zero bits followed by a one bit (the sync bit) are written
+        #The actual number of zero (FM) bits before the data sync bit observed in disk images varies between 97 and 98
+        #equivalent to 66 FM bits followed by 0x0001 (32 FM bits) syncword. For reading, use minimum of 60 FM bits before the syncword
+        
+        self.pre_datasync_read_fm_bits = 60
+        #self.pre_datasync_write_fm_bits = 150 #20 + 160 + 2 = 150 presync + 32 sync word 0x0001
+        self.pre_datasync_write_fm_bytes = 5 #20 + 160 + 2 = 150 presync + 32 sync word 0x0001
+    
+
         self.cyl, self.head = cyl, head
         self.config = config
         self.sector: List[Optional[bytes]]
@@ -114,6 +141,13 @@ class DataGeneral(codec.Codec):
         return totsize
 
     def decode_flux(self, track: HasFlux, pll: Optional[PLL]=None) -> None:
+        global min_sync
+        global max_sync
+        global min_sync_zero
+        global max_sync_zero
+        global min_datasync
+        global max_datasync
+
         flux = track.flux()
         if flux.time_per_rev < self.time_per_rev / 2:
             flux.identify_hard_sectors()
@@ -148,23 +182,62 @@ class DataGeneral(codec.Codec):
                 #print(bits[s:e])
                 data = decode(bits[s:e].tobytes())
                 #print(data.hex())
-                offs = bits[s:e].search(self.sync)
+
+                #Start searching for sync after a minimum delay of pre_addresssync_read_bits
+                offs = bits[s + self.pre_addresssync_read_fm_bits:e].search(self.address_sync_fmbits)
                 if (off := next(offs, None)) is None:
                     continue
-                off += (self.sync_bytes) * 16
+
+                numsync = self.pre_addresssync_read_fm_bits + off + len(self.address_sync_fmbits)
+                #Get offset of first preamble bit
+                off += self.pre_addresssync_read_fm_bits +  len(self.address_sync_fmbits)
+
+
+                #Reed 2 byte preamb;e
                 data = decode(bits[s+off:s+off+2*16].tobytes())
-                #print(data.hex())
+                
+                #Extract track# and sector#
                 track = data[0] & 0x7F
                 sector = data[1] >> 2
-                #print(f'Track {track}, Sector {sector}')
-
                 
-                dataoffs = bits[s+off+2*16:e].search(self.datasync)
+                
+                if numsync < min_sync:
+                    min_sync =numsync
+                if numsync > max_sync:
+                    max_sync = numsync
+
+                numsynczero = 0
+                
+                for kk in range(s + numsync - 4, s, -2):
+                    if bits[kk:kk + 2] != bitarray('10'):
+                        break
+                    numsynczero += 2
+
+                if numsynczero < min_sync_zero:
+                    min_sync_zero =numsynczero
+                if numsynczero > max_sync_zero:
+                    max_sync_zero = numsynczero
+                #print(f'Track {track}, Sector {sector}, after {numsync} sync bits, {numsynczero} zero value sync bits, min sync {min_sync}, max sync {max_sync}, min zero {min_sync_zero}, max zero {max_sync_zero}')
+
+                dsyncstart = off + 2*16
+                #Skip to the start of the data sync, skip over 2 byte preamble plus minimum delay of pre_datasync_read_bits
+                off +=  2*16 + self.pre_datasync_read_fm_bits
+                dataoffs = bits[s+off:e].search(self.data_sync_fmbits)
                 
                 if (dataoff := next(dataoffs, None)) is None:
                     continue
+    
+                dataoff += off + len(self.data_sync_fmbits)
+                numdsync = dataoff - dsyncstart
 
-                data = decode(bits[s+off+2*16 + dataoff + len(self.datasync) :s+off+2*16 + dataoff + len(self.datasync) + 518*16].tobytes())
+                if numdsync < min_datasync:
+                    min_datasync = numdsync
+                if numdsync > max_datasync:
+                    max_datasync = numdsync
+
+                #print(f'Data sync {numdsync} bits, min {min_datasync}, max {max_datasync}')
+
+                data = decode(bits[s + dataoff:s + dataoff + 518*16].tobytes())
                 #print(data[:512].hex())
                 #print(data[512:514].hex())
                 #print(data[514:].hex())
@@ -177,20 +250,33 @@ class DataGeneral(codec.Codec):
 
 
     def master_track(self) -> MasterTrack:
-        raise error.Fatal('NOT IMPLEMENTED')
         t = bytes()
         slen = int((self.time_per_rev / self.clock / self.nsec / 16))
 
         for sec_id in range(self.nsec):
-            s  = encode(bytes(self.presync_bytes))
-            s += encode(b'\xfb' * self.sync_bytes)
+            # 
+            s  = encode(b'\x00' * self.pre_addresssync_write_fm_bytes)
+            s += encode(self.address_sync)
+            
+            
+            
             sector = self.sector[sec_id]
+            trackid = self.cyl & 7
+            sectorenc = (sec_id & 0xF) << 2
+            preamble = struct.pack('>BB', trackid, sectorenc)
+            
+            s += encode(preamble)
+
+            s += encode(b'\x00' * self.pre_datasync_write_fm_bytes)
+            s += encode(self.data_sync)
+            
             data = bad_sector*(self.bps//16) if sector is None else sector
-            s += encode(data + bytes([csum(data)]))
+            
+            s += encode(data + csum(data).to_bytes(2, 'big'))
             s += encode(bytes(slen - len(s)//2))
             t += s
 
-        t = mfm_encode(t) if self.config.mode is Mode.MFM else fm_encode(t)
+        t = fm_encode(t)
 
         hardsector_bits = [slen*16*i for i in range(self.nsec)]
 
@@ -222,8 +308,6 @@ class DataGeneralDef(codec.TrackDef):
         elif key == 'mode':
             if val == 'fm':
                 self.mode = Mode.FM
-            elif val == 'mfm':
-                self.mode = Mode.MFM
             else:
                 raise error.Fatal('unrecognised mode %s' % val)
         else:
