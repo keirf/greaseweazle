@@ -235,6 +235,7 @@ class HFE(Image):
             bits = t.bits[index:] + t.bits[:index]
             bit_ticks = (t.bit_ticks[index:] + t.bit_ticks[:index]
                          if t.bit_ticks else None)
+            hardsector_bits = t.hardsector_bits
             # Rotate the weak areas
             weak = []
             for s, n in t.weak:
@@ -255,9 +256,12 @@ class HFE(Image):
                 if bit_ticks is not None:
                     bit_ticks = [x for x in bit_ticks for _ in range(2)]
                 weak = [(2*x,2*y) for (x,y) in weak]
+                if hardsector_bits is not None:
+                    hardsector_bits = [2*x for x in hardsector_bits]
             mt = MasterTrack(
                 bits = bits, time_per_rev = t.time_per_rev,
-                bit_ticks = bit_ticks, weak = weak)
+                bit_ticks = bit_ticks, weak = weak,
+                hardsector_bits = hardsector_bits)
         else:
             flux = t.flux()
             flux.cue_at_index()
@@ -385,6 +389,7 @@ def hfev3_mk_track(cyl: int, head: int, track_v1: HFETrack) -> HFETrack:
     bits = bitarray(endian='big')
     ticks: List[int] = []
     weak: List[HFEv3_Range] = []
+    index: List[int] = []
 
     i = rate = 0
     while i < len(tdat):
@@ -392,7 +397,7 @@ def hfev3_mk_track(cyl: int, head: int, track_v1: HFETrack) -> HFETrack:
         if x == HFEv3_Op.Nop:
             pass
         elif x == HFEv3_Op.Index:
-            pass # TODO: Support hard-sector images
+            index.append(len(bits))
         elif x == HFEv3_Op.Bitrate:
             if i+1 > len(tdat):
                 # Non fatal: This has been observed in HFEv3 images created
@@ -433,11 +438,24 @@ def hfev3_mk_track(cyl: int, head: int, track_v1: HFETrack) -> HFETrack:
         if ticks[i] != 0: break
         ticks[i] = rate
 
+    # This only works if the track is index aligned, with the first sector
+    # starting at bit 0.
+    hardsector_bits: Optional[List[int]] = None
+    if len(index) > 1:
+        pos = 0
+        hardsector_bits = []
+        for x in index[1:]:
+            hardsector_bits.append(x-pos)
+            pos = x
+        # The last index pulse is the pre-index hole: extend to end of track
+        hardsector_bits[-1] += len(bits) - pos
+
     mt = MasterTrack(
         bits = bits,
         time_per_rev = sum(ticks)/36e6,
         bit_ticks = cast(List[float], ticks), # mypy
-        weak = list(map(lambda x: (x.s, x.n), weak))
+        weak = list(map(lambda x: (x.s, x.n), weak)),
+        hardsector_bits = hardsector_bits
     )
     return HFETrack(mt)
 
