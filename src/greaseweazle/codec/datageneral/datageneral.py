@@ -180,9 +180,8 @@ class DataGeneral(codec.Codec):
 
         t = fm_encode(t)
 
-        hardsector_bits = [slen*16*i for i in range(self.nsec)]
-
-        track = MasterTrack(bits = t, time_per_rev = self.time_per_rev)
+        track = MasterTrack(bits = t, time_per_rev = self.time_per_rev,
+                            hardsector_bits = [slen*16] * self.nsec)
         track.verify = self
         return track
 
