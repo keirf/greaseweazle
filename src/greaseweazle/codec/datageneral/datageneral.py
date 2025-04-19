@@ -38,6 +38,7 @@ def csum(dat):
 
 class DataGeneral(codec.Codec):
 
+    nsec = 8
     time_per_rev = 60 / 360
 
     verify_revs: float = default_revs
@@ -49,10 +50,6 @@ class DataGeneral(codec.Codec):
         self.config = config
         self.sector: List[Optional[bytes]]
         self.sector = [None] * self.nsec
-
-    @property
-    def nsec(self) -> int:
-        return self.config.secs
 
     def summary_string(self) -> str:
         nsec, nbad = self.nsec, self.nr_missing()
@@ -102,10 +99,10 @@ class DataGeneral(codec.Codec):
 
             hardsector_bits = raw.revolutions[rev].hardsector_bits
             if hardsector_bits is not None:
+                hardsector_bits = list(it.accumulate(hardsector_bits))
                 # DG hard-sectored media has 4 holes per sector; 8 sectors
                 if len(hardsector_bits) == 32:
                     hardsector_bits = hardsector_bits[3::4]
-                hardsector_bits = list(it.accumulate(hardsector_bits))
             else:
                 hardsector_bits = [len(bits)*(i+1)//self.nsec
                                    for i in range(self.nsec)]
@@ -198,22 +195,13 @@ class DataGeneralDef(codec.TrackDef):
     default_revs = default_revs
 
     def __init__(self, format_name: str):
-        self.secs: Optional[int] = None
-        self.finalised = False
+        return
 
     def add_param(self, key: str, val) -> None:
-        if key == 'secs':
-            val = int(val)
-            self.secs = val
-        else:
-            raise error.Fatal('unrecognised track option %s' % key)
+        raise error.Fatal('unrecognised track option %s' % key)
 
     def finalise(self) -> None:
-        if self.finalised:
-            return
-        error.check(self.secs is not None,
-                    'number of sectors not specified')
-        self.finalised = True
+        return
 
     def mk_track(self, cyl: int, head: int) -> DataGeneral:
         return DataGeneral(cyl, head, self)
