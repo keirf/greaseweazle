@@ -116,7 +116,6 @@ class DataGeneral(codec.Codec):
                 s, e = hardsector_bits[hsec_id], hardsector_bits[hsec_id+1]
                 # Skip first 352 cells (704us), see Figure G-1
                 s += 352
-                data = decode(bits[s:e].tobytes())
 
                 offs = bits[s:e].search(sync)
                 if (off := next(offs, None)) is None:
