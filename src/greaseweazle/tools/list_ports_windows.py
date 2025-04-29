@@ -1317,6 +1317,9 @@ def iterate_comports(cache_usb_info=True):
             continue
         yielded_devices.append(port_device)
 
+        # Skip ports with empty names.
+        if port_device.port_name is None:
+            continue
         # Skip parallel ports.
         if port_device.port_name.startswith('LPT'):
             continue
