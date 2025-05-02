@@ -9,6 +9,7 @@ from greaseweazle.image.img import IMG
 
 class SSD(IMG):
     default_format = 'acorn.dfs.ss'
+    sequential = True
 
 class DSD(IMG):
     default_format = 'acorn.dfs.ds'
