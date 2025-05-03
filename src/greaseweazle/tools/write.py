@@ -211,6 +211,7 @@ def main(argv) -> None:
 
     epilog = (util.drive_desc + "\n"
               + util.speed_desc + "\n" + util.tspec_desc
+              + "\n" + util.precompspec_desc
               + "\nFORMAT options:\n" + codec.print_formats()
               + "\n\nSupported file suffixes:\n"
               + util.columnify(util.image_types))

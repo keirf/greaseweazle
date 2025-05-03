@@ -97,6 +97,13 @@ PLLSPEC: Colon-separated list of:
   Defaults: period=5:phase=60 (no lowpass filter)
 """
 
+precompspec_desc = """\
+PRECOMP: Any of the following elements:
+  type=<t>            :: Precomp type (mfm, fm, gcr): Default mfm
+  <c>=<p>             :: Precompensate all cylinders >= c by p nanoseconds
+  e.g. '40=125' to apply 125ns MFM precompensation to cylinders 40 and higher
+"""
+
 # Returns time period in seconds (float)
 # Accepts rpm, ms, us, ns, scp. Naked value is assumed rpm.
 def period(arg):
