@@ -151,19 +151,23 @@ class IMD(Image):
             cyl, head, nsec, sec_n = c, h, 0, None
             rmap, cmap, hmap = [], [], []
             for s in t.sectors:
-                if not isinstance(s, ibm.Sector):
+                if isinstance(s, ibm.Sector):
+                    idam = s.idam
+                elif isinstance(s, ibm.IDAM):
+                    idam = s
+                else:
                     continue
                 nsec += 1
-                error.check(s.idam.n == sec_n or sec_n is None,
+                error.check(idam.n == sec_n or sec_n is None,
                             'IMD: Cannot create T%d.%d: Sectors vary in size'
                             % (c,h))
-                sec_n = s.idam.n
-                rmap.append(s.idam.r)
-                cmap.append(s.idam.c)
-                hmap.append(s.idam.h)
-                if s.idam.c != c:
+                sec_n = idam.n
+                rmap.append(idam.r)
+                cmap.append(idam.c)
+                hmap.append(idam.h)
+                if idam.c != c:
                     head |= 0x80
-                if s.idam.h != h:
+                if idam.h != h:
                     head |= 0x40
             if sec_n is None:
                 sec_n = 0
@@ -175,7 +179,10 @@ class IMD(Image):
             if head & 0x40:
                 tdat += bytes(hmap)
             for s in t.sectors:
-                if not isinstance(s, ibm.Sector):
+                if isinstance(s, ibm.IDAM):
+                    tdat += bytes([0])
+                    continue
+                elif not isinstance(s, ibm.Sector):
                     continue
                 rec = 0
                 if s.dam.data.count(s.dam.data[0]) == secsz:
