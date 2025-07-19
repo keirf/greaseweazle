@@ -63,7 +63,7 @@ jobs:
         path: greaseweazle-${{ steps.vars.outputs.ver }}.zip
 
   build-win32:
-    runs-on: windows-2019
+    runs-on: windows-2022
     steps:
 
     - uses: actions/checkout@v4
