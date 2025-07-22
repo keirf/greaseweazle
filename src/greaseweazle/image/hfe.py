@@ -226,6 +226,7 @@ class HFE(Image):
                         'HFE: Requires bitrate to be specified'
                         ' (eg. filename.hfe::bitrate=500)')
             self.opts.bitrate = round(t.bitrate / 2e3)
+            assert self.opts.bitrate is not None # mypy
             if double_rate:
                 self.opts.bitrate *= 2
             print('HFE: Data bitrate detected: %d kbit/s' % self.opts.bitrate)

@@ -627,23 +627,22 @@ class IBMTrack(codec.Codec):
             areas = self.fm_decode_raw(raw, mmfm_raw)
 
         # Add to the deduped lists
-        a: Optional[TrackArea]
         for a in areas:
-            list: List[Any]
+            dupe = False
             if isinstance(a, IAM):
-                list = self.iams
+                for iam in self.iams:
+                    if dupe := abs(iam.start - a.start) < 1000:
+                        break
+                if not dupe:
+                    self.iams.append(a)
             elif isinstance(a, Sector):
-                list = self.sectors
-            else:
-                continue
-            for i, s in enumerate(list):
-                if abs(s.start - a.start) < 1000:
-                    if isinstance(a, Sector) and s.crc != 0 and a.crc == 0:
-                        self.sectors[i] = a
-                    a = None
-                    break
-            if a is not None:
-                list.append(a)
+                for i, sec in enumerate(self.sectors):
+                    if dupe := abs(sec.start - a.start) < 1000:
+                        if sec.crc != 0 and a.crc == 0:
+                            self.sectors[i] = a
+                        break
+                if not dupe:
+                    self.sectors.append(a)
         self.iams.sort(key=lambda x:x.start)
         self.sectors.sort(key=lambda x:x.start)
 
