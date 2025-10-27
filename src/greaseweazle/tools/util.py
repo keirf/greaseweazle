@@ -69,7 +69,7 @@ def level(letter):
 
 drive_desc = """\
 DRIVE: Drive (and bus) identifier:
-  0 | 1 | 2           :: Shugart bus unit
+  0 | 1 | 2 | 3       :: Shugart bus unit
   A | B               :: IBM/PC bus unit
 """
 
@@ -132,6 +132,7 @@ class Drive:
             '0': (USB.BusType.Shugart, 0),
             '1': (USB.BusType.Shugart, 1),
             '2': (USB.BusType.Shugart, 2),
+            '3': (USB.BusType.Shugart, 3),
         }
         if not letter.upper() in types:
             raise argparse.ArgumentTypeError("invalid drive letter: '%s'"
