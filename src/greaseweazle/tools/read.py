@@ -62,6 +62,9 @@ def read_with_retry(usb: USB.Unit, args, t) -> Tuple[Flux, Optional[HasFlux]]:
 
     usb.seek(t.physical_cyl, t.physical_head)
 
+    if args.gen_tg43:
+        usb.set_pin(2, cyl < 60)
+
     flux = read_and_normalise(usb, args, args.revs, args.ticks)
     if args.fmt_cls is None:
         print(f'{tspec}: {flux.summary_string()}')
@@ -95,6 +98,8 @@ def read_with_retry(usb: USB.Unit, args, t) -> Tuple[Flux, Optional[HasFlux]]:
             if retry != 0:
                 usb.seek(0, 0)
                 usb.seek(t.physical_cyl, t.physical_head)
+                if args.gen_tg43:
+                    usb.set_pin(2, cyl < 60)
             seek_retry += 1
             retry = 0
         retry += 1
@@ -239,8 +244,11 @@ def main(argv) -> None:
                         help="do not overwrite an existing file")
     parser.add_argument("--pll", type=track.PLL, metavar="PLLSPEC",
                         help="manual PLL parameter override")
-    parser.add_argument("--densel", "--dd", type=util.level, metavar="LEVEL",
+    densel_group = parser.add_mutually_exclusive_group(required=False)
+    densel_group.add_argument("--densel", "--dd", type=util.level, metavar="LEVEL",
                         help="drive interface density select on pin 2 (H,L)")
+    densel_group.add_argument("--gen-tg43", action="store_true",
+                        help="generate TG43 signal for 8-inch drive on pin 2 from track 60. Enable postcompensation filter")
     parser.add_argument("--reverse", action="store_true",
                         help="reverse track data (flippy disk)")
     parser.add_argument("file", help="output filename")
@@ -280,14 +288,15 @@ Known formats:\n%s"""
         if args.format:
             print("Format " + args.format)
         try:
-            if args.densel is not None:
+            if args.densel is not None or args.gen_tg43:
                 prev_pin2 = usb.get_pin(2)
+            if args.densel is not None:
                 usb.set_pin(2, args.densel)
             with open_image(args, image_class) as image:
                 util.with_drive_selected(
                     lambda: read_to_image(usb, args, image), usb, args.drive)
         finally:
-            if args.densel is not None:
+            if args.densel is not None or args.gen_tg43:
                 usb.set_pin(2, prev_pin2)
     except USB.CmdError as err:
         print("Command Failed: %s" % err)
