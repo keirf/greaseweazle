@@ -345,6 +345,8 @@ class SCP(Image):
             to_index -= x
             y = x * factor + rem
             val = round(y)
+            if val <= 0:
+                continue
             if (val & 65535) == 0:
                 val += 1
             rem = y - val
