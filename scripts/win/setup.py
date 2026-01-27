@@ -12,6 +12,7 @@ else:
 
 buildOptions = dict(
     packages = ['greaseweazle'],
+    includes = ['requests', 'crcmod', 'bitarray', 'serial', 'serial.tools'],
     excludes = ['tkinter', 'test', 'distutils'],
     bin_path_includes = bin_path_includes,
     include_msvcr = True)
