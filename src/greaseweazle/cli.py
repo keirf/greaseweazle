@@ -24,7 +24,8 @@ actions = [ 'info',
             'pin',
             'reset',
             'bandwidth',
-            'rpm' ]
+            'rpm',
+            'align' ]
 
 def usage(argv):
     print("Usage: %s [--time] [action] [-h] ..." % (argv[0]))
