@@ -81,13 +81,13 @@ def encode(dat):
     return bytes(out)
 doubler = encode
 
-decode_list = bytearray()
-for x in range(0x5555+1):
-    y = 0
-    for i in range(16):
-        if x&(1<<(i*2)):
-            y |= 1<<i
-    decode_list.append(y)
+decode_list = bytearray(0x5556)
+for x in range(0x5556):
+    index = x & 0x5555
+    y = (index + (index >> 1)) & 0x3333
+    y = (y + (y >> 2)) & 0x0F0F
+    y = (y + (y >> 4)) & 0x00FF
+    decode_list[index] = y
 
 def decode(dat):
     out = bytearray()

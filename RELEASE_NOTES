@@ -3,6 +3,13 @@
 ** Keir Fraser <keir.xen@gmail.com>
 ************************************
 
+** v1.23 - 17 December 2025
+ - Fix for empty name fields in Windows serial port list
+ - acorn: Fixes for single-density image handling
+ - Diskdefs for Kaypro and Eagle computers
+ - Various hard-sector fixes and updates
+ - Fourth unit on Shugart bus (needs v1.7 or later firmware)
+
 ** v1.22 - 10 March 2025
  - DMK: Many fixes for import of TRS-80 DMK image files
 
