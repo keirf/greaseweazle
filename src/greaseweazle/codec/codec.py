@@ -84,6 +84,7 @@ class DiskDef:
     def __init__(self) -> None:
         self.cyls: Optional[int] = None
         self.heads: Optional[int] = None
+        self.sequential: bool = False
         self.track_map: Dict[Tuple[int,int],TrackDef] = dict()
 
     def add_param(self, key: str, val: str) -> None:
@@ -95,6 +96,8 @@ class DiskDef:
             n = int(val)
             error.check(1 <= n <= 2, '%s out of range' % key)
             self.heads = n
+        elif key == 'sequential':
+            self.sequential = (val.lower() in ('yes', 'true', '1'))
         else:
             raise error.Fatal('unrecognised disk option: %s' % key)
 

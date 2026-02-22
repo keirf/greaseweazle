@@ -83,6 +83,9 @@ class Image:
                     "%s: Cannot create %s image files" % (name, cls.__name__))
         obj = cls(name, fmt)
         obj.noclobber = noclobber
+        # Apply sequential flag from DiskDef if available
+        if fmt is not None and hasattr(fmt, 'sequential') and hasattr(obj, 'sequential'):
+            obj.sequential = fmt.sequential
         obj.apply_w_opts(opts)
         return obj
 
