@@ -45,7 +45,7 @@ class ApridiskRecord:
 
     @staticmethod
     def split_apridisk_file(file: bytes, fmt: codec.DiskDef) -> list[ApridiskRecord]:
-        res: list[tuple[ApridiskRecord, bytes]] = []
+        res: list[ApridiskRecord] = []
         byte = 0
         while file:
             record = ApridiskRecord(file, fmt)
@@ -74,8 +74,8 @@ class ApridiskRecord:
             self.byte = self.data[2]
 
     def _match_pos(self, data: bytes):
-        error.check(data[12] in range(0, self.fmt.heads),
-                    f"Apridisk heads out of range (max {self.fmt.heads}): {hex(data[12])}")
+        error.check(data[12] in range(0, self.fmt.heads or 2),
+                    f"Apridisk heads out of range (max {self.fmt.heads or 2}): {hex(data[12])}")
         self.head = data[12]
 
         error.check(data[13] in range(1, 19) or self.itm_type != ApridiskSecType.SECTOR,
@@ -83,7 +83,7 @@ class ApridiskRecord:
         self.sector = data[13]
 
         cyl = int.from_bytes(data[14:16], byteorder="little")
-        error.check(cyl in range(0, self.fmt.cyls),
+        error.check(cyl in range(0, self.fmt.cyls or 80),
                     f"Apridisk cylinder out of range for chosen format (max {self.fmt.cyls}): {cyl}")
         self.cyl = cyl
 
@@ -96,6 +96,7 @@ class ApridiskSecType(Enum):
     COMMENT = 0xE31D0002
     CREATOR = 0xE31D0003
 
+    @staticmethod
     def from_bytes(b: bytes) -> ApridiskSecType:
         num = int.from_bytes(b[:4], byteorder="little")
         try:
