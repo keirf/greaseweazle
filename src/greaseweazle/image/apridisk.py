@@ -17,7 +17,7 @@ from greaseweazle.image.img import IMG
 class Apridisk(IMG):
 
     def from_bytes(self, dat: bytes) -> None:
-        error.check(len(dat) >= 128, "Apridisk file missing 129 byte header")
+        error.check(len(dat) >= 128, "Apridisk file missing 128 byte header")
         dat = dat[128:]
 
         records = ApridiskRecord.split_apridisk_file(dat, self.fmt)
@@ -28,7 +28,7 @@ class Apridisk(IMG):
 
 class ApridiskRecord:
     def __init__(self, data: bytes, fmt: codec.DiskDef):
-        error.check(len(data) >= 16, "Apridisk record contains no header")
+        error.check(len(data) >= 16, "Apridisk record contains no section header")
         
         self.fmt = fmt
         self.itm_type = ApridiskSecType.from_bytes(data[:4])
