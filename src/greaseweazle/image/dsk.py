@@ -16,12 +16,12 @@ class DSK(IMG):
     def from_file(cls, name: str, fmt, opts: OptDict) -> Image:
 
         with open(name, "rb") as f:
-            sig = f.read(16)
+            sig = f.read(24)
 
         if sig[:8] == b'MV - CPC' or sig[:16] == b'EXTENDED CPC DSK':
             return EDSK.from_file(name, fmt, opts)
         
-        if sig[24:] == b"ACT Apricot disk image\032\004":
+        if sig[:24] == b"ACT Apricot disk image\032\004":
             return Apridisk.from_file(name, fmt, opts)
 
         return IMG.from_file(name, fmt, opts)
