@@ -20,4 +20,5 @@
 /build/
 /dist/
 /src/greaseweazle/__init__.py
+/.vscode
 
