@@ -74,14 +74,16 @@ class SCPOpts(ImageOpts):
     """legacy_ss: Set to True to generate (incorrect) legacy single-sided
     SCP image.
     revs: Number of revolutions to output per track.
+    img_output: Additional IMG output file when writing raw SCP.
     """
 
-    w_settings = [ 'disktype', 'legacy_ss', 'revs' ]
+    w_settings = [ 'disktype', 'legacy_ss', 'revs', 'img_output' ]
 
     def __init__(self) -> None:
         self.legacy_ss = False
         self._disktype = 0x80 # Other
         self._revs: Optional[int] = None
+        self.img_output: Optional[str] = None
 
     @property
     def disktype(self) -> int:
