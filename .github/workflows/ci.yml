@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
 
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
       with:
         fetch-depth: 0
 
@@ -34,7 +34,7 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
 
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
       with:
         fetch-depth: 0
 
@@ -57,7 +57,7 @@ jobs:
       run: make dist
 
     - name: Upload artifacts
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: greaseweazle-ci-${{ steps.vars.outputs.ver }}-sdist
         path: greaseweazle-${{ steps.vars.outputs.ver }}.zip
@@ -66,12 +66,12 @@ jobs:
     runs-on: windows-2022
     steps:
 
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
       with:
         fetch-depth: 0
 
     - name: Set up Python
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v6
       with:
         python-version: 3.8
         architecture: x86
@@ -98,7 +98,7 @@ jobs:
         rm -rf ipf ipf.zip
 
     - name: Upload artifacts
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: greaseweazle-ci-${{ steps.vars.outputs.ver }}-win32
         path: greaseweazle-${{ steps.vars.outputs.ver }}
@@ -107,12 +107,12 @@ jobs:
     runs-on: windows-2022
     steps:
 
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
       with:
         fetch-depth: 0
 
     - name: Set up Python
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v6
       with:
         python-version: 3.11
         architecture: x64
@@ -139,7 +139,7 @@ jobs:
         rm -rf ipf ipf.zip
 
     - name: Upload artifacts
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: greaseweazle-ci-${{ steps.vars.outputs.ver }}-win64
         path: greaseweazle-${{ steps.vars.outputs.ver }}

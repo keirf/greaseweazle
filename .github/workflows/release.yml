@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
 
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
       with:
         fetch-depth: 0
 
@@ -34,7 +34,7 @@ jobs:
       run: make dist
 
     - name: Upload artifacts
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: greaseweazle-ci-${{ steps.vars.outputs.ver }}-sdist
         path: greaseweazle-${{ steps.vars.outputs.ver }}.zip
@@ -43,12 +43,12 @@ jobs:
     runs-on: windows-2022
     steps:
 
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
       with:
         fetch-depth: 0
 
     - name: Set up Python
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v6
       with:
         python-version: 3.8
         architecture: x86
@@ -76,7 +76,7 @@ jobs:
         7z a $GW-win32.zip $GW
 
     - name: Upload artifacts
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: greaseweazle-ci-${{ steps.vars.outputs.ver }}-win32
         path: greaseweazle-${{ steps.vars.outputs.ver }}-win32.zip
@@ -85,12 +85,12 @@ jobs:
     runs-on: windows-2022
     steps:
 
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
       with:
         fetch-depth: 0
 
     - name: Set up Python
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v6
       with:
         python-version: 3.11
         architecture: x64
@@ -118,7 +118,7 @@ jobs:
         7z a $GW-win64.zip $GW
 
     - name: Upload artifacts
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: greaseweazle-ci-${{ steps.vars.outputs.ver }}-win64
         path: greaseweazle-${{ steps.vars.outputs.ver }}-win64.zip
@@ -128,7 +128,7 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
 
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
       with:
         fetch-depth: 0
 
@@ -148,7 +148,7 @@ jobs:
         echo "ver=$(make version)" >> $GITHUB_OUTPUT
 
     - name: Download artifacts
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v8
       with:
         pattern: greaseweazle-ci-${{ steps.vars.outputs.ver }}-*
         merge-multiple: true
