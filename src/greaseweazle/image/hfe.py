@@ -68,10 +68,11 @@ EncodingType = {
 
 class HFEOpts(ImageOpts):
     """bitrate: Bitrate of new HFE image file.
+    img_output: Additional IMG output file when writing raw HFE.
     """
 
     w_settings = [ 'bitrate', 'version', 'interface', 'encoding',
-                   'double_step', 'uniform' ]
+                   'double_step', 'uniform', 'img_output' ]
 
     def __init__(self) -> None:
         self._bitrate: Optional[int] = None
@@ -80,6 +81,7 @@ class HFEOpts(ImageOpts):
         self._encoding = 0xff
         self.double_step = False
         self.uniform = False
+        self.img_output: Optional[str] = None
 
     @property
     def bitrate(self) -> Optional[int]:

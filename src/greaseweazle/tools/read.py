@@ -191,6 +191,15 @@ def read_to_image(usb: USB.Unit, args, image: image.Image) -> None:
         args.ticks = 0
 
     summary: Dict[Tuple[int,int],codec.Codec] = dict()
+    
+    img_image = None
+    if args.raw and args.fmt_cls is not None:
+        if hasattr(image, 'opts') and hasattr(image.opts, 'img_output') and image.opts.img_output:
+            img_filename = image.opts.img_output
+            print(f"Will also write IMG file: {img_filename}")
+            from greaseweazle.image import img as img_module
+            img_image = img_module.IMG(img_filename, args.fmt_cls)
+            img_image.noclobber = False  # Always overwrite
 
     for t in args.tracks:
         cyl, head = t.cyl, t.head
@@ -198,6 +207,8 @@ def read_to_image(usb: USB.Unit, args, image: image.Image) -> None:
         if args.fmt_cls is not None and dat is not None:
             assert isinstance(dat, codec.Codec)
             summary[cyl,head] = dat
+            if img_image is not None:
+                img_image.emit_track(cyl, head, dat)
         if args.raw:
             image.emit_track(cyl, head, flux)
         elif dat is not None:
@@ -205,6 +216,13 @@ def read_to_image(usb: USB.Unit, args, image: image.Image) -> None:
 
     if args.fmt_cls is not None:
         print_summary(args, summary)
+    
+    if img_image is not None:
+        try:
+            with open(img_image.filename, 'wb') as f:
+                f.write(img_image.get_image())
+        except Exception as e:
+            print(f"Error writing IMG file: {e}")
 
 
 def main(argv) -> None:
