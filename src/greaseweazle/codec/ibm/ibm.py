@@ -785,8 +785,9 @@ class IBMTrack_Fixed(IBMTrack):
         for sec in sec_map(nsec, config.interleave,
                            config.cskew, config.hskew, cyl, head):
             pos += t.gap_presync
+            r = id0+sec if not config.ids else config.ids[sec]
             idam = IDAM(pos*16, (pos+synclen+4+2)*16, 0xffff,
-                        c = cyl, h = h, r = id0+sec, n = sec_n(sec))
+                        c = cyl, h = h, r = r, n = sec_n(sec))
             pos += synclen + 4 + 2 + gap2 + t.gap_presync
             size = 128 << idam.n
             datsz = size*2 if mark_dam == Mark.DAM_DEC_MMFM else size
@@ -806,6 +807,7 @@ class IBMTrack_FixedDef(codec.TrackDef):
         self.secs = 0
         self.sz: List[int] = []
         self.id = 1
+        self.ids: List[int] = []
         self.h: Optional[int] = None
         self.format_name = format_name
         self.interleave = 1
@@ -848,6 +850,11 @@ class IBMTrack_FixedDef(codec.TrackDef):
             n = int(val, base=0)
             error.check(0 <= n <= 255, '%s out of range' % key)
             setattr(self, key, n)
+        elif key == 'ids':
+            for x in val.split(','):
+                n = int(x, base=0)
+                error.check(0 <= n <= 255, 'id out of range')
+                self.ids.append(n)
         elif key in ['gap1', 'gap2', 'gap3', 'gap4a', 'gapbyte', 'h']:
             if val == 'auto':
                 n = None
@@ -876,6 +883,10 @@ class IBMTrack_FixedDef(codec.TrackDef):
                     'gap1 specified but no iam')
         error.check(self.secs == 0 or len(self.sz) != 0,
                     'sector size not specified')
+        error.check(self.id == 1 or len(self.ids) == 0,
+                    'base id and id list both present')
+        error.check(len(self.ids) == 0 or len(self.ids) == self.secs,
+                    'sector id list length must match number of sectors')
         error.check((self.img_bps is None
                      or self.img_bps >= max(self.sz, default=0)),
                     'img_bps cannot be smaller than sector data size')
