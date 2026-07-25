@@ -160,6 +160,7 @@ from greaseweazle.codec.hp import hp_mmfm
 from greaseweazle.codec.northstar import northstar
 from greaseweazle.codec.micropolis import micropolis
 from greaseweazle.codec.datageneral import datageneral
+from greaseweazle.codec.compucorp665 import compucorp665
 
 def mk_trackdef(format_name: str) -> TrackDef:
     if format_name in ['amiga.amigados']:
@@ -178,6 +179,8 @@ def mk_trackdef(format_name: str) -> TrackDef:
         return northstar.NorthStarDef(format_name)
     if format_name in ['micropolis']:
         return micropolis.MicropolisDef(format_name)
+    if format_name in ['compucorp665']:
+        return compucorp665.Compucorp665Def(format_name)
     if format_name in ['apple2.gcr']:
         return apple2_gcr.Apple2GCRDef(format_name)
     if format_name in ['bitcell']:
