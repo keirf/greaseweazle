@@ -24,9 +24,19 @@ from greaseweazle import track
 plls = track.plls
 
 def open_image(args, image_class: Type[image.Image]) -> image.Image:
+    # Bare --raw writes flux to the mandatory file; otherwise cook it.
+    # With --raw FILE, raw goes to FILE and the mandatory file is cooked.
+    fmt = None if args.raw is True else args.fmt_cls
     image = image_class.to_file(
-        args.file, None if args.raw else args.fmt_cls, args.no_clobber,
-        args.file_opts)
+        args.file, fmt, args.no_clobber, args.file_opts)
+    image.write_on_ctrl_c = True
+    return image
+
+
+def open_raw_image(args) -> image.Image:
+    raw_file, raw_opts = args.raw, args.raw_opts
+    image_class = util.get_image_class(raw_file)
+    image = image_class.to_file(raw_file, None, args.no_clobber, raw_opts)
     image.write_on_ctrl_c = True
     return image
 
@@ -154,7 +164,8 @@ def print_summary(args, summary: Dict[Tuple[int,int],codec.Codec]) -> None:
               (good_sec, tot_sec, good_sec*100/tot_sec))
 
 
-def read_to_image(usb: USB.Unit, args, image: image.Image) -> None:
+def read_to_image(usb: USB.Unit, args, image: image.Image,
+                  raw_image: Optional[image.Image] = None) -> None:
     """Reads a floppy disk and dumps it into a new image file.
     """
 
@@ -198,10 +209,12 @@ def read_to_image(usb: USB.Unit, args, image: image.Image) -> None:
         if args.fmt_cls is not None and dat is not None:
             assert isinstance(dat, codec.Codec)
             summary[cyl,head] = dat
-        if args.raw:
+        if args.raw is True:
             image.emit_track(cyl, head, flux)
         elif dat is not None:
             image.emit_track(cyl, head, dat)
+        if raw_image is not None:
+            raw_image.emit_track(cyl, head, flux)
 
     if args.fmt_cls is not None:
         print_summary(args, summary)
@@ -221,13 +234,14 @@ def main(argv) -> None:
     parser.add_argument("--drive", type=util.Drive(), default='A',
                         help="drive to read")
     parser.add_argument("--diskdefs", help="disk definitions file")
-    parser.add_argument("--format", help="disk format (output is converted unless --raw)")
+    parser.add_argument("--format", help="disk format (output is converted unless bare --raw)")
     parser.add_argument("--revs", type=util.min_int(1), metavar="N",
                         help="number of revolutions to read per track")
     parser.add_argument("--tracks", type=util.TrackSet, metavar="TSPEC",
                         help="which tracks to read")
-    parser.add_argument("--raw", action="store_true",
-                        help="output raw stream (--format verifies only)")
+    parser.add_argument("--raw", nargs='?', const=True, metavar="FILE",
+                        help="output raw stream (if FILE given, write raw there; "
+                             "mandatory file is cooked)")
     index_group = parser.add_mutually_exclusive_group(required=False)
     index_group.add_argument("--fake-index", type=util.period, metavar="SPEED",
                              help="fake index pulses at SPEED")
@@ -251,12 +265,23 @@ def main(argv) -> None:
                         help="generate TG43 signal for 8-inch drive on pin 2 from track 60. Enable postcompensation filter")
     parser.add_argument("--reverse", action="store_true",
                         help="reverse track data (flippy disk)")
-    parser.add_argument("file", help="output filename")
+    parser.add_argument("file", nargs='?', help="output filename")
     parser.description = description
     parser.prog += ' ' + argv[1]
     args = parser.parse_args(argv[2:])
 
+    # Bare "--raw FILE" (no cooked output name) is the usual form and must keep
+    # writing raw flux to FILE. Dual output is "--raw RAWFILE COOKEDFILE".
+    if args.file is None:
+        if isinstance(args.raw, str):
+            args.file = args.raw
+            args.raw = True
+        else:
+            parser.error("the following arguments are required: file")
+
     args.file, args.file_opts = util.split_opts(args.file)
+    if isinstance(args.raw, str):
+        args.raw, args.raw_opts = util.split_opts(args.raw)
 
     if args.pll is not None:
         plls.insert(0, args.pll)
@@ -293,8 +318,16 @@ Known formats:\n%s"""
             if args.densel is not None:
                 usb.set_pin(2, args.densel)
             with open_image(args, image_class) as image:
-                util.with_drive_selected(
-                    lambda: read_to_image(usb, args, image), usb, args.drive)
+                if isinstance(args.raw, str):
+                    print(f"Also writing raw file: {args.raw}")
+                    with open_raw_image(args) as raw_image:
+                        util.with_drive_selected(
+                            lambda: read_to_image(usb, args, image, raw_image),
+                            usb, args.drive)
+                else:
+                    util.with_drive_selected(
+                        lambda: read_to_image(usb, args, image),
+                        usb, args.drive)
         finally:
             if args.densel is not None or args.gen_tg43:
                 usb.set_pin(2, prev_pin2)

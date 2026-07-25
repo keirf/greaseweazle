@@ -67,8 +67,7 @@ EncodingType = {
 }
 
 class HFEOpts(ImageOpts):
-    """bitrate: Bitrate of new HFE image file.
-    """
+    """bitrate: Bitrate of new HFE image file."""
 
     w_settings = [ 'bitrate', 'version', 'interface', 'encoding',
                    'double_step', 'uniform' ]
