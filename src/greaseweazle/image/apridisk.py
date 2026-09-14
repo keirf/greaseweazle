@@ -5,6 +5,8 @@
 # This is free and unencumbered software released into the public domain.
 # See the file COPYING for more details, or visit <http://unlicense.org>.
 
+from __future__ import annotations
+
 from enum import Enum
 
 from greaseweazle import error

@@ -274,6 +274,7 @@ class IBMTrack(codec.Codec):
         else:
             raise error.Fatal('Unrecognised IBM mode')
         self.img_bps: Optional[int] = None
+        self.force_bps: Optional[int] = None
 
     @property
     def nsec(self) -> int:
@@ -324,6 +325,7 @@ class IBMTrack(codec.Codec):
     def verify_track(self, flux) -> bool:
         readback_track = self.__class__(self.cyl, self.head, self.mode)
         readback_track.clock = self.clock
+        readback_track.force_bps = self.force_bps
         readback_track.time_per_rev = self.time_per_rev
         for iam in self.iams:
             readback_track.iams.append(copy.copy(iam))
@@ -440,7 +442,8 @@ class IBMTrack(codec.Codec):
         return track
 
     @staticmethod
-    def mfm_decode_raw(raw: PLLTrack) -> List[TrackArea]:
+    def mfm_decode_raw(raw: PLLTrack,
+                       force_bps: Optional[int] = None) -> List[TrackArea]:
 
         bits, _ = raw.get_all_data()
         areas: List[TrackArea] = []
@@ -474,7 +477,7 @@ class IBMTrack(codec.Codec):
                 if idam is None or offs - idam.end > 1000:
                     areas.append(DAM(offs, offs+4*16, 0xffff, mark=mark))
                 else:
-                    sz = 128 << idam.n
+                    sz = force_bps or (128 << idam.n)
                     s, e = offs, offs+(4+sz+2)*16
                     if len(bits) < e:
                         continue
@@ -507,7 +510,8 @@ class IBMTrack(codec.Codec):
 
     @staticmethod
     def fm_decode_raw(raw: PLLTrack,
-                      mmfm_raw: Optional[PLLTrack] = None) -> List[TrackArea]:
+                      mmfm_raw: Optional[PLLTrack] = None,
+                      force_bps: Optional[int] = None) -> List[TrackArea]:
 
         bits, times = raw.get_all_data()
         areas: List[TrackArea] = []
@@ -569,7 +573,7 @@ class IBMTrack(codec.Codec):
                 if idam is None or offs - idam.end > 1000:
                     areas.append(DAM(offs, offs+4*16, 0xffff, mark=mark))
                     continue
-                sz = 128 << idam.n
+                sz = force_bps or (128 << idam.n)
                 s, e = offs, offs+(1+sz+2)*16
                 if (mark & 0xfb) != Mark.DDAM_DEC_MMFM:
                     if len(bits) < e:
@@ -618,9 +622,9 @@ class IBMTrack(codec.Codec):
                    flux: Flux) -> None:
 
         if self.mode is Mode.FM:
-            areas = self.fm_decode_raw(raw)
+            areas = self.fm_decode_raw(raw, force_bps=self.force_bps)
         elif self.mode is Mode.MFM:
-            areas = self.mfm_decode_raw(raw)
+            areas = self.mfm_decode_raw(raw, force_bps=self.force_bps)
         elif self.mode is Mode.DEC_RX02:
             mmfm_raw = PLLTrack(time_per_rev = self.time_per_rev,
                                 clock = self.clock/2, data = flux, pll = pll)
@@ -656,6 +660,7 @@ class IBMTrack_Fixed(IBMTrack):
 
     def decode_flux(self, track: HasFlux, pll: Optional[PLL]=None) -> None:
         self.raw.clock = self.clock
+        self.raw.force_bps = self.force_bps
         self.raw.time_per_rev = self.time_per_rev
         self.raw.decode_flux(track, pll)
         mismatches = set()
@@ -700,6 +705,7 @@ class IBMTrack_Fixed(IBMTrack):
         t = cls(cyl, head, mode)
         nsec = config.secs
         t.img_bps = config.img_bps
+        t.force_bps = config.force_bps
 
         if config.gapbyte is not None:
             t.gapbyte = config.gapbyte
@@ -721,7 +727,7 @@ class IBMTrack_Fixed(IBMTrack):
 
         tracklen = idx_sz + (idam_sz + dam_sz_pre + dam_sz_post) * nsec
         for i in range(nsec):
-            tracklen += 128 << sec_n(i)
+            tracklen += config.force_bps or (128 << sec_n(i))
         tracklen *= 16
 
         rate, rpm = config.rate, config.rpm
@@ -788,7 +794,7 @@ class IBMTrack_Fixed(IBMTrack):
             idam = IDAM(pos*16, (pos+synclen+4+2)*16, 0xffff,
                         c = cyl, h = h, r = id0+sec, n = sec_n(sec))
             pos += synclen + 4 + 2 + gap2 + t.gap_presync
-            size = 128 << idam.n
+            size = config.force_bps or (128 << idam.n)
             datsz = size*2 if mark_dam == Mark.DAM_DEC_MMFM else size
             dam = DAM(pos*16, (pos+synclen+size+2)*16, 0xffff,
                       mark=mark_dam, data=b'-=[BAD SECTOR]=-'*(datsz//16))
@@ -819,6 +825,7 @@ class IBMTrack_FixedDef(codec.TrackDef):
         self.iam = True
         self.rate = 0
         self.img_bps: Optional[int] = None
+        self.force_bps: Optional[int] = None
         self.finalised = False
 
     def add_param(self, key: str, val: str) -> None:
@@ -862,6 +869,11 @@ class IBMTrack_FixedDef(codec.TrackDef):
             n = int(val)
             error.check(1 <= n <= 2000, '%s out of range' % key)
             setattr(self, key, n)
+        elif key == 'force_bps':
+            n = int(val)
+            error.check(128 <= n <= 8192 and n & (n-1) == 0,
+                        '%s out of range' % key)
+            self.force_bps = n
         elif key == 'img_bps':
             n = int(val)
             error.check(128 <= n <= 8192, '%s out of range' % key)
@@ -876,8 +888,12 @@ class IBMTrack_FixedDef(codec.TrackDef):
                     'gap1 specified but no iam')
         error.check(self.secs == 0 or len(self.sz) != 0,
                     'sector size not specified')
-        error.check((self.img_bps is None
-                     or self.img_bps >= max(self.sz, default=0)),
+        error.check(self.force_bps is None or self.format_name != 'dec.rx02',
+                    'force_bps is only supported for ibm.fm and ibm.mfm')
+        force_bps = self.force_bps or max((128 << n for n in self.sz), default=0)
+        if self.format_name == 'dec.rx02':
+            force_bps *= 2
+        error.check((self.img_bps is None or self.img_bps >= force_bps),
                     'img_bps cannot be smaller than sector data size')
         self.finalised = True
 
