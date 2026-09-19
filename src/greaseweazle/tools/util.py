@@ -399,6 +399,10 @@ def find_port(old_port=None):
     raise serial.SerialException('Cannot find the Greaseweazle device')
 
 def port_info(devname):
+    try: # resolve any symlinks in the device path
+        devname = os.path.realpath(devname)
+    except OSError:
+        pass
     for x in comports():
         if x.device == devname:
             return x
