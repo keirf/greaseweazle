@@ -81,8 +81,12 @@ def main(argv) -> None:
         
     port = usb.port_info
 
-    if port.device:
+    # port_info can be None for custom paths (e.g. udev symlinks) that
+    # pyserial's comports() does not list under that name.
+    if port and port.device:
         print_info_line('Port', port.device, tab=2)
+    elif args.device:
+        print_info_line('Port', args.device, tab=2)
 
     try:
         model = model_id[usb.hw_model][usb.hw_submodel]
@@ -110,8 +114,10 @@ def main(argv) -> None:
         fwver += ' (Bootloader)'
     print_info_line('Firmware', fwver, tab=2)
 
-    print_info_line('Serial', port.serial_number if port.serial_number
-                    else 'Unknown', tab=2)
+    print_info_line('Serial',
+                    (port.serial_number if port and port.serial_number
+                     else 'Unknown'),
+                    tab=2)
 
     usb_strs = list()
     try:

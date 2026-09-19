@@ -397,9 +397,18 @@ def find_port(old_port=None):
     raise serial.SerialException('Cannot find the Greaseweazle device')
 
 def port_info(devname):
+    try:
+        real = os.path.realpath(devname)
+    except OSError:
+        real = devname
     for x in comports():
         if x.device == devname:
             return x
+        try:
+            if os.path.realpath(x.device) == real:
+                return x
+        except OSError:
+            pass
     return None
 
 def usb_reopen(usb, is_update):
