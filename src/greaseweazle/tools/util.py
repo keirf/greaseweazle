@@ -288,6 +288,8 @@ image_types = OrderedDict(
       '.dim': 'DIM',
       '.dmk': 'DMK',
       '.do' : ('DO','apple2'),
+      '.d16' : ('DO','apple2'),
+      '.d13' : ('D13','apple2'),
       '.dsd': ('DSD','acorn'),
       '.dsk': 'DSK',
       '.edsk': 'EDSK',

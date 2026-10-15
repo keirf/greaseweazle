@@ -399,7 +399,7 @@ fail:
 }
 
 static PyObject *
-py_decode_apple2_sector(PyObject *self, PyObject *args)
+py_decode_apple2_6a2_sector(PyObject *self, PyObject *args)
 {
     Py_buffer in;
     PyObject *out;
@@ -413,8 +413,8 @@ py_decode_apple2_sector(PyObject *self, PyObject *args)
     if (out == NULL)
         goto fail;
 
-    status = decode_apple2_sector((const uint8_t *)in.buf, in.len,
-                                  (uint8_t *)PyBytes_AsString(out));
+    status = decode_apple2_6a2_sector((const uint8_t *)in.buf, in.len,
+                                      (uint8_t *)PyBytes_AsString(out));
 
     res = Py_BuildValue("Oi", out, status);
 
@@ -425,7 +425,33 @@ fail:
 }
 
 static PyObject *
-py_encode_apple2_sector(PyObject *self, PyObject *args)
+py_decode_apple2_5a3_sector(PyObject *self, PyObject *args)
+{
+    Py_buffer in;
+    PyObject *out;
+    int status;
+    PyObject *res = NULL;
+
+    if (!PyArg_ParseTuple(args, "y*", &in))
+        return NULL;
+
+    out = PyBytes_FromStringAndSize(NULL, APPLE2_SECTOR_LENGTH);
+    if (out == NULL)
+        goto fail;
+
+    status = decode_apple2_5a3_sector((const uint8_t *)in.buf, in.len,
+                                      (uint8_t *)PyBytes_AsString(out));
+
+    res = Py_BuildValue("Oi", out, status);
+
+    Py_DECREF(out);
+fail:
+    PyBuffer_Release(&in);
+    return res;
+}
+
+static PyObject *
+py_encode_apple2_6a2_sector(PyObject *self, PyObject *args)
 {
     Py_buffer in;
     PyObject *out = NULL;
@@ -435,12 +461,35 @@ py_encode_apple2_sector(PyObject *self, PyObject *args)
     if (in.len < APPLE2_SECTOR_LENGTH)
         goto fail;
 
-    out = PyBytes_FromStringAndSize(NULL, APPLE2_ENCODED_SECTOR_LENGTH+1);
+    out = PyBytes_FromStringAndSize(NULL, APPLE2_6A2_ENCODED_SECTOR_LENGTH+1);
     if (out == NULL)
         goto fail;
 
-    encode_apple2_sector((const uint8_t *)in.buf,
-                         (uint8_t *)PyBytes_AsString(out));
+    encode_apple2_6a2_sector((const uint8_t *)in.buf,
+                             (uint8_t *)PyBytes_AsString(out));
+
+fail:
+    PyBuffer_Release(&in);
+    return out;
+}
+
+static PyObject *
+py_encode_apple2_5a3_sector(PyObject *self, PyObject *args)
+{
+    Py_buffer in;
+    PyObject *out = NULL;
+
+    if (!PyArg_ParseTuple(args, "y*", &in))
+        return NULL;
+    if (in.len < APPLE2_SECTOR_LENGTH)
+        goto fail;
+
+    out = PyBytes_FromStringAndSize(NULL, APPLE2_5A3_ENCODED_SECTOR_LENGTH+1);
+    if (out == NULL)
+        goto fail;
+
+    encode_apple2_5a3_sector((const uint8_t *)in.buf,
+                             (uint8_t *)PyBytes_AsString(out));
 
 fail:
     PyBuffer_Release(&in);
@@ -482,8 +531,14 @@ static PyMethodDef modulefuncs[] = {
     { "encode_mac_sector", py_encode_mac_sector, METH_VARARGS, NULL },
     { "decode_c64_gcr", py_decode_c64_gcr, METH_VARARGS, NULL },
     { "encode_c64_gcr", py_encode_c64_gcr, METH_VARARGS, NULL },
-    { "decode_apple2_sector", py_decode_apple2_sector, METH_VARARGS, NULL },
-    { "encode_apple2_sector", py_encode_apple2_sector, METH_VARARGS, NULL },
+    { "decode_apple2_6a2_sector", py_decode_apple2_6a2_sector, METH_VARARGS,
+      NULL },
+    { "decode_apple2_5a3_sector", py_decode_apple2_5a3_sector, METH_VARARGS,
+      NULL },
+    { "encode_apple2_6a2_sector", py_encode_apple2_6a2_sector, METH_VARARGS,
+      NULL },
+    { "encode_apple2_5a3_sector", py_encode_apple2_5a3_sector, METH_VARARGS,
+      NULL },
     { "td0_unpack", py_td0_unpack, METH_VARARGS, NULL },
     { NULL }
 };

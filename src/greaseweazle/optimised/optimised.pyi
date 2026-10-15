@@ -32,10 +32,16 @@ def decode_c64_gcr(dat: bytes) -> bytes:
 def encode_c64_gcr(dat: bytes) -> bytes:
     ...
 
-def decode_apple2_sector(dat: bytes) -> Tuple[bytes, int]:
+def decode_apple2_6a2_sector(dat: bytes) -> Tuple[bytes, int]:
     ...
 
-def encode_apple2_sector(dat: bytes) -> bytes:
+def decode_apple2_5a3_sector(dat: bytes) -> Tuple[bytes, int]:
+    ...
+
+def encode_apple2_6a2_sector(dat: bytes) -> bytes:
+    ...
+
+def encode_apple2_5a3_sector(dat: bytes) -> bytes:
     ...
 
 def td0_unpack(dat: bytes) -> bytes:
