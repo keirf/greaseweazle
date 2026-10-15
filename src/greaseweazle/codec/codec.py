@@ -178,7 +178,7 @@ def mk_trackdef(format_name: str) -> TrackDef:
         return northstar.NorthStarDef(format_name)
     if format_name in ['micropolis']:
         return micropolis.MicropolisDef(format_name)
-    if format_name in ['apple2.gcr']:
+    if format_name in ['apple2.gcr', 'apple2.gcr5a3']:
         return apple2_gcr.Apple2GCRDef(format_name)
     if format_name in ['bitcell']:
         return bitcell.BitcellTrackDef(format_name)

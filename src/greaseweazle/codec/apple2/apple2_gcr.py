@@ -20,10 +20,13 @@ default_revs = 1.1
 
 gap4 = bitarray([1], endian='big')
 ff40 = bitarray([1]*8 + [0]*2, endian='big')
+ff36 = ff40[:9]
 ff32 = ff40[:8]
 
-addr_sync = bitarray(endian='big')
-addr_sync.frombytes(b'\xd5\xaa\x96')
+addr_sync_6a2 = bitarray(endian='big')
+addr_sync_6a2.frombytes(b'\xd5\xaa\x96')
+addr_sync_5a3 = bitarray(endian='big')
+addr_sync_5a3.frombytes(b'\xd5\xaa\xb5')
 
 data_sync = bitarray(endian='big')
 data_sync.frombytes(b'\xd5\xaa\xad')
@@ -43,6 +46,7 @@ class Apple2GCR(codec.Codec):
         self.cyl, self.head = cyl, head
         self.config = config
         self.clock = config.clock
+        self.format_name = config.format_name
         self.sector: List[Optional[bytes]]
         self.sector = [None] * self.nsec
         self.vol_id: Optional[int] = None
@@ -55,7 +59,10 @@ class Apple2GCR(codec.Codec):
 
     def summary_string(self) -> str:
         nsec, nbad = self.nsec, self.nr_missing()
-        s = "Apple2 GCR (%d/%d sectors)" % (nsec - nbad, nsec)
+        if self.format_name.endswith('.gcr5a3'):
+            s = "Apple2 5-and-3 GCR (%d/%d sectors)" % (nsec - nbad, nsec)
+        else:
+            s = "Apple2 GCR (%d/%d sectors)" % (nsec - nbad, nsec)
         return s
 
     def set_vol_id(self, vol_id: int):
@@ -98,6 +105,12 @@ class Apple2GCR(codec.Codec):
                        lowpass_thresh = 2.5e-6)
         bits, _ = raw.get_all_data()
 
+        # Understanding the Apple II pp.9-27,9-28
+        if self.format_name.endswith('.gcr5a3'):
+            addr_sync = addr_sync_5a3
+        else:
+            addr_sync = addr_sync_6a2
+
         for offs in bits.search(addr_sync):
 
             if self.nr_missing() == 0:
@@ -137,8 +150,12 @@ class Apple2GCR(codec.Codec):
             offs += dat_offs[0]
 
             # Decode data
-            sec, csum = optimised.decode_apple2_sector(
-                bits[offs+3*8:offs+400*8].tobytes())
+            if self.format_name.endswith('.gcr5a3'):
+                sec, csum = optimised.decode_apple2_5a3_sector(
+                    bits[offs+3*8:offs+600*8].tobytes())
+            else:
+                sec, csum = optimised.decode_apple2_6a2_sector(
+                    bits[offs+3*8:offs+400*8].tobytes())
             if csum != 0:
                 continue
 
@@ -150,19 +167,38 @@ class Apple2GCR(codec.Codec):
         vol_id = self.vol_id if self.vol_id is not None else 254
         trk_id = self.tracknr()
 
+        # Understanding the Apple II pp.9-27,9-28 figure 9.15,9-34
+        # TODO: Per above reference, handle attenuated data trailer for DOS 3.2
+        #       and attenuated address trailer for DOS 3.3. For DOS 3.3, also
+        #       consider adding 50 and 53 6502-cycle gaps to the address and
+        #       data trailers respectively.
+        if self.format_name.endswith('.gcr5a3'):
+            addr_leader = ff36*18 + ff32 + addr_sync_5a3
+            data_leader = ff36*11 + data_sync
+            addr_trailer = trailer
+            data_trailer = trailer  # TODO: 14 6502 CPU cycles; 3.5 bits?
+        else:
+            addr_leader = ff40*18 + ff32 + addr_sync_6a2
+            data_leader = ff40*4 + ff36 + data_sync
+            addr_trailer = trailer  # TODO: 16 6502 CPU cycles; 4 bits? Gap?
+            data_trailer = trailer  # TODO: Gap?
+
         # Post-index track gap.
         t = gap4 * 300
 
         for sec_id in range(self.nsec):
             sector = self.sector[sec_id]
             data = bad_sector if sector is None else sector
-            t += ff40*18 + ff32 + addr_sync
+            t += addr_leader
             t.frombytes(b''.join(map(
                 lambda x: bytes([x>>1 | 0xaa, x | 0xaa]),
                 [vol_id, trk_id, sec_id, vol_id ^ trk_id ^ sec_id])))
-            t += trailer + ff40*6 + data_sync
-            t.frombytes(optimised.encode_apple2_sector(data))
-            t += trailer
+            t += addr_trailer + data_leader
+            if self.format_name.endswith('.gcr5a3'):
+                t.frombytes(optimised.encode_apple2_5a3_sector(data))
+            else:
+                t.frombytes(optimised.encode_apple2_6a2_sector(data))
+            t += data_trailer
 
         # Add the pre-index gap.
         tlen = int((self.time_per_rev / self.clock))
@@ -187,6 +223,7 @@ class Apple2GCRDef(codec.TrackDef):
     def __init__(self, format_name: str):
         self.secs: List[int] = []
         self.clock: Optional[float] = None
+        self.format_name = format_name
         self.finalised = False
 
     def add_param(self, key: str, val) -> None:
