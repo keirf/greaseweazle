@@ -5,6 +5,8 @@
 # This is free and unencumbered software released into the public domain.
 # See the file COPYING for more details, or visit <http://unlicense.org>.
 
+from typing import List
+
 from enum import Enum
 
 from greaseweazle import error
@@ -42,8 +44,8 @@ class ApridiskRecord:
         self._match_compression(data)
 
     @staticmethod
-    def split_apridisk_file(file: bytes, fmt: codec.DiskDef) -> list[ApridiskRecord]:
-        res: list[ApridiskRecord] = []
+    def split_apridisk_file(file: bytes, fmt: codec.DiskDef) -> List[ApridiskRecord]:
+        res: List[ApridiskRecord] = []
         byte = 0
         while file:
             record = ApridiskRecord(file, fmt)

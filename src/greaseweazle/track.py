@@ -182,6 +182,7 @@ class MasterTrack:
 
         # Also copy the bit_ticks array (or create a dummy one), and remember
         # the total ticks that it contains.
+        bit_ticks: List[float]
         bit_ticks = self.bit_ticks.copy() if self.bit_ticks else [1] * bitlen
         ticks_to_index = sum(bit_ticks)
 

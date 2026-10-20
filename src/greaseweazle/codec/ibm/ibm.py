@@ -904,8 +904,8 @@ class IBMTrack_Scan(codec.Codec):
 
     RATES = [ 125, 250, 500 ]
     RPMS = [ 300, 360 ]
-    BEST_GUESS = None
-    
+    BEST_GUESS: Optional[Tuple[float, float, Mode]] = None
+
     def __init__(self, cyl: int, head: int, config: IBMTrack_ScanDef):
         self.cyl, self.head = cyl, head
         self.rate, self.rpm = config.rate, config.rpm
