@@ -294,6 +294,7 @@ class KryoFlux(Image):
 
 
     def __enter__(self):
+        os.makedirs(os.path.dirname(self.filename), exist_ok=True)
         return self
     def __exit__(self, type, value, tb):
         pass
