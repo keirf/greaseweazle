@@ -182,6 +182,7 @@ class MasterTrack:
 
         # Also copy the bit_ticks array (or create a dummy one), and remember
         # the total ticks that it contains.
+        bit_ticks: List[float]
         bit_ticks = self.bit_ticks.copy() if self.bit_ticks else [1] * bitlen
         ticks_to_index = sum(bit_ticks)
 
@@ -305,6 +306,13 @@ class MasterTrack:
                     sample_freq = ticks_to_index / self.time_per_rev,
                     index_cued = True)
         flux.splice = sum(bit_ticks[:self.splice])
+        if self.hardsector_bits is not None and self.splice == 0:
+            pos = 0
+            sector_ticks = []
+            for n in self.hardsector_bits:
+                sector_ticks.append(sum(bit_ticks[pos:pos+n]))
+                pos += n
+            flux.sector_list = [sector_ticks] * revs
         return flux
 
 class PLLRevolution:

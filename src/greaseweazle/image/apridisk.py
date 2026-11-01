@@ -6,6 +6,7 @@
 # See the file COPYING for more details, or visit <http://unlicense.org>.
 
 from __future__ import annotations
+from typing import List
 
 from enum import Enum
 
@@ -44,8 +45,8 @@ class ApridiskRecord:
         self._match_compression(data)
 
     @staticmethod
-    def split_apridisk_file(file: bytes, fmt: codec.DiskDef) -> list[ApridiskRecord]:
-        res: list[ApridiskRecord] = []
+    def split_apridisk_file(file: bytes, fmt: codec.DiskDef) -> List[ApridiskRecord]:
+        res: List[ApridiskRecord] = []
         byte = 0
         while file:
             record = ApridiskRecord(file, fmt)

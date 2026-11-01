@@ -92,9 +92,9 @@ jobs:
       run: |
         export GW=greaseweazle-${{ steps.vars.outputs.ver }}
         make windist
-        curl -L http://softpres.org/_media/files:spsdeclib_5.1_windows.zip --output ipf.zip
+        curl -L https://fs-uae.net/files/stable/plugins/CAPSImg/CAPSImg_5.1fs3_Windows_x86.zip --output ipf.zip
         7z x -oipf ipf.zip
-        cp -a ipf/capsimg_binary/CAPSImg.dll $GW/
+        cp -a ipf/CAPSImg/Windows/x86/capsimg.dll $GW/CAPSImg.dll
         rm -rf ipf ipf.zip
 
     - name: Upload artifacts
@@ -133,9 +133,9 @@ jobs:
       run: |
         export GW=greaseweazle-${{ steps.vars.outputs.ver }}
         make windist
-        curl -L http://softpres.org/_media/files:spsdeclib_5.1_windows.zip --output ipf.zip
+        curl -L https://fs-uae.net/files/stable/plugins/CAPSImg/CAPSImg_5.1fs3_Windows_x86-64.zip --output ipf.zip
         7z x -oipf ipf.zip
-        cp -a ipf/capsimg_binary/x64/CAPSImg.dll $GW/
+        cp -a ipf/CAPSImg/Windows/x86-64/capsimg.dll $GW/CAPSImg.dll
         rm -rf ipf ipf.zip
 
     - name: Upload artifacts

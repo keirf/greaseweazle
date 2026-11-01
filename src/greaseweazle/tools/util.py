@@ -288,6 +288,8 @@ image_types = OrderedDict(
       '.dim': 'DIM',
       '.dmk': 'DMK',
       '.do' : ('DO','apple2'),
+      '.d16' : ('DO','apple2'),
+      '.d13' : ('D13','apple2'),
       '.dsd': ('DSD','acorn'),
       '.dsk': 'DSK',
       '.edsk': 'EDSK',
@@ -397,6 +399,12 @@ def find_port(old_port=None):
     raise serial.SerialException('Cannot find the Greaseweazle device')
 
 def port_info(devname):
+    if platform.system() != 'Windows':
+        # On systems that support it, resolve any symlinks in the device path
+        try:
+            devname = os.path.realpath(devname)
+        except OSError:
+            pass
     for x in comports():
         if x.device == devname:
             return x

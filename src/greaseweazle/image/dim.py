@@ -22,15 +22,21 @@ class DIM(IMG_AutoFormat):
         with open(name, "rb") as f:
             header = f.read(256)
 
-        error.check(header[0xAB:0xB8] == b"DIFC HEADER  ",
-                    "DIM: Not a DIM file.")
-        media_byte, = struct.unpack('B255x', header)
-        if media_byte == 0:
-            format_str = 'pc98.2hd'
-        elif media_byte == 1:
-            format_str = 'pc98.2hs'
-        else:
-            raise error.Fatal("DIM: Unsupported format.")
+            error.check(header[0xAB:0xB8] == b"DIFC HEADER  ",
+                        "DIM: Not a DIM file.")
+            media_byte, = struct.unpack('B255x', header)
+            if media_byte == 0:
+                format_str = 'pc98.2hd'
+            elif media_byte == 1:
+                # check the IPL to see if this is a Sharp disk
+                data = f.read(1024)
+                a, b, c = struct.unpack('BBB1021x', data)
+                if (a, b, c) == (0x60, 0x1e, 0x39):
+                    format_str = 'sharp.2hs'
+                else:
+                    format_str = 'pc98.2hs'
+            else:
+                raise error.Fatal("DIM: Unsupported format.")
 
         return format_str
 

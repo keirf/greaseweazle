@@ -10,6 +10,9 @@ from greaseweazle.image.img import IMG
 class DO(IMG):
     default_format = 'apple2.appledos.140'
 
+class D13(IMG):
+    default_format = 'apple2.appledos.114'
+
 class PO(IMG):
     default_format = 'apple2.prodos.140'
 
