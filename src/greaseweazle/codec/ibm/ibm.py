@@ -157,6 +157,7 @@ class TrackArea:
         self.start = start
         self.end = end
         self.crc = crc
+        self.revolution = 0
     def delta(self, delta):
         self.start -= delta
         self.end -= delta
@@ -492,15 +493,17 @@ class IBMTrack(codec.Codec):
         # Convert to offsets within track
         areas.sort(key=lambda x:x.start)
         index = iter([x.nr_bits for x in raw.revolutions])
-        p, n = 0, next(index)
+        p, n, rev = 0, next(index), 0
         for a in areas:
-            if a.start >= n:
+            while a.start >= n:
                 p = n
+                rev += 1
                 try:
                     n += next(index)
                 except StopIteration:
                     n = float('inf')
             a.delta(p)
+            a.revolution = rev
         areas.sort(key=lambda x:x.start)
 
         return areas
@@ -594,15 +597,17 @@ class IBMTrack(codec.Codec):
         # Convert to offsets within track
         areas.sort(key=lambda x:x.start)
         index = iter([x.nr_bits for x in raw.revolutions])
-        p, n = 0, next(index)
+        p, n, rev = 0, next(index), 0
         for a in areas:
-            if a.start >= n:
+            while a.start >= n:
                 p = n
+                rev += 1
                 try:
                     n += next(index)
                 except StopIteration:
                     n = float('inf')
             a.delta(p)
+            a.revolution = rev
         areas.sort(key=lambda x:x.start)
 
         return areas
