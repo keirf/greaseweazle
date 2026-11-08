@@ -19,6 +19,7 @@ from greaseweazle.codec import codec
 from greaseweazle.track import MasterTrack
 from greaseweazle.image.image import Image
 from greaseweazle.image.img import IMG
+from greaseweazle.image.nfd import NFD, multirev_diskdef
 
 from greaseweazle import track
 plls = track.plls
@@ -53,6 +54,10 @@ def process_input_track(
     track = in_image.get_track(t.physical_cyl, t.physical_head)
     if track is None:
         return None
+
+    if args.nfd_out and not isinstance(track, Flux):
+        raise error.Fatal('NFD(R1) output requires a raw flux input image '
+                          '(eg. SCP, KryoFlux)')
 
     if args.reverse:
         track = track.flux()
@@ -160,6 +165,7 @@ def main(argv) -> None:
         args.format = in_image_class.default_format
 
     out_image_class = util.get_image_class(args.out_file)
+    args.nfd_out = out_image_class is NFD
     if not args.format:
         args.format = out_image_class.default_format
 
@@ -172,6 +178,8 @@ Unknown format '%s'
 Known formats:\n%s"""
                               % (args.format, codec.print_formats(
                                   args.diskdefs)))
+        if args.nfd_out:
+            args.fmt_cls = multirev_diskdef(args.fmt_cls)
     in_image = open_input_image(args, in_image_class)
     if args.fmt_cls is None and isinstance(in_image, IMG):
         args.fmt_cls = in_image.fmt
